@@ -3,6 +3,16 @@ import { OrderWithItems, type ShippingAddress } from "@/types/order";
 
 let _resend: Resend | null = null;
 
+function siteUrl(): string {
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configuredUrl) return configuredUrl;
+
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) return `https://${vercelUrl}`;
+
+  return "https://f1846vinyl.com";
+}
+
 function resend() {
   if (!_resend) {
     const key = process.env.RESEND_API_KEY;
@@ -98,7 +108,7 @@ a{color:#d4a843}</style>
   <pre style="white-space:pre-wrap;font-size:14px">${address}</pre>
   <div class="footer">Expected delivery: 5-7 business days. Track your order: <a href="<NEXT_PUBLIC_SITE_URL>/track-order"><NEXT_PUBLIC_SITE_URL>/track-order</a></div>
 </div></body></html>`
-    .replace(/<NEXT_PUBLIC_SITE_URL>/g, process.env.NEXT_PUBLIC_SITE_URL ?? "https://f1846vinyl.com");
+    .replace(/<NEXT_PUBLIC_SITE_URL>/g, siteUrl());
 }
 
 function buildShippingEmail({

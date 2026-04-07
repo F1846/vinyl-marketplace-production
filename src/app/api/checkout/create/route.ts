@@ -18,6 +18,16 @@ const checkoutSchema = z.object({
     .min(1),
 });
 
+function getSiteUrl(): string {
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configuredUrl) return configuredUrl;
+
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) return `https://${vercelUrl}`;
+
+  return "http://localhost:3000";
+}
+
 export async function POST(req: NextRequest) {
   if (!process.env.DATABASE_URL || !process.env.STRIPE_SECRET_KEY) {
     return NextResponse.json(
@@ -97,7 +107,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = getSiteUrl();
 
   const session = await stripe().checkout.sessions.create({
     mode: "payment",
