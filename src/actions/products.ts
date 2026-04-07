@@ -4,6 +4,16 @@ import { db } from "@/db";
 import { schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import type { MediaCondition } from "@/types/product";
+
+const MEDIA_CONDITIONS = new Set<MediaCondition>(["M", "NM", "VG+", "VG", "G", "P"]);
+
+function parseMediaCondition(value: string | File | null): MediaCondition | null {
+  if (typeof value !== "string" || !MEDIA_CONDITIONS.has(value as MediaCondition)) {
+    return null;
+  }
+  return value as MediaCondition;
+}
 
 // ─── Add Product (Server Action from FormData) ───
 
@@ -34,8 +44,8 @@ export async function addProductFormAction(
   const title = String(formData.get("title"));
   const format = formData.get("format") as "vinyl" | "cassette" | "cd";
   const genre = String(formData.get("genre"));
-  const conditionMedia = (formData.get("conditionMedia") as "M" | "NM" | "VG+" | "VG" | "G" | "P" | null) || null;
-  const conditionSleeve = format === "vinyl" ? ((formData.get("conditionSleeve") as "M" | "NM" | "VG+" | "VG" | "G" | "P" | null) || null) : null;
+  const conditionMedia = parseMediaCondition(formData.get("conditionMedia"));
+  const conditionSleeve = format === "vinyl" ? parseMediaCondition(formData.get("conditionSleeve")) : null;
   const pressingLabel = (formData.get("pressingLabel") as string) || null;
   const pressingCatalogNumber = (formData.get("pressingCatalogNumber") as string) || null;
   const description = String(formData.get("description"));
@@ -95,7 +105,7 @@ export async function updateProduct(id: string, formData: FormData) {
   const stockQuantity = Number(formData.get("stockQuantity"));
   const pressingYear = formData.get("pressingYear") ? Number(formData.get("pressingYear")) : null;
   const updateFormat = formData.get("format") as "vinyl" | "cassette" | "cd";
-  const updateConditionSleeve = updateFormat === "vinyl" ? ((formData.get("conditionSleeve") as string) || null) : null;
+  const updateConditionSleeve = updateFormat === "vinyl" ? parseMediaCondition(formData.get("conditionSleeve")) : null;
 
   await d
     .update(schema.products)
@@ -106,7 +116,7 @@ export async function updateProduct(id: string, formData: FormData) {
       genre: String(formData.get("genre")),
       priceCents,
       stockQuantity,
-      conditionMedia: (formData.get("conditionMedia") as string) || null,
+      conditionMedia: parseMediaCondition(formData.get("conditionMedia")),
       conditionSleeve: updateConditionSleeve,
       pressingLabel: (formData.get("pressingLabel") as string) || null,
       pressingYear,

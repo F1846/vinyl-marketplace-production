@@ -3,14 +3,14 @@
 import { db } from "@/db";
 import { schema } from "@/db";
 import { eq } from "drizzle-orm";
-import { isValidTransition } from "@/types/order";
+import { isValidTransition, type OrderStatus } from "@/types/order";
 import { revalidatePath } from "next/cache";
 
-export async function updateOrderStatus(orderId: string, formData: FormData) {
+export async function updateOrderStatus(orderId: string, formData: FormData): Promise<void> {
   "use server";
 
-  const newStatus = formData.get("newStatus") as string;
-  if (!newStatus) return { error: "No status selected" };
+  const newStatus = formData.get("newStatus");
+  if (typeof newStatus !== "string" || newStatus.length === 0) return;
 
   const d = db();
 
@@ -18,18 +18,18 @@ export async function updateOrderStatus(orderId: string, formData: FormData) {
     where: eq(schema.orders.id, orderId),
   });
 
-  if (!order) return { error: "Order not found" };
+  if (!order) return;
 
-  if (!isValidTransition(order.status as Parameters<typeof isValidTransition>[0], newStatus as Parameters<typeof isValidTransition>[1])) {
-    return { error: `Invalid transition from ${order.status} to ${newStatus}` };
+  const nextStatus = newStatus as OrderStatus;
+  if (!isValidTransition(order.status as OrderStatus, nextStatus)) {
+    return;
   }
 
   await d
     .update(schema.orders)
-    .set({ status: newStatus as "pending" | "processing" | "shipped" | "delivered" | "cancelled" })
+    .set({ status: nextStatus })
     .where(eq(schema.orders.id, orderId));
 
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${orderId}`);
-  return { success: true };
 }

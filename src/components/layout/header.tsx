@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Disc as RecordIcon, ShoppingCart, Search } from "lucide-react";
+import { Disc as RecordIcon, ShoppingCart } from "lucide-react";
 import { Suspense } from "react";
 
 function CartCount() {

@@ -7,7 +7,7 @@ export function stripe(): Stripe {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error("STRIPE_SECRET_KEY is not configured");
     _stripe = new Stripe(key, {
-      apiVersion: "2025-01-27.acacia",
+      apiVersion: "2025-02-24.acacia",
       typescript: true,
     });
   }

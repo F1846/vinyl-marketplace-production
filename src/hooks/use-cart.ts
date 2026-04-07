@@ -30,11 +30,6 @@ export function useCart() {
     }
   }, []);
 
-  const save = useCallback((newItems: CartItemType[]) => {
-    setItems(newItems);
-    localStorage.setItem(CART_KEY, JSON.stringify(newItems));
-  }, []);
-
   const addItem = useCallback(
     (item: Omit<CartItemType, "quantity"> & { quantity?: number }) => {
       setItems((prev) => {

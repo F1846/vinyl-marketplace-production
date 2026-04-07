@@ -1,3 +1,4 @@
+import Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { db } from "@/db";
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     .where(and(eq(schema.products.status, "active"), inArray(schema.products.id, productIds)));
 
   const productMap = new Map(products.map((p) => [p.id, p]));
-  const lineItems: { price_data: Record<string, unknown>; quantity: number }[] = [];
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
 
   for (const item of items) {
     const product = productMap.get(item.id);

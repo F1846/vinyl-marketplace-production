@@ -1,7 +1,9 @@
 import { db } from "@/db";
-import { eq, desc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { schema } from "@/db";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminOrdersPage() {
   const d = db();

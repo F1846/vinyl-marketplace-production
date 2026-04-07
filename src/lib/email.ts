@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { OrderWithItems } from "@/types/order";
+import { OrderWithItems, type ShippingAddress } from "@/types/order";
 
 let _resend: Resend | null = null;
 
@@ -117,7 +117,7 @@ function buildShippingEmail({
 </div></body></html>`;
 }
 
-function formatAddress(addr: Record<string, string | null>): string {
+function formatAddress(addr: ShippingAddress): string {
   return [
     addr.name,
     addr.line1,

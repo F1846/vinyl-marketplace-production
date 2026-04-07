@@ -44,7 +44,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         </div>
         {product.images.length > 1 && (
           <div className="mt-3 flex gap-2 overflow-x-auto">
-            {product.images.map((img, i) => (
+            {product.images.map((img) => (
               <div
                 key={img.id}
                 className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded border border-border cursor-pointer"

@@ -3,6 +3,18 @@ import { eq } from "drizzle-orm";
 import { schema } from "@/db";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import type { MediaCondition } from "@/types/product";
+
+const MEDIA_CONDITIONS = new Set<MediaCondition>(["M", "NM", "VG+", "VG", "G", "P"]);
+
+export const dynamic = "force-dynamic";
+
+function parseMediaCondition(value: string | File | null): MediaCondition | null {
+  if (typeof value !== "string" || !MEDIA_CONDITIONS.has(value as MediaCondition)) {
+    return null;
+  }
+  return value as MediaCondition;
+}
 
 export default async function EditProductPage({
   params,
@@ -18,6 +30,7 @@ export default async function EditProductPage({
   });
 
   if (!product) notFound();
+  const nextVersion = product.version + 1;
 
   async function handleSubmit(formData: FormData) {
     "use server";
@@ -35,13 +48,13 @@ export default async function EditProductPage({
         genre: formData.get("genre") as string,
         priceCents,
         stockQuantity,
-        conditionMedia: (formData.get("conditionMedia") as string) || null,
-        conditionSleeve: formData.get("format") === "vinyl" ? ((formData.get("conditionSleeve") as string) || null) : null,
+        conditionMedia: parseMediaCondition(formData.get("conditionMedia")),
+        conditionSleeve: formData.get("format") === "vinyl" ? parseMediaCondition(formData.get("conditionSleeve")) : null,
         pressingLabel: (formData.get("pressingLabel") as string) || null,
         pressingYear,
         pressingCatalogNumber: (formData.get("pressingCatalogNumber") as string) || null,
         description: formData.get("description") as string,
-        version: product.version + 1,
+        version: nextVersion,
       })
       .where(eq(schema.products.id, id));
 

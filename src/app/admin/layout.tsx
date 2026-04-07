@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import "./admin.css";
 import Link from "next/link";
 import { Package, ShoppingCart, LayoutDashboard, ArrowLeft } from "lucide-react";
@@ -8,7 +9,7 @@ const navLinks = [
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex gap-8">
       {/* Sidebar */}

@@ -3,7 +3,9 @@ import { eq } from "drizzle-orm";
 import { schema } from "@/db";
 import { notFound } from "next/navigation";
 import { updateOrderStatus } from "@/actions/orders";
-import { getValidNextStates, isValidTransition } from "@/types/order";
+import { getValidNextStates, type ShippingAddress } from "@/types/order";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminOrderDetailPage({
   params,
@@ -20,6 +22,7 @@ export default async function AdminOrderDetailPage({
   if (!order) notFound();
 
   const validNextStates = getValidNextStates(order.status);
+  const shippingAddress = order.shippingAddress as ShippingAddress;
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -55,14 +58,14 @@ export default async function AdminOrderDetailPage({
 
       {/* Shipping address */}
       <div className="card space-y-3">
-        <h2 className="text-lg font-semibold text-foreground">Shipping Address</h2>
-        <pre className="text-sm text-muted whitespace-pre-wrap">
-          {[
-            order.shippingAddress?.name,
-            order.shippingAddress?.line1,
-            order.shippingAddress?.line2,
-            [order.shippingAddress?.city, order.shippingAddress?.state, order.shippingAddress?.postalCode].filter(Boolean).join(" "),
-            order.shippingAddress?.country,
+          <h2 className="text-lg font-semibold text-foreground">Shipping Address</h2>
+          <pre className="text-sm text-muted whitespace-pre-wrap">
+            {[
+            shippingAddress.name,
+            shippingAddress.line1,
+            shippingAddress.line2,
+            [shippingAddress.city, shippingAddress.state, shippingAddress.postalCode].filter(Boolean).join(" "),
+            shippingAddress.country,
           ].filter(Boolean).join("\n")}
         </pre>
       </div>

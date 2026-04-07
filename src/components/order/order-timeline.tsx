@@ -1,4 +1,4 @@
-import { OrderTimelineEvent } from "@/types/order";
+import { OrderStatus, OrderTimelineEvent } from "@/types/order";
 import { CheckCircle, Circle, Package, Truck, MapPin, XCircle } from "lucide-react";
 
 const STATUS_ICONS: Record<string, typeof CheckCircle> = {
@@ -19,21 +19,24 @@ const STATUS_LABELS: Record<string, string> = {
 
 interface OrderTimelineProps {
   events: OrderTimelineEvent[];
-  currentStatus: string;
+  currentStatus: OrderStatus;
 }
 
 export function OrderTimeline({ events, currentStatus }: OrderTimelineProps) {
-  const orderedStatuses = ["pending", "processing", "shipped", "delivered"];
-  const currentIndex = currentStatus === "cancelled" ? -1 : orderedStatuses.indexOf(currentStatus as any);
+  const orderedStatuses: Exclude<OrderStatus, "cancelled">[] = ["pending", "processing", "shipped", "delivered"];
+  const timelineStatuses: OrderStatus[] =
+    currentStatus === "cancelled"
+      ? ["cancelled"]
+      : orderedStatuses.slice(0, orderedStatuses.indexOf(currentStatus) + 1);
 
   return (
     <ol className="space-y-4">
-      {(currentStatus === "cancelled" ? [{ status: "cancelled", timestamp: new Date(), description: "Cancelled" }] : orderedStatuses.filter((_, i) => i <= currentIndex)).map(
-        (status: string) => {
+      {timelineStatuses.map((status) => {
           const event = events.find((e) => e.status === status);
           const Icon = STATUS_ICONS[status] || Circle;
           const isActive = status === currentStatus;
-          const isPast = currentIndex > orderedStatuses.indexOf(status as any);
+          const isPast =
+            currentStatus !== "cancelled" && orderedStatuses.indexOf(currentStatus) > orderedStatuses.indexOf(status as Exclude<OrderStatus, "cancelled">);
 
           return (
             <li key={status} className="flex items-start gap-3">
@@ -51,8 +54,7 @@ export function OrderTimeline({ events, currentStatus }: OrderTimelineProps) {
               </div>
             </li>
           );
-        }
-      )}
+        })}
     </ol>
   );
 }

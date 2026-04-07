@@ -1,11 +1,7 @@
 import Link from "next/link";
 import { CheckCircle, ArrowRight } from "lucide-react";
 
-export default function OrderConfirmationPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ session_id?: string }>;
-}) {
+export default function OrderConfirmationPage() {
   return (
     <div className="mx-auto max-w-2xl text-center space-y-6 py-8">
       <div className="flex justify-center">

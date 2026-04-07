@@ -1,9 +1,12 @@
 import { db } from "@/db";
-import { eq, desc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { schema } from "@/db";
 import Link from "next/link";
 import { Plus, Pencil, EyeOff } from "lucide-react";
 import { archiveProduct } from "@/actions/products";
+import type { ProductStatus } from "@/types/product";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminProductsPage() {
   const d = db();
@@ -12,12 +15,12 @@ export default async function AdminProductsPage() {
     with: { images: { orderBy: [schema.productImages.sortOrder] } },
   });
 
-  const statusBadge = (status: string) => {
-    const cls: Record<string, string> = {
+  const statusBadge = (status: ProductStatus) => {
+    const cls = {
       active: "badge-active",
       sold_out: "badge-sold",
       archived: "badge-archived",
-    }[status] || "badge";
+    }[status];
     return <span className={cls}>{status}</span>;
   };
 
