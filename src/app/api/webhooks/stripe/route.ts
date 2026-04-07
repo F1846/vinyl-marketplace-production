@@ -3,9 +3,8 @@ import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { db } from "@/db";
 import { schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { sendOrderConfirmation } from "@/lib/email";
-import { sql } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -76,7 +75,7 @@ export async function POST(req: NextRequest) {
     const products = await d
       .select()
       .from(schema.products)
-      .where(schema.products.id.inArray(productIds));
+      .where(inArray(schema.products.id, productIds));
     const productMap = new Map(products.map((p) => [p.id, p]));
 
     const subtotalCents = items.reduce((sum, item) => {
@@ -119,9 +118,22 @@ export async function POST(req: NextRequest) {
 
         // Reserve stock atomically using the try_reserve_stock function
         for (const item of items) {
-          await tx.execute(
-            sql`UPDATE ${schema.products} SET stock_quantity = stock_quantity - ${item.qty} WHERE id = ${item.id} AND stock_quantity >= ${item.qty}`
-          );
+          const reserved = await tx
+            .update(schema.products)
+            .set({
+              stockQuantity: sql`${schema.products.stockQuantity} - ${item.qty}`,
+            })
+            .where(
+              and(
+                eq(schema.products.id, item.id),
+                gte(schema.products.stockQuantity, item.qty)
+              )
+            )
+            .returning({ id: schema.products.id });
+
+          if (reserved.length === 0) {
+            throw new Error(`Insufficient stock while finalizing order for product ${item.id}`);
+          }
         }
 
         return newOrder;

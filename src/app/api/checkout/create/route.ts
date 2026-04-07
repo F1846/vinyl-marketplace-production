@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { db } from "@/db";
-import { eq, and } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { schema } from "@/db";
 import { z } from "zod";
 
 const checkoutSchema = z.object({
-  items: z.array(
-    z.object({
-      id: z.string(),
-      qty: z.number().int().min(1).max(10),
-      price: z.number().int().min(0),
-    })
-  ),
+  items: z
+    .array(
+      z.object({
+        id: z.string(),
+        qty: z.number().int().min(1).max(10),
+        price: z.number().int().min(0),
+      })
+    )
+    .min(1),
 });
 
 export async function POST(req: NextRequest) {
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
   const products = await d
     .select()
     .from(schema.products)
-    .where(and(eq(schema.products.status, "active"), schema.products.id.inArray(productIds)));
+    .where(and(eq(schema.products.status, "active"), inArray(schema.products.id, productIds)));
 
   const productMap = new Map(products.map((p) => [p.id, p]));
   const lineItems: { price_data: Record<string, unknown>; quantity: number }[] = [];

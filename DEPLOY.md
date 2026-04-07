@@ -87,7 +87,13 @@ The workflow:
 
 ## Step 7: Add Admin Password
 
-Set `ADMIN_PASSWORD` in Vercel dashboard to a strong password.
+Generate a bcrypt hash locally:
+
+```bash
+npm run admin:hash-password -- "your-strong-password"
+```
+
+Set `ADMIN_PASSWORD` and `ADMIN_PASSWORD_HASH` in the Vercel dashboard to the same password pair.
 Navigate to `/admin/login` to access the admin panel.
 
 ## Local Development

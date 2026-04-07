@@ -3,8 +3,7 @@
 import { db } from "@/db";
 import { schema } from "@/db";
 import { eq } from "drizzle-orm";
-import { revalidatePath, revalidateTag } from "next/cache";
-import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 // ─── Add Product (Server Action from FormData) ───
 
@@ -72,8 +71,11 @@ export async function addProductFormAction(
     revalidatePath("/catalog");
     revalidatePath("/admin/products");
     return { error: null, success: true };
-  } catch (err: any) {
-    return { error: err?.message ?? "Failed to create product", success: false };
+  } catch (err: unknown) {
+    return {
+      error: err instanceof Error ? err.message : "Failed to create product",
+      success: false,
+    };
   }
 }
 

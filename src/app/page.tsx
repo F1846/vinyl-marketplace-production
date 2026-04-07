@@ -4,6 +4,8 @@ import { db, schema } from "@/db";
 import { desc, eq } from "drizzle-orm";
 import { ProductCard } from "@/components/catalog/product-card";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const d = db();
   const recentProducts = await d.query.products.findMany({

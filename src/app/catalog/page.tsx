@@ -1,9 +1,11 @@
 import { db } from "@/db";
-import { eq, desc, and, ilike } from "drizzle-orm";
+import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { schema } from "@/db";
 import Link from "next/link";
 import { Filter, Search as SearchIcon } from "lucide-react";
 import { ProductCard } from "@/components/catalog/product-card";
+
+export const dynamic = "force-dynamic";
 
 export default async function CatalogPage({
   searchParams,
@@ -22,7 +24,16 @@ export default async function CatalogPage({
   // Build filters
   const whereConditions = [eq(schema.products.status, "active")];
   if (format) whereConditions.push(eq(schema.products.format, format));
-  if (q) whereConditions.push(ilike(schema.products.artist, `%${q}%`));
+  if (genre) whereConditions.push(eq(schema.products.genre, genre));
+  if (q) {
+    whereConditions.push(
+      or(
+        ilike(schema.products.artist, `%${q}%`),
+        ilike(schema.products.title, `%${q}%`),
+        ilike(schema.products.pressingLabel, `%${q}%`)
+      )!
+    );
+  }
 
   const products = await d.query.products.findMany({
     where: and(...whereConditions),
