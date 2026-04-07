@@ -1,9 +1,12 @@
 // Seed data: 10 electronic music releases
 // Run with: npx tsx db/seed.ts (requires DATABASE_URL set)
 
-import "dotenv/config";
+import dotenv from "dotenv";
 import { db } from "./index.js";
 import { products, productImages } from "./schema";
+
+dotenv.config({ path: ".env.local" });
+dotenv.config();
 
 const seedProducts = [
   {

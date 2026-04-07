@@ -19,6 +19,18 @@ const checkoutSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  if (!process.env.DATABASE_URL || !process.env.STRIPE_SECRET_KEY) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "CHECKOUT_UNAVAILABLE",
+          message: "Checkout is not configured yet.",
+        },
+      },
+      { status: 503 }
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();

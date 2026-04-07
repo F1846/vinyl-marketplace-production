@@ -7,6 +7,14 @@ import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { sendOrderConfirmation } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
+  if (
+    !process.env.DATABASE_URL ||
+    !process.env.STRIPE_SECRET_KEY ||
+    !process.env.STRIPE_WEBHOOK_SECRET
+  ) {
+    return NextResponse.json({ error: "Stripe webhook is not configured" }, { status: 503 });
+  }
+
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");
 
