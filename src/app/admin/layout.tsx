@@ -1,3 +1,4 @@
+import React from "react";
 import "./admin.css";
 import Link from "next/link";
 import { Package, ShoppingCart, LayoutDashboard, ArrowLeft } from "lucide-react";
