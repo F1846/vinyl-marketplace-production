@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { desc } from "drizzle-orm";
 import { schema } from "@/db";
 import Link from "next/link";
+import { formatEuroFromCents } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export default async function AdminOrdersPage() {
               <tr key={order.id} className="border-b border-border last:border-0 hover:bg-surface-hover">
                 <td className="px-4 py-3 font-mono text-accent">{order.orderNumber}</td>
                 <td className="px-4 py-3 text-foreground">{order.customerEmail}</td>
-                <td className="px-4 py-3 text-foreground">${(order.totalCents / 100).toFixed(2)}</td>
+                <td className="px-4 py-3 text-foreground">{formatEuroFromCents(order.totalCents)}</td>
                 <td className={`px-4 py-3 font-medium capitalize ${statusColors[order.status] ?? "text-foreground"}`}>
                   {order.status}
                 </td>

@@ -417,29 +417,27 @@ async function main() {
       version: sql`${products.version} + 1`,
     };
 
-    await d.transaction(async (tx) => {
-      const [product] = await tx
-        .insert(products)
-        .values(insertValues)
-        .onConflictDoUpdate({
-          target: products.discogsListingId,
-          set: updateValues,
-        })
-        .returning({ id: products.id });
+    const [product] = await d
+      .insert(products)
+      .values(insertValues)
+      .onConflictDoUpdate({
+        target: products.discogsListingId,
+        set: updateValues,
+      })
+      .returning({ id: products.id });
 
-      await tx.delete(productImages).where(eq(productImages.productId, product.id));
+    await d.delete(productImages).where(eq(productImages.productId, product.id));
 
-      if (imageUrls.length > 0) {
-        await tx.insert(productImages).values(
-          imageUrls.map((url, sortOrder) => ({
-            id: crypto.randomUUID(),
-            productId: product.id,
-            url,
-            sortOrder,
-          }))
-        );
-      }
-    });
+    if (imageUrls.length > 0) {
+      await d.insert(productImages).values(
+        imageUrls.map((url, sortOrder) => ({
+          id: crypto.randomUUID(),
+          productId: product.id,
+          url,
+          sortOrder,
+        }))
+      );
+    }
 
     importedListingIds.push(listingId);
 

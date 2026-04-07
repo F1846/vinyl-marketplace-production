@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 import "./admin.css";
 import Link from "next/link";
-import { Package, ShoppingCart, LayoutDashboard, ArrowLeft } from "lucide-react";
+import { Package, ShoppingCart, LayoutDashboard, ArrowLeft, Truck } from "lucide-react";
 
 const navLinks = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+  { href: "/admin/shipping", label: "Shipping", icon: Truck },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

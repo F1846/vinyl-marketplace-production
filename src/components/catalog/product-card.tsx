@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ProductWithImages } from "@/types/product";
 import Image from "next/image";
+import { formatEuroFromCents } from "@/lib/money";
 
 function formatBadge(format: string) {
   const classes: Record<string, string> = {
@@ -9,10 +10,6 @@ function formatBadge(format: string) {
     cd: "badge-cd",
   };
   return <span className={classes[format] || "badge"}>{format}</span>;
-}
-
-function formatPrice(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
 }
 
 interface ProductCardProps {
@@ -47,7 +44,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <p className="text-sm text-muted">{product.artist}</p>
         <p className="text-sm font-medium text-foreground">{product.title}</p>
         <div className="mt-2 flex items-center justify-between">
-          <span className="text-lg font-bold text-accent">{formatPrice(product.priceCents)}</span>
+          <span className="text-lg font-bold text-accent">{formatEuroFromCents(product.priceCents)}</span>
           {product.conditionMedia && (
             <span className="text-xs text-muted border border-border px-2 py-0.5 rounded">
               {product.conditionMedia}

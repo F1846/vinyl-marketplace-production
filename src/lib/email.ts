@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { OrderWithItems, type ShippingAddress } from "@/types/order";
+import { formatEuroFromCents } from "@/lib/money";
 
 let _resend: Resend | null = null;
 
@@ -30,13 +31,13 @@ export async function sendOrderConfirmation(order: OrderWithItems) {
   const lineItems = order.items
     .map(
       (item) =>
-        `${item.product.artist} - ${item.product.title} (${item.product.format}) x ${item.quantity} = $${(item.priceAtPurchaseCents / 100).toFixed(2)}`
+        `${item.product.artist} - ${item.product.title} (${item.product.format}) x ${item.quantity} = ${formatEuroFromCents(item.priceAtPurchaseCents * item.quantity)}`
     )
     .join("\n");
 
-  const total = (order.totalCents / 100).toFixed(2);
-  const shipping = (order.shippingCents / 100).toFixed(2);
-  const subtotal = (order.subtotalCents / 100).toFixed(2);
+  const total = formatEuroFromCents(order.totalCents);
+  const shipping = formatEuroFromCents(order.shippingCents);
+  const subtotal = formatEuroFromCents(order.subtotalCents);
 
   const html = buildEmailHtml({
     orderNumber: order.orderNumber,
@@ -103,7 +104,7 @@ a{color:#d4a843}</style>
   <p>Thanks, ${customerName}!</p>
   <h2>Order ${orderNumber}</h2>
   <div class="line-item"><pre style="white-space:pre-wrap;font-size:14px">${lineItems}</pre></div>
-  <div class="totals">Subtotal: $${subtotal}<br>Shipping: $${shipping}<br><strong>Total: $${total}</strong></div>
+  <div class="totals">Subtotal: ${subtotal}<br>Shipping: ${shipping}<br><strong>Total: ${total}</strong></div>
   <h2>Shipping To</h2>
   <pre style="white-space:pre-wrap;font-size:14px">${address}</pre>
   <div class="footer">Expected delivery: 5-7 business days. Track your order: <a href="<NEXT_PUBLIC_SITE_URL>/track-order"><NEXT_PUBLIC_SITE_URL>/track-order</a></div>

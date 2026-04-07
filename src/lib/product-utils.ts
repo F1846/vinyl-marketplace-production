@@ -1,5 +1,7 @@
+import { formatEuroFromCents } from "@/lib/money";
+
 export function formatPrice(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
+  return formatEuroFromCents(cents);
 }
 
 export function formatCondition(grade: string | null): string {

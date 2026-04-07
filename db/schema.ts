@@ -10,6 +10,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
+type ShippingRateFormat = "all" | "vinyl" | "cassette" | "cd";
+
 // ──────────────────────────────────────────────
 // Enums
 // ──────────────────────────────────────────────
@@ -134,3 +136,18 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
     references: [products.id],
   }),
 }));
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Shipping Rates
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+export const shippingRates = pgTable("shipping_rates", {
+  id: uuid("id").primaryKey(),
+  countryCode: varchar("country_code", { length: 8 }).notNull(),
+  formatScope: varchar("format_scope", { length: 16 }).$type<ShippingRateFormat>().notNull().default("all"),
+  minQuantity: integer("min_quantity").notNull().default(1),
+  maxQuantity: integer("max_quantity"),
+  rateCents: integer("rate_cents").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});

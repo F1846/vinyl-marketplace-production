@@ -1,22 +1,10 @@
 import Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
-import { db } from "@/db";
 import { and, eq, inArray } from "drizzle-orm";
-import { schema } from "@/db";
-import { z } from "zod";
-
-const checkoutSchema = z.object({
-  items: z
-    .array(
-      z.object({
-        id: z.string(),
-        qty: z.number().int().min(1).max(10),
-        price: z.number().int().min(0),
-      })
-    )
-    .min(1),
-});
+import { db, schema } from "@/db";
+import { calculateShippingQuote, getCountryLabel } from "@/lib/shipping";
+import { stripe } from "@/lib/stripe";
+import { checkoutSchema } from "@/validations/checkout";
 
 function getSiteUrl(): string {
   const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -50,75 +38,122 @@ export async function POST(req: NextRequest) {
 
   const parsed = checkoutSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: { code: "VALIDATION_FAILED", details: parsed.error.flatten() } }, { status: 400 });
+    return NextResponse.json(
+      { error: { code: "VALIDATION_FAILED", details: parsed.error.flatten() } },
+      { status: 400 }
+    );
   }
 
-  const { items } = parsed.data;
+  const { items, shippingCountry } = parsed.data;
   const d = db();
-
-  // Validate stock for each item
-  const productIds = items.map((i) => i.id);
+  const productIds = items.map((item) => item.id);
   const products = await d
     .select()
     .from(schema.products)
     .where(and(eq(schema.products.status, "active"), inArray(schema.products.id, productIds)));
 
-  const productMap = new Map(products.map((p) => [p.id, p]));
+  const productMap = new Map(products.map((product) => [product.id, product]));
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+  const shippingItems: Array<{ format: "vinyl" | "cassette" | "cd"; quantity: number }> = [];
 
   for (const item of items) {
     const product = productMap.get(item.id);
     if (!product) {
-      return NextResponse.json({ error: { code: "PRODUCT_NOT_FOUND", productId: item.id } }, { status: 404 });
+      return NextResponse.json(
+        { error: { code: "PRODUCT_NOT_FOUND", productId: item.id } },
+        { status: 404 }
+      );
     }
+
     if (product.stockQuantity < item.qty) {
-      return NextResponse.json({
-        error: { code: "INSUFFICIENT_STOCK", productId: item.id, available: product.stockQuantity },
-      }, { status: 409 });
+      return NextResponse.json(
+        {
+          error: {
+            code: "INSUFFICIENT_STOCK",
+            productId: item.id,
+            available: product.stockQuantity,
+          },
+        },
+        { status: 409 }
+      );
     }
+
     if (product.priceCents !== item.price) {
-      return NextResponse.json({
-        error: { code: "PRICE_CHANGED", productId: item.id, current: product.priceCents },
-      }, { status: 409 });
+      return NextResponse.json(
+        {
+          error: {
+            code: "PRICE_CHANGED",
+            productId: item.id,
+            current: product.priceCents,
+          },
+        },
+        { status: 409 }
+      );
     }
 
     lineItems.push({
       quantity: item.qty,
       price_data: {
-        currency: "usd",
+        currency: "eur",
         product_data: {
           name: `${product.artist} - ${product.title}`,
           description: product.format + (product.genre ? ` / ${product.genre}` : ""),
-          images: [], // Will need to fetch image URLs
+          images: [],
         },
         unit_amount: product.priceCents,
       },
     });
+
+    shippingItems.push({
+      format: product.format,
+      quantity: item.qty,
+    });
   }
 
-  // Add shipping line
-  const shippingCents = parseInt(process.env.SHIPPING_RATE_CENTS ?? "899", 10);
+  let shippingQuote;
+  try {
+    shippingQuote = await calculateShippingQuote(shippingCountry, shippingItems);
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "SHIPPING_UNAVAILABLE",
+          message:
+            error instanceof Error
+              ? error.message
+              : "No shipping rate is configured for this cart.",
+        },
+      },
+      { status: 409 }
+    );
+  }
+
   lineItems.push({
     quantity: 1,
     price_data: {
-      currency: "usd",
-      product_data: { name: "Shipping" },
-      unit_amount: shippingCents,
+      currency: "eur",
+      product_data: {
+        name: `Shipping to ${getCountryLabel(shippingCountry)}`,
+      },
+      unit_amount: shippingQuote.totalCents,
     },
   });
 
   const siteUrl = getSiteUrl();
-
   const session = await stripe().checkout.sessions.create({
     mode: "payment",
     line_items: lineItems,
     success_url: `${siteUrl}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${siteUrl}/cart`,
     shipping_address_collection: {
-      allowed_countries: ["US"],
+      allowed_countries: [
+        shippingCountry as Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry,
+      ],
     },
     metadata: {
       items: JSON.stringify(items),
+      shippingCountry,
+      shippingCents: String(shippingQuote.totalCents),
     },
   });
 

@@ -4,6 +4,7 @@ import { schema } from "@/db";
 import { notFound } from "next/navigation";
 import { updateOrderStatus } from "@/actions/orders";
 import { getValidNextStates, type ShippingAddress } from "@/types/order";
+import { formatEuroFromCents } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -85,13 +86,13 @@ export default async function AdminOrderDetailPage({
       {/* Totals */}
       <div className="card space-y-2">
         <div className="flex justify-between text-sm text-muted">
-          <span>Subtotal</span><span>${(order.subtotalCents / 100).toFixed(2)}</span>
+          <span>Subtotal</span><span>{formatEuroFromCents(order.subtotalCents)}</span>
         </div>
         <div className="flex justify-between text-sm text-muted">
-          <span>Shipping</span><span>${(order.shippingCents / 100).toFixed(2)}</span>
+          <span>Shipping</span><span>{formatEuroFromCents(order.shippingCents)}</span>
         </div>
         <div className="border-t border-border pt-2 flex justify-between text-lg font-bold text-foreground">
-          <span>Total</span><span>${(order.totalCents / 100).toFixed(2)}</span>
+          <span>Total</span><span>{formatEuroFromCents(order.totalCents)}</span>
         </div>
       </div>
     </div>

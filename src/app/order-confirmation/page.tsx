@@ -1,7 +1,20 @@
+"use client";
+
+import { useEffect } from "react";
 import Link from "next/link";
 import { CheckCircle, ArrowRight } from "lucide-react";
+import { useCart } from "@/hooks/use-cart";
 
 export default function OrderConfirmationPage() {
+  const { clearCart } = useCart();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("session_id")) {
+      clearCart();
+    }
+  }, [clearCart]);
+
   return (
     <div className="mx-auto max-w-2xl text-center space-y-6 py-8">
       <div className="flex justify-center">

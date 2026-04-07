@@ -101,7 +101,7 @@ export default async function EditProductPage({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="priceCents" className="label">Price (cents)</label>
+            <label htmlFor="priceCents" className="label">Price (euro cents)</label>
             <input id="priceCents" name="priceCents" type="number" className="input" defaultValue={product.priceCents} required />
           </div>
           <div>

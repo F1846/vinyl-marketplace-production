@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import { Package, Truck, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { formatEuroFromCents } from "@/lib/money";
 
 interface OrderData {
   orderNumber: string;
@@ -137,7 +138,7 @@ function OrderResult({ order }: { order: OrderData }) {
               <span className="text-foreground">
                 {item.title} ({item.format}) x{item.quantity}
               </span>
-              <span className="text-muted">${(item.priceAtPurchaseCents / 100).toFixed(2)}</span>
+              <span className="text-muted">{formatEuroFromCents(item.priceAtPurchaseCents * item.quantity)}</span>
             </div>
           ))}
         </div>
@@ -147,7 +148,7 @@ function OrderResult({ order }: { order: OrderData }) {
       <div className="border-t border-border pt-3">
         <div className="flex justify-between text-lg font-bold text-foreground">
           <span>Total Paid</span>
-          <span>${(order.totalCents / 100).toFixed(2)}</span>
+          <span>{formatEuroFromCents(order.totalCents)}</span>
         </div>
         <p className="text-xs text-muted mt-1">
           Ordered: {new Date(order.createdAt).toLocaleDateString()}

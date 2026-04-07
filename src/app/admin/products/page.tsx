@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Plus, Pencil, EyeOff } from "lucide-react";
 import { archiveProduct } from "@/actions/products";
 import type { ProductStatus } from "@/types/product";
+import { formatEuroFromCents } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,7 @@ export default async function AdminProductsPage() {
               <tr key={product.id} className="border-b border-border last:border-0 hover:bg-surface-hover">
                 <td className="px-4 py-3 text-foreground">{product.artist} &ndash; {product.title}</td>
                 <td className="px-4 py-3"><span className={`badge badge-${product.format}`}>{product.format}</span></td>
-                <td className="px-4 py-3 text-foreground">${(product.priceCents / 100).toFixed(2)}</td>
+                <td className="px-4 py-3 text-foreground">{formatEuroFromCents(product.priceCents)}</td>
                 <td className="px-4 py-3 text-foreground">{product.stockQuantity}</td>
                 <td className="px-4 py-3">{statusBadge(product.status)}</td>
                 <td className="px-4 py-3">

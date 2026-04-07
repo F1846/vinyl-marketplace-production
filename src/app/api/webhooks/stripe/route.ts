@@ -1,10 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { stripe } from "@/lib/stripe";
-import { db } from "@/db";
-import { schema } from "@/db";
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { db, schema } from "@/db";
 import { sendOrderConfirmation } from "@/lib/email";
+import { generateOrderNumber } from "@/lib/order-number";
+import { calculateShippingQuote } from "@/lib/shipping";
+import { stripe } from "@/lib/stripe";
+
+type CheckoutItem = {
+  id: string;
+  qty: number;
+  price: number;
+};
+
+async function releaseReservedStock(items: Array<{ productId: string; quantity: number }>) {
+  if (items.length === 0) return;
+
+  const d = db();
+  for (const item of items) {
+    await d
+      .update(schema.products)
+      .set({
+        stockQuantity: sql`${schema.products.stockQuantity} + ${item.quantity}`,
+        version: sql`${schema.products.version} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.products.id, item.productId));
+  }
+}
 
 export async function POST(req: NextRequest) {
   if (
@@ -25,7 +48,11 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
 
   try {
-    event = stripe().webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET ?? "");
+    event = stripe().webhooks.constructEvent(
+      body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET ?? ""
+    );
   } catch (err) {
     console.error("Webhook signature verification failed:", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
@@ -33,22 +60,18 @@ export async function POST(req: NextRequest) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-
     const d = db();
 
-    // ─── Idempotency: check if we already processed this session ───
     const existingOrder = await d.query.orders.findFirst({
       where: eq(schema.orders.stripeSessionId, session.id ?? ""),
     });
 
     if (existingOrder) {
-      // Already processed — return 200 to avoid Stripe retry
       return NextResponse.json({ received: true });
     }
 
-    // ─── Parse metadata ───
     const metadata = session.metadata;
-    let items: Array<{ id: string; qty: number; price: number }>;
+    let items: CheckoutItem[];
     try {
       items = metadata?.items ? JSON.parse(metadata.items) : [];
     } catch {
@@ -56,14 +79,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid metadata" }, { status: 400 });
     }
 
-    // ─── Generate order number ───
-    const orderCount = await d.select({ count: sql<number>`count(*)` }).from(schema.orders);
-    const sequence = (orderCount[0]?.count ?? 0) + 1;
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
-    const orderNumber = `VM-${dateStr}-${String(sequence).padStart(4, "0")}`;
+    if (items.length === 0) {
+      return NextResponse.json({ error: "No checkout items found" }, { status: 400 });
+    }
 
-    // ─── Shipping address ───
+    const orderCount = await d
+      .select({ count: sql<number>`count(*)` })
+      .from(schema.orders);
+    const orderNumber = generateOrderNumber((orderCount[0]?.count ?? 0) + 1);
+
     const shipping = session.shipping_details;
     const shippingAddress = {
       name: shipping?.name ?? "",
@@ -76,27 +100,74 @@ export async function POST(req: NextRequest) {
       phone: null,
     };
 
-    // ─── Calculate totals ───
-    const shippingCents = parseInt(process.env.SHIPPING_RATE_CENTS ?? "899", 10);
-    // Fetch current prices to be safe
-    const productIds = items.map((i) => i.id);
+    const productIds = items.map((item) => item.id);
     const products = await d
       .select()
       .from(schema.products)
       .where(inArray(schema.products.id, productIds));
-    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    const productMap = new Map(products.map((product) => [product.id, product]));
+    for (const item of items) {
+      if (!productMap.has(item.id)) {
+        return NextResponse.json({ error: "Product no longer exists" }, { status: 400 });
+      }
+    }
 
     const subtotalCents = items.reduce((sum, item) => {
-      const prod = productMap.get(item.id);
-      return sum + (prod ? prod.priceCents * item.qty : 0);
+      const product = productMap.get(item.id);
+      return sum + (product ? product.priceCents * item.qty : 0);
     }, 0);
 
-    const totalCents = subtotalCents + shippingCents;
+    const shippingCountry = shippingAddress.country || metadata?.shippingCountry || "";
 
-    // ─── Insert order + order items in transaction ───
+    let shippingQuote;
     try {
-      const order = await d.transaction(async (tx) => {
-        const [newOrder] = await tx.insert(schema.orders).values({
+      shippingQuote = await calculateShippingQuote(
+        shippingCountry,
+        items.map((item) => ({
+          format: productMap.get(item.id)!.format,
+          quantity: item.qty,
+        }))
+      );
+    } catch (shippingError) {
+      console.error("Failed to calculate shipping for webhook:", shippingError);
+      return NextResponse.json({ error: "Shipping calculation failed" }, { status: 500 });
+    }
+
+    const shippingCents = shippingQuote.totalCents;
+    const totalCents = subtotalCents + shippingCents;
+    const reservedItems: Array<{ productId: string; quantity: number }> = [];
+
+    try {
+      for (const item of items) {
+        const reserved = await d
+          .update(schema.products)
+          .set({
+            stockQuantity: sql`${schema.products.stockQuantity} - ${item.qty}`,
+            version: sql`${schema.products.version} + 1`,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(schema.products.id, item.id),
+              gte(schema.products.stockQuantity, item.qty)
+            )
+          )
+          .returning({ id: schema.products.id });
+
+        if (reserved.length === 0) {
+          throw new Error(`Insufficient stock while finalizing order for product ${item.id}`);
+        }
+
+        reservedItems.push({
+          productId: item.id,
+          quantity: item.qty,
+        });
+      }
+
+      const [order] = await d
+        .insert(schema.orders)
+        .values({
           id: crypto.randomUUID(),
           orderNumber,
           customerEmail: session.customer_details?.email ?? "",
@@ -109,45 +180,19 @@ export async function POST(req: NextRequest) {
           status: "processing",
           stripeSessionId: session.id,
           stripePaymentIntentId: session.payment_intent as string | null,
-        }).returning();
+        })
+        .returning();
 
-        // Insert order items
-        for (const item of items) {
-          const prod = productMap.get(item.id);
-          if (!prod) continue;
-          await tx.insert(schema.orderItems).values({
-            id: crypto.randomUUID(),
-            orderId: newOrder.id,
-            productId: item.id,
-            quantity: item.qty,
-            priceAtPurchaseCents: prod.priceCents,
-          });
-        }
+      await d.insert(schema.orderItems).values(
+        items.map((item) => ({
+          id: crypto.randomUUID(),
+          orderId: order.id,
+          productId: item.id,
+          quantity: item.qty,
+          priceAtPurchaseCents: productMap.get(item.id)!.priceCents,
+        }))
+      );
 
-        // Reserve stock atomically using the try_reserve_stock function
-        for (const item of items) {
-          const reserved = await tx
-            .update(schema.products)
-            .set({
-              stockQuantity: sql`${schema.products.stockQuantity} - ${item.qty}`,
-            })
-            .where(
-              and(
-                eq(schema.products.id, item.id),
-                gte(schema.products.stockQuantity, item.qty)
-              )
-            )
-            .returning({ id: schema.products.id });
-
-          if (reserved.length === 0) {
-            throw new Error(`Insufficient stock while finalizing order for product ${item.id}`);
-          }
-        }
-
-        return newOrder;
-      });
-
-      // ─── Send confirmation email ───
       const orderWithItems = {
         id: order.id,
         orderNumber: order.orderNumber,
@@ -166,18 +211,18 @@ export async function POST(req: NextRequest) {
         createdAt: order.createdAt ?? new Date(),
         updatedAt: new Date(),
         items: items.map((item) => {
-          const prod = productMap.get(item.id);
+          const product = productMap.get(item.id);
           return {
             id: crypto.randomUUID(),
             orderId: order.id,
             productId: item.id,
             quantity: item.qty,
-            priceAtPurchaseCents: prod?.priceCents ?? 0,
+            priceAtPurchaseCents: product?.priceCents ?? 0,
             createdAt: new Date(),
             product: {
-              artist: prod?.artist ?? "Unknown",
-              title: prod?.title ?? "Unknown",
-              format: prod?.format ?? "vinyl",
+              artist: product?.artist ?? "Unknown",
+              title: product?.title ?? "Unknown",
+              format: product?.format ?? "vinyl",
               imageUrl: null,
             },
           };
@@ -188,9 +233,9 @@ export async function POST(req: NextRequest) {
         await sendOrderConfirmation(orderWithItems);
       } catch (emailErr) {
         console.error("Failed to send order confirmation email:", emailErr);
-        // Do not fail the webhook — email can be resent manually
       }
     } catch (dbErr) {
+      await releaseReservedStock(reservedItems);
       console.error("Failed to create order from webhook:", dbErr);
       return NextResponse.json({ error: "Order creation failed" }, { status: 500 });
     }

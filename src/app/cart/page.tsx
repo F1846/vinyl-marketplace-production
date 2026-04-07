@@ -1,19 +1,128 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useCart } from "@/hooks/use-cart";
 import { Loader2, Trash2, ArrowLeft, ArrowRight } from "lucide-react";
+import { useCart } from "@/hooks/use-cart";
+import { formatEuroFromCents } from "@/lib/money";
 
-const SHIPPING_CENTS = 899; // $8.99 flat rate
+type ShippingCountry = {
+  code: string;
+  label: string;
+};
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, totalItems, totalPriceCents, isLoaded, clearCart } = useCart();
+  const { items, removeItem, updateQuantity, totalItems, totalPriceCents, isLoaded } = useCart();
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const total = totalPriceCents + (items.length > 0 ? SHIPPING_CENTS : 0);
+  const [shippingCountries, setShippingCountries] = useState<ShippingCountry[]>([]);
+  const [shippingCountry, setShippingCountry] = useState("");
+  const [shippingCents, setShippingCents] = useState(0);
+  const [shippingLabel, setShippingLabel] = useState("Shipping");
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [shippingError, setShippingError] = useState<string | null>(null);
+  const total = totalPriceCents + (items.length > 0 ? shippingCents : 0);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    let cancelled = false;
+
+    async function loadShippingCountries() {
+      try {
+        const res = await fetch("/api/shipping/countries");
+        const json = await res.json();
+        if (cancelled) return;
+
+        const countries = Array.isArray(json.countries) ? json.countries : [];
+        setShippingCountries(countries);
+
+        if (!countries.length) {
+          setShippingError("Shipping is not configured yet. Please contact the shop.");
+          return;
+        }
+
+        setShippingCountry((current) => current || countries[0].code);
+      } catch {
+        if (!cancelled) {
+          setShippingError("Shipping options are unavailable right now.");
+        }
+      }
+    }
+
+    void loadShippingCountries();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded || items.length === 0 || !shippingCountry) {
+      setShippingCents(0);
+      if (items.length === 0) {
+        setShippingError(null);
+      }
+      return;
+    }
+
+    let cancelled = false;
+    setShippingLoading(true);
+    setShippingError(null);
+
+    async function loadShippingQuote() {
+      try {
+        const res = await fetch("/api/shipping/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shippingCountry,
+            items: items.map((item) => ({
+              id: item.productId,
+              qty: item.quantity,
+              price: item.priceCents,
+            })),
+          }),
+        });
+
+        const json = await res.json();
+        if (cancelled) return;
+
+        if (!res.ok || !json.quote) {
+          setShippingCents(0);
+          setShippingLabel("Shipping");
+          setShippingError(json.error?.message ?? "No shipping option is configured for this cart.");
+          return;
+        }
+
+        setShippingCents(json.quote.totalCents);
+        setShippingLabel(`Shipping to ${json.quote.countryLabel}`);
+      } catch {
+        if (!cancelled) {
+          setShippingCents(0);
+          setShippingLabel("Shipping");
+          setShippingError("Could not calculate shipping right now.");
+        }
+      } finally {
+        if (!cancelled) {
+          setShippingLoading(false);
+        }
+      }
+    }
+
+    void loadShippingQuote();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, items, shippingCountry]);
 
   async function handleCheckout() {
+    if (!shippingCountry) {
+      setError("Choose a shipping country before checkout.");
+      return;
+    }
+
     setCheckingOut(true);
     setError(null);
     try {
@@ -21,12 +130,16 @@ export default function CartPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((i) => ({ id: i.productId, qty: i.quantity, price: i.priceCents })),
+          shippingCountry,
+          items: items.map((item) => ({
+            id: item.productId,
+            qty: item.quantity,
+            price: item.priceCents,
+          })),
         }),
       });
       const json = await res.json();
       if (json.url) {
-        clearCart();
         window.location.href = json.url;
       } else {
         setError(json.error?.message ?? json.error?.code ?? "Checkout failed");
@@ -60,8 +173,7 @@ export default function CartPage() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-3">
-      {/* Cart items */}
-      <div className="lg:col-span-2 space-y-4">
+      <div className="space-y-4 lg:col-span-2">
         <h1 className="text-2xl font-bold text-foreground">
           Your Cart ({totalItems} item{totalItems !== 1 ? "s" : ""})
         </h1>
@@ -69,11 +181,16 @@ export default function CartPage() {
           <div key={item.productId} className="card flex gap-4">
             <div className="h-24 w-24 flex-shrink-0 rounded bg-zinc-800" />
             <div className="flex-1">
-              <Link href={`/products/${item.productId}`} className="text-foreground hover:text-accent">
+              <Link
+                href={`/products/${item.productId}`}
+                className="text-foreground hover:text-accent"
+              >
                 <span className="font-medium">{item.title}</span>
               </Link>
-              {item.format && <span className="ml-2 text-xs text-muted capitalize">({item.format})</span>}
-              <div className="flex items-center justify-between mt-2">
+              {item.format && (
+                <span className="ml-2 text-xs capitalize text-muted">({item.format})</span>
+              )}
+              <div className="mt-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => updateQuantity(item.productId, item.quantity - 1)}
@@ -93,9 +210,13 @@ export default function CartPage() {
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="font-bold text-accent">
-                    ${((item.priceCents * item.quantity) / 100).toFixed(2)}
+                    {formatEuroFromCents(item.priceCents * item.quantity)}
                   </span>
-                  <button onClick={() => removeItem(item.productId)} className="text-muted hover:text-danger transition-colors" title="Remove">
+                  <button
+                    onClick={() => removeItem(item.productId)}
+                    className="text-muted transition-colors hover:text-danger"
+                    title="Remove"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -105,35 +226,67 @@ export default function CartPage() {
         ))}
       </div>
 
-      {/* Order summary */}
       <div className="lg:col-span-1">
         <div className="card space-y-4 lg:sticky lg:top-8">
           <h2 className="text-lg font-bold text-foreground">Order Summary</h2>
+
+          <div className="space-y-2">
+            <label htmlFor="shipping-country" className="label">Shipping country</label>
+            <select
+              id="shipping-country"
+              className="input"
+              value={shippingCountry}
+              onChange={(event) => setShippingCountry(event.target.value)}
+              disabled={shippingCountries.length === 0}
+            >
+              {shippingCountries.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.label} ({country.code})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="space-y-2 text-sm">
             <div className="flex justify-between text-muted">
               <span>Subtotal</span>
-              <span>${(totalPriceCents / 100).toFixed(2)}</span>
+              <span>{formatEuroFromCents(totalPriceCents)}</span>
             </div>
             <div className="flex justify-between text-muted">
-              <span>Shipping (flat rate)</span>
-              <span>${(SHIPPING_CENTS / 100).toFixed(2)}</span>
+              <span>{shippingLabel}</span>
+              <span>{shippingLoading ? "Calculating..." : formatEuroFromCents(shippingCents)}</span>
             </div>
           </div>
+
           <div className="border-t border-border pt-4">
             <div className="flex justify-between text-xl font-bold text-foreground">
               <span>Total</span>
-              <span>${(total / 100).toFixed(2)}</span>
+              <span>{formatEuroFromCents(total)}</span>
             </div>
           </div>
-          <button onClick={handleCheckout} className="btn-primary w-full text-base" disabled={checkingOut}>
+
+          <button
+            onClick={handleCheckout}
+            className="btn-primary w-full text-base"
+            disabled={checkingOut || shippingLoading || !!shippingError || !shippingCountry}
+          >
             {checkingOut ? (
-              <><Loader2 className="h-5 w-5 animate-spin" /> Redirecting to Checkout...</>
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" /> Redirecting to Checkout...
+              </>
             ) : (
-              <>Proceed to Checkout <ArrowRight className="h-5 w-5" /></>
+              <>
+                Proceed to Checkout <ArrowRight className="h-5 w-5" />
+              </>
             )}
           </button>
-          {error && <p className="text-sm text-danger text-center">{error}</p>}
-          <Link href="/catalog" className="btn-secondary w-full text-center">Continue Shopping</Link>
+
+          {shippingError && <p className="text-center text-sm text-danger">{shippingError}</p>}
+          {error && <p className="text-center text-sm text-danger">{error}</p>}
+
+          <Link href="/catalog" className="btn-secondary w-full text-center">
+            Continue Shopping
+          </Link>
         </div>
       </div>
     </div>

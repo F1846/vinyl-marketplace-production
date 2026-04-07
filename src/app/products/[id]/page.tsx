@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { conditionLabel } from "@/types/product";
 import { AddToCart } from "@/components/product/add-to-cart";
+import { formatEuroFromCents } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -79,7 +80,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
         {/* Price */}
         <p className="text-3xl font-bold text-accent">
-          ${(product.priceCents / 100).toFixed(2)}
+          {formatEuroFromCents(product.priceCents)}
         </p>
 
         {/* Pressing info - Discogs-style table */}

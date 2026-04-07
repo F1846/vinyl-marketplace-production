@@ -73,9 +73,9 @@ export default function NewProductPage() {
         {/* Price + Stock */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="priceCents" className="label">Price (cents)</label>
+            <label htmlFor="priceCents" className="label">Price (euro cents)</label>
             <input id="priceCents" name="priceCents" type="number" className="input" placeholder="2500" required />
-            <p className="mt-1 text-xs text-muted">2500 = $25.00</p>
+            <p className="mt-1 text-xs text-muted">2500 = 25,00 €</p>
           </div>
           <div>
             <label htmlFor="stockQuantity" className="label">Stock</label>

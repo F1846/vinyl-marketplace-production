@@ -18,6 +18,7 @@ export function AddToCart({ product }: AddToCartProps) {
       productId: product.id,
       title: `${product.artist} - ${product.title}`,
       priceCents: product.priceCents,
+      format: product.format,
       maxQuantity: product.stockQuantity,
     });
     setAdded(true);

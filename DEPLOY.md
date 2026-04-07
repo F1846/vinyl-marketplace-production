@@ -30,7 +30,6 @@ vercel
 #   STRIPE_SECRET_KEY
 #   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 #   STRIPE_WEBHOOK_SECRET
-#   SHIPPING_RATE_CENTS
 #   ADMIN_PASSWORD
 #   RESEND_API_KEY
 #   EMAIL_FROM
@@ -49,6 +48,8 @@ npm run db:migrate
 # Then seed sample data:
 npm run db:seed
 ```
+
+After the migrations run, review `/admin/shipping` and adjust country, quantity, and format-based shipping rules before taking live orders.
 
 ## Step 4: Configure Stripe Webhook
 

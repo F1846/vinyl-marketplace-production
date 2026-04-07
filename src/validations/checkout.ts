@@ -7,7 +7,8 @@ export const checkoutItemSchema = z.object({
 });
 
 export const checkoutSchema = z.object({
-  items: z.array(checkoutItemSchema),
+  items: z.array(checkoutItemSchema).min(1),
+  shippingCountry: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/),
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;

@@ -42,6 +42,9 @@ export default async function AdminDashboard() {
             <Link href="/admin/products/new" className="btn-primary w-full text-center block text-sm">
               Add Product
             </Link>
+            <Link href="/admin/shipping" className="btn-secondary w-full text-center block text-sm">
+              Manage Shipping
+            </Link>
           </div>
         </div>
       </div>
