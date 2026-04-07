@@ -5,6 +5,8 @@ import { adminLoginAction } from "@/actions/auth";
 import { Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 export default function AdminLoginPage() {
   const router = useRouter();
   const [state, formAction] = useActionState(

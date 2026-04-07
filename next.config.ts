@@ -12,6 +12,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.public.blob.vercel-storage.com",
       },
+      {
+        protocol: "https",
+        hostname: "i.discogs.com",
+      },
+      {
+        protocol: "https",
+        hostname: "img.discogs.com",
+      },
     ],
   },
   output: "standalone",

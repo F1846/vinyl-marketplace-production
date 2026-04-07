@@ -45,6 +45,8 @@ export const products = pgTable("products", {
   pressingLabel: varchar("pressing_label", { length: 255 }),
   pressingYear: integer("pressing_year"),
   pressingCatalogNumber: varchar("pressing_catalog_number", { length: 100 }),
+  discogsListingId: varchar("discogs_listing_id", { length: 32 }).unique(),
+  discogsReleaseId: integer("discogs_release_id"),
   description: text("description").notNull(),
   status: productStatusEnum("status").notNull().default("active"),
   version: integer("version").notNull().default(1),
