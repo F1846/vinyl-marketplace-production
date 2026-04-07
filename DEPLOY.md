@@ -5,11 +5,11 @@
 ```bash
 # On GitHub.com:
 # 1. Go to https://github.com/new
-# 2. Create repo: f1846/vinyl-marketplace (private or public)
+# 2. Create repo: f1846/vinyl-marketplace-production (private or public)
 # 3. Copy the remote URL
 
 # Then run:
-git remote add origin https://github.com/F1846/vinyl-marketplace.git
+git remote add origin https://github.com/F1846/vinyl-marketplace-production.git
 git branch -M main
 git push -u origin main
 ```
