@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: #d4a843;
+    color: #1a1a1a;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-accent text-background hover:bg-accent-hover;
+  }
+
+  .btn-secondary {
+    @apply btn border border-border bg-surface text-foreground hover:bg-surface-hover;
+  }
+
+  .btn-danger {
+    @apply btn bg-danger text-white hover:bg-red-700;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-foreground;
+  }
+
+  .card {
+    @apply rounded-lg border border-border bg-surface p-4;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+
+  .badge-vinyl {
+    @apply badge bg-purple-900/50 text-purple-200;
+  }
+
+  .badge-cassette {
+    @apply badge bg-blue-900/50 text-blue-200;
+  }
+
+  .badge-cd {
+    @apply badge bg-emerald-900/50 text-emerald-200;
+  }
+
+  .badge-active {
+    @apply badge bg-green-900/50 text-green-300;
+  }
+
+  .badge-sold {
+    @apply badge bg-red-900/50 text-red-300;
+  }
+
+  .badge-archived {
+    @apply badge bg-gray-800 text-gray-400;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

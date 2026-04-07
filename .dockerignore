@@ -1,0 +1,12 @@
+node_modules
+.git
+.github
+.next
+.env*
+!.env.example
+*.md
+CLAUDE.md
+coverage
+db/migrations
+scripts
+docs
