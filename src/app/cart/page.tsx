@@ -1,13 +1,42 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/hooks/use-cart";
 import { Loader2, Trash2, ArrowLeft, ArrowRight } from "lucide-react";
 
+const SHIPPING_CENTS = 899; // $8.99 flat rate
+
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, totalItems, totalPriceCents, isLoaded } = useCart();
-  const shippingCents = parseInt(process.env.NEXT_PUBLIC_SHIPPING_CENTS ?? "899", 10);
-  const total = totalPriceCents + (items.length > 0 ? shippingCents : 0);
+  const { items, removeItem, updateQuantity, totalItems, totalPriceCents, isLoaded, clearCart } = useCart();
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const total = totalPriceCents + (items.length > 0 ? SHIPPING_CENTS : 0);
+
+  async function handleCheckout() {
+    setCheckingOut(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/checkout/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: items.map((i) => ({ id: i.productId, qty: i.quantity, price: i.priceCents })),
+        }),
+      });
+      const json = await res.json();
+      if (json.url) {
+        clearCart();
+        window.location.href = json.url;
+      } else {
+        setError(json.error?.message ?? json.error?.code ?? "Checkout failed");
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setCheckingOut(false);
+    }
+  }
 
   if (!isLoaded) {
     return (
@@ -38,8 +67,7 @@ export default function CartPage() {
         </h1>
         {items.map((item) => (
           <div key={item.productId} className="card flex gap-4">
-            {/* Image placeholder */}
-            <div className="h-24 w-24 flex-shrink-0 rounded bg-background" />
+            <div className="h-24 w-24 flex-shrink-0 rounded bg-zinc-800" />
             <div className="flex-1">
               <Link href={`/products/${item.productId}`} className="text-foreground hover:text-accent">
                 <span className="font-medium">{item.title}</span>
@@ -67,11 +95,7 @@ export default function CartPage() {
                   <span className="font-bold text-accent">
                     ${((item.priceCents * item.quantity) / 100).toFixed(2)}
                   </span>
-                  <button
-                    onClick={() => removeItem(item.productId)}
-                    className="text-muted hover:text-danger transition-colors"
-                    title="Remove"
-                  >
+                  <button onClick={() => removeItem(item.productId)} className="text-muted hover:text-danger transition-colors" title="Remove">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -92,7 +116,7 @@ export default function CartPage() {
             </div>
             <div className="flex justify-between text-muted">
               <span>Shipping (flat rate)</span>
-              <span>${(shippingCents / 100).toFixed(2)}</span>
+              <span>${(SHIPPING_CENTS / 100).toFixed(2)}</span>
             </div>
           </div>
           <div className="border-t border-border pt-4">
@@ -101,15 +125,15 @@ export default function CartPage() {
               <span>${(total / 100).toFixed(2)}</span>
             </div>
           </div>
-          <form action="/api/checkout/create" method="POST" className="space-y-2">
-            <input type="hidden" name="cart" value={JSON.stringify(items.map(i => ({ id: i.productId, qty: i.quantity, price: i.priceCents })))} />
-            <button type="submit" className="btn-primary w-full text-base">
-              Proceed to Checkout <ArrowRight className="h-5 w-5" />
-            </button>
-          </form>
-          <Link href="/catalog" className="btn-secondary w-full text-center">
-            Continue Shopping
-          </Link>
+          <button onClick={handleCheckout} className="btn-primary w-full text-base" disabled={checkingOut}>
+            {checkingOut ? (
+              <><Loader2 className="h-5 w-5 animate-spin" /> Redirecting to Checkout...</>
+            ) : (
+              <>Proceed to Checkout <ArrowRight className="h-5 w-5" /></>
+            )}
+          </button>
+          {error && <p className="text-sm text-danger text-center">{error}</p>}
+          <Link href="/catalog" className="btn-secondary w-full text-center">Continue Shopping</Link>
         </div>
       </div>
     </div>
