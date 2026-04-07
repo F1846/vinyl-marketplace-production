@@ -2,7 +2,7 @@
 // Run with: npx tsx db/seed.ts (requires DATABASE_URL set)
 
 import "dotenv/config";
-import { db } from "./index";
+import { db } from "./index.js";
 import { products, productImages } from "./schema";
 
 const seedProducts = [

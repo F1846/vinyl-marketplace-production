@@ -26,7 +26,7 @@ export async function updateOrderStatus(orderId: string, formData: FormData) {
 
   await d
     .update(schema.orders)
-    .set({ status: newStatus })
+    .set({ status: newStatus as "pending" | "processing" | "shipped" | "delivered" | "cancelled" })
     .where(eq(schema.orders.id, orderId));
 
   revalidatePath("/admin/orders");

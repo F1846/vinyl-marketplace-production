@@ -31,21 +31,31 @@ export async function addProductFormAction(
 
   const productId = crypto.randomUUID();
 
+  const artist = String(formData.get("artist"));
+  const title = String(formData.get("title"));
+  const format = formData.get("format") as "vinyl" | "cassette" | "cd";
+  const genre = String(formData.get("genre"));
+  const conditionMedia = (formData.get("conditionMedia") as "M" | "NM" | "VG+" | "VG" | "G" | "P" | null) || null;
+  const conditionSleeve = format === "vinyl" ? ((formData.get("conditionSleeve") as "M" | "NM" | "VG+" | "VG" | "G" | "P" | null) || null) : null;
+  const pressingLabel = (formData.get("pressingLabel") as string) || null;
+  const pressingCatalogNumber = (formData.get("pressingCatalogNumber") as string) || null;
+  const description = String(formData.get("description"));
+
   try {
     await d.insert(schema.products).values({
       id: productId,
-      artist: formData.get("artist") as string,
-      title: formData.get("title") as string,
-      format: formData.get("format") as "vinyl" | "cassette" | "cd",
-      genre: formData.get("genre") as string,
+      artist,
+      title,
+      format,
+      genre,
       priceCents,
       stockQuantity,
-      conditionMedia: (formData.get("conditionMedia") as string) || null,
-      conditionSleeve: formData.get("format") === "vinyl" ? ((formData.get("conditionSleeve") as string) || null) : null,
-      pressingLabel: (formData.get("pressingLabel") as string) || null,
+      conditionMedia,
+      conditionSleeve,
+      pressingLabel,
       pressingYear,
-      pressingCatalogNumber: (formData.get("pressingCatalogNumber") as string) || null,
-      description: formData.get("description") as string,
+      pressingCatalogNumber,
+      description,
       status: "active" as const,
       version: 1,
     });
@@ -82,22 +92,24 @@ export async function updateProduct(id: string, formData: FormData) {
   const priceCents = Number(formData.get("priceCents"));
   const stockQuantity = Number(formData.get("stockQuantity"));
   const pressingYear = formData.get("pressingYear") ? Number(formData.get("pressingYear")) : null;
+  const updateFormat = formData.get("format") as "vinyl" | "cassette" | "cd";
+  const updateConditionSleeve = updateFormat === "vinyl" ? ((formData.get("conditionSleeve") as string) || null) : null;
 
   await d
     .update(schema.products)
     .set({
-      artist: formData.get("artist") as string,
-      title: formData.get("title") as string,
-      format: formData.get("format") as "vinyl" | "cassette" | "cd",
-      genre: formData.get("genre") as string,
+      artist: String(formData.get("artist")),
+      title: String(formData.get("title")),
+      format: updateFormat,
+      genre: String(formData.get("genre")),
       priceCents,
       stockQuantity,
       conditionMedia: (formData.get("conditionMedia") as string) || null,
-      conditionSleeve: formData.get("format") === "vinyl" ? ((formData.get("conditionSleeve") as string) || null) : null,
+      conditionSleeve: updateConditionSleeve,
       pressingLabel: (formData.get("pressingLabel") as string) || null,
       pressingYear,
       pressingCatalogNumber: (formData.get("pressingCatalogNumber") as string) || null,
-      description: formData.get("description") as string,
+      description: String(formData.get("description")),
       version: product.version + 1,
     })
     .where(eq(schema.products.id, id));

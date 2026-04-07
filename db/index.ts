@@ -1,11 +1,10 @@
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle, NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
 import * as schema from "./schema";
 
 const client = neon(process.env.DATABASE_URL ?? "");
 
-// Singleton pattern to avoid recreating connection
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: NeonHttpDatabase<typeof schema> | null = null;
 
 export function db() {
   if (!_db) {

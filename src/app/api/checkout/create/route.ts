@@ -99,5 +99,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ url: session.url });
 }
-
-{"type": "function", "function": {"name": "C:\\Users\\feded\\projects\\vinyl-marketplace\\src\\app\\api\\webhooks\\stripe\\route.ts", "parameters": {"file_path": "C:\\Users\\feded\\projects\\vinyl-marketplace\\src\\app\\api\\webhooks\\stripe"}}}
