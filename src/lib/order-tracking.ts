@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import {
   getOrderStatusRank,
@@ -993,7 +993,7 @@ export async function syncOrderTrackingById(orderId: string) {
 
 export async function syncShippedOrders(limit = 25) {
   const openOrders = await db().query.orders.findMany({
-    where: eq(schema.orders.deliveryMethod, "shipping"),
+    orderBy: desc(schema.orders.updatedAt),
     limit,
   });
 

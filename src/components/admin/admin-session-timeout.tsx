@@ -2,20 +2,19 @@
 
 import { useEffect, useRef } from "react";
 
-const ACTIVITY_EVENTS = [
-  "click",
-  "keydown",
-  "mousemove",
-  "pointerdown",
-  "scroll",
-  "touchstart",
-] as const;
-
-export function AdminSessionTimeout({ timeoutMs }: { timeoutMs: number }) {
+export function AdminSessionTimeout({
+  timeoutMs,
+  expiresAtMs,
+}: {
+  timeoutMs: number;
+  expiresAtMs: number | null;
+}) {
   const timerRef = useRef<number | null>(null);
   const loggingOutRef = useRef(false);
 
   useEffect(() => {
+    const deadlineMs = expiresAtMs ?? Date.now() + timeoutMs;
+
     async function logout() {
       if (loggingOutRef.current) {
         return;
@@ -42,33 +41,33 @@ export function AdminSessionTimeout({ timeoutMs }: { timeoutMs: number }) {
       }
     }
 
-    function startTimer() {
+    function ensureLogoutAtDeadline() {
+      const remainingMs = Math.max(deadlineMs - Date.now(), 0);
       clearTimer();
       timerRef.current = window.setTimeout(() => {
         void logout();
-      }, timeoutMs);
+      }, remainingMs);
     }
 
-    function handleActivity() {
-      startTimer();
+    function enforceIfExpired() {
+      if (Date.now() >= deadlineMs) {
+        void logout();
+        return;
+      }
+
+      ensureLogoutAtDeadline();
     }
 
-    startTimer();
-    document.addEventListener("visibilitychange", handleActivity);
-
-    for (const eventName of ACTIVITY_EVENTS) {
-      window.addEventListener(eventName, handleActivity, { passive: true });
-    }
+    ensureLogoutAtDeadline();
+    document.addEventListener("visibilitychange", enforceIfExpired);
+    window.addEventListener("focus", enforceIfExpired);
 
     return () => {
       clearTimer();
-      document.removeEventListener("visibilitychange", handleActivity);
-
-      for (const eventName of ACTIVITY_EVENTS) {
-        window.removeEventListener(eventName, handleActivity);
-      }
+      document.removeEventListener("visibilitychange", enforceIfExpired);
+      window.removeEventListener("focus", enforceIfExpired);
     };
-  }, [timeoutMs]);
+  }, [expiresAtMs, timeoutMs]);
 
   return null;
 }

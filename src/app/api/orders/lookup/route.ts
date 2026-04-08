@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
   };
   let trackingSummary = null;
 
-  if (order.trackingNumber && order.deliveryMethod === "shipping") {
+  if (order.trackingNumber) {
     try {
       const synced = await syncOrderTracking(order);
       effectiveOrder = {

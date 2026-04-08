@@ -4,7 +4,11 @@ import Link from "next/link";
 import { Package, ShoppingCart, LayoutDashboard, ArrowLeft, Truck, Upload } from "lucide-react";
 import { adminLogoutAction } from "@/actions/auth";
 import { AdminSessionTimeout } from "@/components/admin/admin-session-timeout";
-import { ADMIN_SESSION_TTL_SECONDS, isAuthenticatedAdmin } from "@/lib/auth";
+import {
+  ADMIN_SESSION_TTL_SECONDS,
+  getAdminSessionExpiryMs,
+  isAuthenticatedAdmin,
+} from "@/lib/auth";
 import "./admin.css";
 
 const navLinks = [
@@ -24,6 +28,7 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const isAuthed = await isAuthenticatedAdmin();
+  const sessionExpiryMs = isAuthed ? await getAdminSessionExpiryMs() : null;
 
   if (!isAuthed) {
     return <div className="mx-auto w-full max-w-md">{children}</div>;
@@ -31,7 +36,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <div className="flex gap-8">
-      <AdminSessionTimeout timeoutMs={ADMIN_SESSION_TTL_SECONDS * 1000} />
+      <AdminSessionTimeout
+        timeoutMs={ADMIN_SESSION_TTL_SECONDS * 1000}
+        expiresAtMs={sessionExpiryMs}
+      />
       <aside className="w-56 flex-shrink-0">
         <div className="mb-4 flex items-center justify-between gap-3">
           <Link

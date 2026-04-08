@@ -48,6 +48,49 @@ function createSessionToken(secret: string): string {
   return `${payload}.${signPayload(payload, secret)}`;
 }
 
+function parseSessionToken(
+  token: string,
+  secret: string
+): AdminSessionPayload | null {
+  const [payload, signature] = token.split(".");
+  if (!payload || !signature) {
+    return null;
+  }
+
+  const expectedSignature = signPayload(payload, secret);
+  const providedBuffer = Buffer.from(signature, "hex");
+  const expectedBuffer = Buffer.from(expectedSignature, "hex");
+
+  if (providedBuffer.length !== expectedBuffer.length) {
+    return null;
+  }
+
+  if (!timingSafeEqual(providedBuffer, expectedBuffer)) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(payload, "base64url").toString("utf8")
+    ) as Partial<AdminSessionPayload>;
+
+    if (
+      typeof parsed.exp !== "number" ||
+      typeof parsed.nonce !== "string" ||
+      parsed.exp <= Math.floor(Date.now() / 1000)
+    ) {
+      return null;
+    }
+
+    return {
+      exp: parsed.exp,
+      nonce: parsed.nonce,
+    };
+  } catch {
+    return null;
+  }
+}
+
 type AdminSessionCookie = {
   name: string;
   value: string;
@@ -61,32 +104,7 @@ type AdminSessionCookie = {
 };
 
 function verifySessionToken(token: string, secret: string): boolean {
-  const [payload, signature] = token.split(".");
-  if (!payload || !signature) {
-    return false;
-  }
-
-  const expectedSignature = signPayload(payload, secret);
-  const providedBuffer = Buffer.from(signature, "hex");
-  const expectedBuffer = Buffer.from(expectedSignature, "hex");
-
-  if (providedBuffer.length !== expectedBuffer.length) {
-    return false;
-  }
-
-  if (!timingSafeEqual(providedBuffer, expectedBuffer)) {
-    return false;
-  }
-
-  try {
-    const parsed = JSON.parse(
-      Buffer.from(payload, "base64url").toString("utf8")
-    ) as Partial<AdminSessionPayload>;
-
-    return typeof parsed.exp === "number" && parsed.exp > Math.floor(Date.now() / 1000);
-  } catch {
-    return false;
-  }
+  return parseSessionToken(token, secret) !== null;
 }
 
 export async function verifyAdminPassword(password: string): Promise<boolean> {
@@ -144,6 +162,22 @@ export async function isAuthenticatedAdmin(): Promise<boolean> {
   const session = cookieStore.get(ADMIN_COOKIE_NAME);
 
   return typeof session?.value === "string" && verifySessionToken(session.value, secret);
+}
+
+export async function getAdminSessionExpiryMs(): Promise<number | null> {
+  const secret = getAdminSessionSecret();
+  if (!secret) {
+    return null;
+  }
+
+  const cookieStore = await cookies();
+  const session = cookieStore.get(ADMIN_COOKIE_NAME);
+  if (typeof session?.value !== "string") {
+    return null;
+  }
+
+  const payload = parseSessionToken(session.value, secret);
+  return payload ? payload.exp * 1000 : null;
 }
 
 export async function requireAuthenticatedAdmin(): Promise<void> {

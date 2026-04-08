@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   AlertCircle,
   CheckCircle,
@@ -32,41 +32,101 @@ interface OrderData {
   }>;
 }
 
+interface OrderLookupParams {
+  orderNumber: string;
+  email: string;
+}
+
+const TRACKING_REFRESH_INTERVAL_MS = 60 * 1000;
+
+async function requestOrderLookup(params: OrderLookupParams) {
+  const res = await fetch("/api/orders/lookup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify(params),
+  });
+
+  const json = await res.json();
+  return json.data as OrderData | null;
+}
+
 export default function TrackOrderPage() {
   const dictionary = useDictionary();
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [lookup, setLookup] = useState<OrderLookupParams | null>(null);
+  const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
+
+  const lookupOrder = useCallback(
+    async (params: OrderLookupParams, mode: "initial" | "refresh") => {
+      if (mode === "initial") {
+        setLoading(true);
+        setError("");
+        setOrder(null);
+        setLastCheckedAt(null);
+      } else {
+        setRefreshing(true);
+      }
+
+      try {
+        const data = await requestOrderLookup(params);
+        if (data) {
+          setLookup(params);
+          setOrder(data);
+          setLastCheckedAt(new Date().toISOString());
+          if (mode === "initial") {
+            setError("");
+          }
+        } else if (mode === "initial") {
+          setError(dictionary.trackOrder.empty);
+        }
+      } catch {
+        if (mode === "initial") {
+          setError(dictionary.trackOrder.lookupFailed);
+        }
+      } finally {
+        if (mode === "initial") {
+          setLoading(false);
+        } else {
+          setRefreshing(false);
+        }
+      }
+    },
+    [dictionary.trackOrder.empty, dictionary.trackOrder.lookupFailed]
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
-    setOrder(null);
 
     const form = event.currentTarget;
     const formData = new FormData(form);
-    const orderNumber = formData.get("orderNumber") as string;
-    const email = formData.get("email") as string;
+    const orderNumber = String(formData.get("orderNumber") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
 
-    setLoading(true);
-    try {
-      const res = await fetch("/api/orders/lookup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderNumber, email }),
-      });
-      const json = await res.json();
-      if (json.data) {
-        setOrder(json.data);
-      } else {
-        setError(dictionary.trackOrder.empty);
-      }
-    } catch {
-      setError(dictionary.trackOrder.lookupFailed);
-    } finally {
-      setLoading(false);
-    }
+    await lookupOrder({ orderNumber, email }, "initial");
   }
+
+  useEffect(() => {
+    if (
+      !lookup ||
+      !order?.trackingNumber ||
+      order.status === "cancelled" ||
+      order.status === "delivered"
+    ) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void lookupOrder(lookup, "refresh");
+    }, TRACKING_REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [lookup, lookupOrder, order?.status, order?.trackingNumber]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -119,12 +179,35 @@ export default function TrackOrderPage() {
         </div>
       )}
 
-      {order && <OrderResult order={order} />}
+      {order && (
+        <OrderResult
+          order={order}
+          lastCheckedAt={lastCheckedAt}
+          refreshing={refreshing}
+          onRefresh={
+            lookup
+              ? () => {
+                  void lookupOrder(lookup, "refresh");
+                }
+              : null
+          }
+        />
+      )}
     </div>
   );
 }
 
-function OrderResult({ order }: { order: OrderData }) {
+function OrderResult({
+  order,
+  lastCheckedAt,
+  refreshing,
+  onRefresh,
+}: {
+  order: OrderData;
+  lastCheckedAt: string | null;
+  refreshing: boolean;
+  onRefresh: (() => void) | null;
+}) {
   const dictionary = useDictionary();
   const statusConfig = {
     pending: { icon: Clock, color: "text-yellow-500", label: dictionary.trackOrder.statusPending },
@@ -198,16 +281,30 @@ function OrderResult({ order }: { order: OrderData }) {
                 {order.trackingSummary?.carrierStatusLabel ?? dictionary.trackOrder.trackingActive}
               </h3>
             </div>
-            {order.trackingSummary?.trackingUrl && (
-              <a
-                href={order.trackingSummary.trackingUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline"
-              >
-                {dictionary.trackOrder.openCarrierPage} <ExternalLink className="h-4 w-4" />
-              </a>
-            )}
+            <div className="flex flex-wrap items-center gap-3">
+              {onRefresh && (
+                <button
+                  type="button"
+                  onClick={onRefresh}
+                  disabled={refreshing}
+                  className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:border-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {refreshing
+                    ? dictionary.trackOrder.refreshingTracking
+                    : dictionary.trackOrder.refreshTracking}
+                </button>
+              )}
+              {order.trackingSummary?.trackingUrl && (
+                <a
+                  href={order.trackingSummary.trackingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline"
+                >
+                  {dictionary.trackOrder.openCarrierPage} <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+            </div>
           </div>
 
           <div className="space-y-1 text-sm text-muted">
@@ -228,6 +325,16 @@ function OrderResult({ order }: { order: OrderData }) {
                   date: new Date(order.trackingSummary.lastUpdatedAt).toLocaleString(),
                 })}
               </p>
+            )}
+            {lastCheckedAt && (
+              <p>
+                {formatMessage(dictionary.trackOrder.lastChecked, {
+                  date: new Date(lastCheckedAt).toLocaleString(),
+                })}
+              </p>
+            )}
+            {order.status !== "cancelled" && order.status !== "delivered" && (
+              <p>{dictionary.trackOrder.autoRefresh}</p>
             )}
           </div>
 
