@@ -17,15 +17,20 @@ import { siteConfig } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Berlin Electronic Music Record Shop",
+  title: "Federico Shop | Berlin Vinyl, Techno, EBM, Darkwave & Post-Punk Records",
   description:
-    "Shop graded techno, EBM, darkwave, post-punk, vinyl, cassette, and CD online from Federico Shop in Berlin.",
+    "Federico Shop is a Berlin electronic music record shop for graded vinyl, cassette, and CD: techno, EBM, darkwave, post-punk, and collector-focused used records.",
   keywords: [
+    "Federico Shop",
+    "Federico",
+    "Federico Shop vinyl",
     "Berlin electronic music record shop",
+    "Berlin vinyl shop",
     "techno vinyl Berlin",
     "EBM records",
     "darkwave vinyl",
     "post-punk records",
+    "used vinyl Berlin",
     "vinyl cassette CD shop",
   ],
   alternates: {
