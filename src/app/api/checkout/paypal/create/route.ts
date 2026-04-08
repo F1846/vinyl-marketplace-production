@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createCheckoutStateToken,
-  isCheckoutStateConfigured,
+  isCheckoutStateSigningConfigured,
 } from "@/lib/checkout-state";
 import {
   calculateOrderShipping,
@@ -20,12 +20,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!isCheckoutStateConfigured()) {
+  if (!isCheckoutStateSigningConfigured()) {
     return NextResponse.json(
       {
         error: {
-          code: "CHECKOUT_STATE_UNAVAILABLE",
-          message: "Secure checkout state is not configured.",
+          code: "PAYPAL_UNAVAILABLE",
+          message: "PayPal checkout state signing is not configured.",
         },
       },
       { status: 503 }

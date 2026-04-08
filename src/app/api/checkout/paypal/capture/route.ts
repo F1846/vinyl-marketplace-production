@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { verifyCheckoutStateToken } from "@/lib/checkout-state";
+import {
+  isCheckoutStateSigningConfigured,
+  verifyCheckoutStateToken,
+} from "@/lib/checkout-state";
 import {
   createShippingAddressFromCheckout,
   finalizeOrder,
@@ -16,6 +19,18 @@ export async function POST(req: NextRequest) {
   if (!process.env.DATABASE_URL) {
     return NextResponse.json(
       { error: { code: "CHECKOUT_UNAVAILABLE", message: "Database is not configured." } },
+      { status: 503 }
+    );
+  }
+
+  if (!isCheckoutStateSigningConfigured()) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "PAYPAL_UNAVAILABLE",
+          message: "PayPal checkout state signing is not configured.",
+        },
+      },
       { status: 503 }
     );
   }
