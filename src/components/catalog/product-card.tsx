@@ -37,33 +37,37 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
   const isMini = size === "mini";
   const isCompact = size === "compact" || isMini;
   const imageSizes = isMini
-    ? "(max-width: 640px) 38vw, (max-width: 1024px) 20vw, 12vw"
+    ? "(max-width: 640px) 34vw, (max-width: 1024px) 18vw, 10vw"
     : isCompact
-      ? "(max-width: 640px) 40vw, (max-width: 1024px) 22vw, 14vw"
-      : "(max-width: 640px) 44vw, (max-width: 1024px) 26vw, 17vw";
-  const imageAspect = isMini ? "aspect-[0.82]" : isCompact ? "aspect-[0.85]" : "aspect-[0.88]";
-  const paddingClass = isMini ? "p-2.5" : isCompact ? "p-3" : "p-[0.8125rem]";
+      ? "(max-width: 640px) 35vw, (max-width: 1024px) 19vw, 11vw"
+      : "(max-width: 640px) 38vw, (max-width: 1024px) 22vw, 13vw";
+  const imageAspect = isMini ? "aspect-[0.82]" : isCompact ? "aspect-[0.82]" : "aspect-[0.84]";
+  const paddingClass = isMini ? "p-2.5" : isCompact ? "p-2.5" : "p-3";
   const artistClass = isMini
     ? "text-[8px] font-semibold uppercase tracking-[0.18em] text-muted"
-    : "text-[9px] font-semibold uppercase tracking-[0.18em] text-muted";
+    : isCompact
+      ? "text-[8px] font-semibold uppercase tracking-[0.18em] text-muted"
+      : "text-[9px] font-semibold uppercase tracking-[0.18em] text-muted";
   const titleClass = isMini
-    ? "min-h-[2rem] text-[0.88rem]"
+    ? "min-h-[1.95rem] text-[0.84rem]"
     : isCompact
-      ? "min-h-[2.15rem] text-[0.92rem]"
-      : "min-h-[2.35rem] text-[0.96rem]";
+      ? "min-h-[1.95rem] text-[0.84rem]"
+      : "min-h-[2.1rem] text-[0.9rem]";
   const priceClass = isMini
-    ? "text-[0.88rem] font-semibold text-foreground"
+    ? "text-[0.84rem] font-semibold text-foreground"
     : isCompact
-      ? "text-[0.92rem] font-semibold text-foreground"
-      : "text-[0.96rem] font-semibold text-foreground";
+      ? "text-[0.84rem] font-semibold text-foreground"
+      : "text-[0.9rem] font-semibold text-foreground";
   const metaClass = isMini
     ? "mt-2 flex items-center justify-between gap-2 text-[8px] uppercase tracking-[0.16em] text-muted"
-    : "mt-2.5 flex items-center justify-between gap-2 text-[9px] uppercase tracking-[0.17em] text-muted";
+    : isCompact
+      ? "mt-2 flex items-center justify-between gap-2 text-[8px] uppercase tracking-[0.16em] text-muted"
+      : "mt-2.5 flex items-center justify-between gap-2 text-[9px] uppercase tracking-[0.17em] text-muted";
 
   return (
     <Link
       href={`/products/${product.id}`}
-      className="group block overflow-hidden rounded-[1rem] border border-border/90 bg-surface shadow-card transition duration-300 hover:-translate-y-0.5 hover:border-foreground/15"
+      className="group block overflow-hidden rounded-[0.95rem] border border-border/90 bg-surface shadow-card transition duration-300 hover:-translate-y-0.5 hover:border-foreground/15"
     >
       <div className={`relative overflow-hidden bg-[#ebe8e1] ${imageAspect}`}>
         {imageUrl ? (
@@ -84,7 +88,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
             <span className="badge-sold font-semibold">Sold out</span>
           </div>
         )}
-        <div className="absolute left-2.5 top-2.5">{formatBadge(product.format)}</div>
+        <div className="absolute left-2 top-2">{formatBadge(product.format)}</div>
       </div>
       <div className={paddingClass}>
         <p className={artistClass}>{product.artist}</p>
@@ -96,7 +100,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
         <div className="mt-2.5 flex items-center justify-between gap-2.5">
           <span className={priceClass}>{formatEuroFromCents(product.priceCents)}</span>
           {product.conditionMedia && (
-            <span className="rounded-full border border-border px-2 py-1 text-[9px] font-medium text-muted">
+            <span className="rounded-full border border-border px-2 py-[0.28rem] text-[8px] font-medium text-muted">
               {product.conditionMedia}
             </span>
           )}

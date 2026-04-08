@@ -42,11 +42,11 @@ export function OrderConfirmationClient({
   }, [paymentMethod]);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 py-8 text-center">
+      <div className="mx-auto max-w-2xl space-y-5 py-6 text-center">
       <div className="flex justify-center">
         <CheckCircle className="h-16 w-16 text-success" />
       </div>
-      <h1 className="font-sans text-4xl font-bold tracking-[-0.04em] text-foreground">
+        <h1 className="font-sans text-[2.1rem] font-bold tracking-[-0.04em] text-foreground sm:text-[2.45rem]">
         {title}
       </h1>
       <p className="text-lg text-muted">{body}</p>

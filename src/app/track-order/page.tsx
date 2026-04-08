@@ -79,7 +79,7 @@ export default function TrackOrderPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
           Order status
         </p>
-        <h1 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground sm:text-4xl">
+      <h1 className="font-sans text-[1.85rem] font-bold tracking-[-0.04em] text-foreground sm:text-[2.15rem]">
           Track your order
         </h1>
         <p className="mx-auto max-w-xl text-muted">
@@ -119,7 +119,7 @@ export default function TrackOrderPage() {
       </form>
 
       {error && (
-        <div className="card py-8 text-center">
+          <div className="card py-6 text-center">
           <p className="text-muted">{error}</p>
         </div>
       )}

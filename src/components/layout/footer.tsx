@@ -4,19 +4,19 @@ import { siteConfig } from "@/lib/site";
 export function Footer() {
   return (
     <footer className="border-t border-border bg-[rgba(255,255,255,0.76)]">
-      <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr_1fr]">
+      <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="grid gap-6 lg:grid-cols-[1.35fr_1fr_1fr]">
           <div>
-            <span className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground">
+            <span className="font-sans text-[1.95rem] font-bold tracking-[-0.04em] text-foreground">
               {siteConfig.name}
             </span>
-            <p className="mt-3 max-w-md text-sm leading-7 text-muted">
+            <p className="mt-2 max-w-md text-[0.92rem] leading-6 text-muted">
               {siteConfig.description}
             </p>
           </div>
-          <div className="space-y-3 text-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Shop</p>
-            <div className="flex flex-col gap-3">
+          <div className="space-y-2 text-[0.92rem]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">Shop</p>
+            <div className="flex flex-col gap-2">
               <Link href="/catalog" className="text-muted transition-colors hover:text-accent">
                 Catalog
               </Link>
@@ -28,9 +28,9 @@ export function Footer() {
               </Link>
             </div>
           </div>
-          <div className="space-y-3 text-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Info</p>
-            <div className="flex flex-col gap-3">
+          <div className="space-y-2 text-[0.92rem]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">Info</p>
+            <div className="flex flex-col gap-2">
               <Link href="/about" className="text-muted transition-colors hover:text-accent">
                 About
               </Link>
@@ -52,7 +52,7 @@ export function Footer() {
             </div>
           </div>
         </div>
-        <div className="mt-8 border-t border-border pt-4 text-center text-xs text-muted">
+        <div className="mt-6 border-t border-border pt-3 text-center text-[11px] text-muted">
           &copy; {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
         </div>
       </div>

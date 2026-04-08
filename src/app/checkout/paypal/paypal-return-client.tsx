@@ -58,7 +58,7 @@ export function PayPalReturnClient({ token, state }: PayPalReturnClientProps) {
   return (
     <div className="card mx-auto max-w-xl space-y-4 py-12 text-center">
       <Loader2 className="mx-auto h-8 w-8 animate-spin text-accent" />
-      <h1 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground">
+        <h1 className="font-sans text-[2rem] font-bold tracking-[-0.04em] text-foreground sm:text-[2.2rem]">
         PayPal checkout
       </h1>
       <p className="text-sm leading-7 text-muted">{message}</p>
