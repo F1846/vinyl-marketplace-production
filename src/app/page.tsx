@@ -53,6 +53,7 @@ export default async function HomePage() {
   const shuffledLatestProducts = shuffleProducts(latestProducts);
   const newArrivalProducts = shuffleProducts(shuffledLatestProducts).slice(0, 12);
   const shelfPicks = shuffledLatestProducts.slice(12, 20);
+  const featureStripProducts = shuffledLatestProducts.slice(20, 23);
   const featuredHeroProduct = heroPreviewProducts[0] ?? latestProducts[0] ?? null;
   const formatSpotlight = heroPreviewProducts[1] ?? latestProducts[1] ?? null;
   const storefrontStructuredData = {
@@ -143,20 +144,13 @@ export default async function HomePage() {
               </p>
             </Link>
           </div>
-          <div className="grid gap-2.5 sm:grid-cols-3">
-            {[
-              "Detailed grading notes on every listing",
-              "PayPal, card, or Berlin local pickup",
-              "Shipping rates matched to format and quantity",
-            ].map((item) => (
-              <div
-                key={item}
-                className="rounded-[0.95rem] border border-border/90 bg-white px-3 py-2.5 text-[12px] leading-5 text-muted shadow-card"
-              >
-                {item}
-              </div>
-            ))}
-          </div>
+          {featureStripProducts.length > 0 && (
+            <div className="grid gap-2.5 sm:grid-cols-3">
+              {featureStripProducts.map((product) => (
+                <ProductCard key={product.id} product={product} size="compact" />
+              ))}
+            </div>
+          )}
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {heroPreviewProducts.map((product) => (
