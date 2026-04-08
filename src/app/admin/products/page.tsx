@@ -1,14 +1,15 @@
 import { db } from "@/db";
-import { asc, desc, sql } from "drizzle-orm";
+import { asc, desc, isNull, sql } from "drizzle-orm";
 import { schema } from "@/db";
 import { requireAuthenticatedAdmin } from "@/lib/auth";
 import Link from "next/link";
-import { Plus, Pencil, EyeOff, RotateCcw, ArrowDown, ArrowUp } from "lucide-react";
+import { Plus, Pencil, EyeOff, RotateCcw, ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import {
   archiveProduct,
-  relistSoldOutProduct,
-  restoreProduct,
+  deleteProduct,
+  relistProduct,
 } from "@/actions/products";
+import { resolveProductStatus } from "@/lib/product-admin";
 import type { ProductStatus } from "@/types/product";
 import { formatEuroFromCents } from "@/lib/money";
 
@@ -41,8 +42,9 @@ export default async function AdminProductsPage({
   const d = db();
   const statusOrder = sql<number>`
     case
-      when ${schema.products.status} = 'active' then 0
+      when ${schema.products.status} = 'active' and ${schema.products.stockQuantity} > 0 then 0
       when ${schema.products.status} = 'sold_out' then 1
+      when ${schema.products.status} = 'active' and ${schema.products.stockQuantity} <= 0 then 1
       when ${schema.products.status} = 'archived' then 2
       else 3
     end
@@ -61,6 +63,7 @@ export default async function AdminProductsPage({
           ? [dir === "asc" ? asc(statusOrder) : desc(statusOrder), desc(schema.products.createdAt)]
           : [desc(schema.products.createdAt)];
   const products = await d.query.products.findMany({
+    where: isNull(schema.products.deletedAt),
     orderBy,
     with: { images: { orderBy: [schema.productImages.sortOrder] } },
   });
@@ -149,7 +152,7 @@ export default async function AdminProductsPage({
                 <td className="px-4 py-3"><span className={`badge badge-${product.format}`}>{product.format}</span></td>
                 <td className="px-4 py-3 text-foreground">{formatEuroFromCents(product.priceCents)}</td>
                 <td className="px-4 py-3 text-foreground">{product.stockQuantity}</td>
-                <td className="px-4 py-3">{statusBadge(product.status)}</td>
+                <td className="px-4 py-3">{statusBadge(resolveProductStatus(product))}</td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end flex-wrap gap-2">
                     <Link
@@ -159,11 +162,15 @@ export default async function AdminProductsPage({
                       <Pencil className="h-3.5 w-3.5" />
                       Edit
                     </Link>
-                    {product.status === "sold_out" && (
-                      <form action={relistSoldOutProduct.bind(null, product.id)}>
+                    {resolveProductStatus(product) !== "active" && (
+                      <form action={relistProduct.bind(null, product.id)}>
                         <button
                           type="submit"
-                          title="Relist and set stock to 1"
+                          title={
+                            product.stockQuantity > 0
+                              ? "Relist this product in the catalog"
+                              : "Relist this product and set stock to 1"
+                          }
                           className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted transition-colors hover:border-success hover:text-success"
                         >
                           <RotateCcw className="h-3.5 w-3.5" />
@@ -171,24 +178,7 @@ export default async function AdminProductsPage({
                         </button>
                       </form>
                     )}
-                    {product.status !== "active" && product.status !== "sold_out" && (
-                      <form action={restoreProduct.bind(null, product.id)}>
-                        <button
-                          type="submit"
-                          title={
-                            product.stockQuantity > 0
-                              ? "Show in catalog"
-                              : "Set stock above 0 in Edit before showing in catalog"
-                          }
-                          className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted transition-colors hover:border-success hover:text-success disabled:cursor-not-allowed disabled:opacity-40"
-                          disabled={product.stockQuantity < 1}
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                          Show
-                        </button>
-                      </form>
-                    )}
-                    {product.status !== "archived" && (
+                    {resolveProductStatus(product) === "active" && (
                       <form action={archiveProduct.bind(null, product.id)}>
                         <button
                           type="submit"
@@ -200,6 +190,16 @@ export default async function AdminProductsPage({
                         </button>
                       </form>
                     )}
+                    <form action={deleteProduct.bind(null, product.id)}>
+                      <button
+                        type="submit"
+                        title="Remove this product from admin and storefront"
+                        className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted transition-colors hover:border-danger hover:text-danger"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </button>
+                    </form>
                   </div>
                 </td>
               </tr>

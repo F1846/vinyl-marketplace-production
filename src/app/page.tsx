@@ -8,7 +8,7 @@ import {
   Truck,
 } from "lucide-react";
 import { db, schema } from "@/db";
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { ProductCard } from "@/components/catalog/product-card";
 import { formatMessage } from "@/lib/i18n/format";
 import { getRequestDictionary } from "@/lib/i18n/server";
@@ -57,13 +57,21 @@ export default async function HomePage() {
   const dictionary = await getRequestDictionary();
   const d = db();
   const latestProducts = await d.query.products.findMany({
-    where: eq(schema.products.status, "active"),
+    where: and(
+      eq(schema.products.status, "active"),
+      gt(schema.products.stockQuantity, 0),
+      isNull(schema.products.deletedAt)
+    ),
     orderBy: [desc(schema.products.createdAt)],
     limit: 50,
     with: { images: { orderBy: [schema.productImages.sortOrder] } },
   });
   const heroPreviewProducts = await d.query.products.findMany({
-    where: eq(schema.products.status, "active"),
+    where: and(
+      eq(schema.products.status, "active"),
+      gt(schema.products.stockQuantity, 0),
+      isNull(schema.products.deletedAt)
+    ),
     orderBy: [sql`random()`],
     limit: 4,
     with: { images: { orderBy: [schema.productImages.sortOrder] } },
@@ -74,10 +82,20 @@ export default async function HomePage() {
       minPrice: sql<number | null>`min(${schema.products.priceCents})`,
     })
     .from(schema.products)
-    .where(eq(schema.products.status, "active"));
+    .where(
+      and(
+        eq(schema.products.status, "active"),
+        gt(schema.products.stockQuantity, 0),
+        isNull(schema.products.deletedAt)
+      )
+    );
 
   const cheapestProduct = await d.query.products.findFirst({
-    where: eq(schema.products.status, "active"),
+    where: and(
+      eq(schema.products.status, "active"),
+      gt(schema.products.stockQuantity, 0),
+      isNull(schema.products.deletedAt)
+    ),
     orderBy: [asc(schema.products.priceCents), asc(schema.products.artist), asc(schema.products.title)],
     with: { images: { orderBy: [schema.productImages.sortOrder] } },
   });

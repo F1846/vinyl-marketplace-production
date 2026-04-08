@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { calculateShippingQuote } from "@/lib/shipping";
 import { shippingQuoteSchema } from "@/validations/checkout";
@@ -28,7 +28,14 @@ export async function POST(req: NextRequest) {
       format: schema.products.format,
     })
     .from(schema.products)
-    .where(and(eq(schema.products.status, "active"), inArray(schema.products.id, productIds)));
+    .where(
+      and(
+        eq(schema.products.status, "active"),
+        gt(schema.products.stockQuantity, 0),
+        isNull(schema.products.deletedAt),
+        inArray(schema.products.id, productIds)
+      )
+    );
 
   const productMap = new Map(products.map((product) => [product.id, product]));
   const shippingItems = items.map((item) => {

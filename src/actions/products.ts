@@ -1,11 +1,15 @@
 "use server";
 
-import { db } from "@/db";
-import { schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
+import { db, schema } from "@/db";
 import { revalidatePath } from "next/cache";
 import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import {
+  archiveProductRecord,
+  deleteProductRecord,
+  relistProductRecord,
+} from "@/lib/product-admin";
 import type { MediaCondition, ProductStatus } from "@/types/product";
 
 const MEDIA_CONDITIONS = new Set<MediaCondition>(["M", "NM", "VG+", "VG", "G", "P"]);
@@ -32,8 +36,6 @@ function revalidateProductPaths(productId?: string) {
   }
 }
 
-// ─── Add Product (Server Action from FormData) ───
-
 export async function addProductFormAction(
   _prevState: { error: string | null; success: boolean },
   formData: FormData
@@ -41,14 +43,12 @@ export async function addProductFormAction(
   await requireAuthenticatedAdmin();
 
   const d = db();
-
   const imageUrlsRaw = (formData.get("imageUrls") as string) ?? "";
   const imageUrls = imageUrlsRaw
     .split("\n")
     .map((u) => u.trim())
     .filter(Boolean);
 
-  // Validate at least one image or allow placeholder
   const priceCents = Number(formData.get("priceCents"));
   const stockQuantity = Number(formData.get("stockQuantity"));
   const pressingYear = formData.get("pressingYear") ? Number(formData.get("pressingYear")) : null;
@@ -58,17 +58,21 @@ export async function addProductFormAction(
   if (!Number.isInteger(priceCents) || !Number.isInteger(stockQuantity)) {
     return { error: "Price and stock must be whole numbers", success: false };
   }
-  if (pressingYear && (pressingYear < 1900 || pressingYear > 2030)) return { error: "Invalid pressing year", success: false };
-  if (imageUrls.length > 10) return { error: "Use at most 10 images per product", success: false };
+  if (pressingYear && (pressingYear < 1900 || pressingYear > 2030)) {
+    return { error: "Invalid pressing year", success: false };
+  }
+  if (imageUrls.length > 10) {
+    return { error: "Use at most 10 images per product", success: false };
+  }
 
   const productId = crypto.randomUUID();
-
   const artist = String(formData.get("artist"));
   const title = String(formData.get("title"));
   const format = formData.get("format") as "vinyl" | "cassette" | "cd";
   const genre = String(formData.get("genre"));
   const conditionMedia = parseMediaCondition(formData.get("conditionMedia"));
-  const conditionSleeve = format === "vinyl" ? parseMediaCondition(formData.get("conditionSleeve")) : null;
+  const conditionSleeve =
+    format === "vinyl" ? parseMediaCondition(formData.get("conditionSleeve")) : null;
   const pressingLabel = (formData.get("pressingLabel") as string) || null;
   const pressingCatalogNumber = (formData.get("pressingCatalogNumber") as string) || null;
   const description = String(formData.get("description"));
@@ -113,16 +117,13 @@ export async function addProductFormAction(
   }
 }
 
-// ─── Update Product ───
-
 export async function updateProduct(id: string, formData: FormData): Promise<void> {
   "use server";
   await requireAuthenticatedAdmin();
 
   const d = db();
-
   const product = await d.query.products.findFirst({
-    where: eq(schema.products.id, id),
+    where: and(eq(schema.products.id, id), isNull(schema.products.deletedAt)),
   });
 
   if (!product) {
@@ -133,7 +134,8 @@ export async function updateProduct(id: string, formData: FormData): Promise<voi
   const stockQuantity = Number(formData.get("stockQuantity"));
   const pressingYear = formData.get("pressingYear") ? Number(formData.get("pressingYear")) : null;
   const updateFormat = formData.get("format") as "vinyl" | "cassette" | "cd";
-  const updateConditionSleeve = updateFormat === "vinyl" ? parseMediaCondition(formData.get("conditionSleeve")) : null;
+  const updateConditionSleeve =
+    updateFormat === "vinyl" ? parseMediaCondition(formData.get("conditionSleeve")) : null;
   const nextStatus =
     product.status === "archived" ? "archived" : statusFromStock(stockQuantity);
 
@@ -168,75 +170,43 @@ export async function updateProduct(id: string, formData: FormData): Promise<voi
       updatedAt: new Date(),
       version: product.version + 1,
     })
-    .where(eq(schema.products.id, id));
+    .where(and(eq(schema.products.id, id), isNull(schema.products.deletedAt)));
 
   revalidateProductPaths(id);
   redirect("/admin/products?updated=1");
 }
 
-// ─── Archive Product ───
-
 export async function archiveProduct(id: string) {
   "use server";
   await requireAuthenticatedAdmin();
-
-  const d = db();
-
-  await d
-    .update(schema.products)
-    .set({ status: "archived", updatedAt: new Date() })
-    .where(eq(schema.products.id, id));
-
+  await archiveProductRecord(id);
   revalidateProductPaths(id);
 }
 
-// ─── Restore Product (from sold_out to active) ───
+export async function relistProduct(id: string) {
+  "use server";
+  await requireAuthenticatedAdmin();
+  await relistProductRecord(id);
+  revalidateProductPaths(id);
+}
 
 export async function restoreProduct(id: string) {
   "use server";
   await requireAuthenticatedAdmin();
-
-  const d = db();
-  const product = await d.query.products.findFirst({
-    where: eq(schema.products.id, id),
-  });
-
-  if (!product) {
-    return;
-  }
-
-  await d
-    .update(schema.products)
-    .set({ status: statusFromStock(product.stockQuantity), updatedAt: new Date() })
-    .where(eq(schema.products.id, id));
-
+  await relistProductRecord(id);
   revalidateProductPaths(id);
 }
-
-// ─── Relist Product (sold out -> active with quantity 1) ───
 
 export async function relistSoldOutProduct(id: string) {
   "use server";
   await requireAuthenticatedAdmin();
+  await relistProductRecord(id);
+  revalidateProductPaths(id);
+}
 
-  const d = db();
-  const product = await d.query.products.findFirst({
-    where: eq(schema.products.id, id),
-  });
-
-  if (!product || product.status !== "sold_out") {
-    return;
-  }
-
-  await d
-    .update(schema.products)
-    .set({
-      stockQuantity: 1,
-      status: "active",
-      updatedAt: new Date(),
-      version: product.version + 1,
-    })
-    .where(eq(schema.products.id, id));
-
+export async function deleteProduct(id: string) {
+  "use server";
+  await requireAuthenticatedAdmin();
+  await deleteProductRecord(id);
   revalidateProductPaths(id);
 }

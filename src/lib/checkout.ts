@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, eq, gte, gt, inArray, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { sendOrderConfirmation } from "@/lib/email";
 import { generateOrderNumber } from "@/lib/order-number";
@@ -10,7 +10,7 @@ import type {
   PaymentMethod,
   ShippingAddress,
 } from "@/types/order";
-import type { ProductFormat } from "@/types/product";
+import type { ProductFormat, ProductStatus } from "@/types/product";
 import type { ShippingDetailsInput } from "@/validations/checkout";
 
 export type CheckoutCartItem = {
@@ -177,7 +177,14 @@ export async function getCheckoutProducts(items: CheckoutCartItem[]): Promise<Pr
   const products = await db()
     .select()
     .from(schema.products)
-    .where(and(eq(schema.products.status, "active"), inArray(schema.products.id, productIds)));
+    .where(
+      and(
+        eq(schema.products.status, "active"),
+        gt(schema.products.stockQuantity, 0),
+        isNull(schema.products.deletedAt),
+        inArray(schema.products.id, productIds)
+      )
+    );
 
   const productMap = new Map(products.map((product) => [product.id, product]));
 
@@ -237,11 +244,15 @@ async function releaseReservedStock(items: Array<{ productId: string; quantity: 
   for (const item of items) {
     await d
       .update(schema.products)
-      .set({
-        stockQuantity: sql`${schema.products.stockQuantity} + ${item.quantity}`,
-        version: sql`${schema.products.version} + 1`,
-        updatedAt: new Date(),
-      })
+        .set({
+          stockQuantity: sql`${schema.products.stockQuantity} + ${item.quantity}`,
+          status: sql<ProductStatus>`case
+            when ${schema.products.stockQuantity} + ${item.quantity} > 0 then 'active'::product_status
+            else 'sold_out'::product_status
+          end`,
+          version: sql`${schema.products.version} + 1`,
+          updatedAt: new Date(),
+        })
       .where(eq(schema.products.id, item.productId));
   }
 }
@@ -298,6 +309,10 @@ export async function finalizeOrder(input: FinalizeOrderInput) {
         .update(schema.products)
         .set({
           stockQuantity: sql`${schema.products.stockQuantity} - ${item.qty}`,
+          status: sql<ProductStatus>`case
+            when ${schema.products.stockQuantity} - ${item.qty} <= 0 then 'sold_out'::product_status
+            else 'active'::product_status
+          end`,
           version: sql`${schema.products.version} + 1`,
           updatedAt: new Date(),
         })

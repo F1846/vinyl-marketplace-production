@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 
@@ -25,7 +25,12 @@ export async function POST(req: NextRequest) {
 
   const productIds = [...new Set(parsed.data.productIds)];
   const products = await db().query.products.findMany({
-    where: and(eq(schema.products.status, "active"), inArray(schema.products.id, productIds)),
+    where: and(
+      eq(schema.products.status, "active"),
+      gt(schema.products.stockQuantity, 0),
+      isNull(schema.products.deletedAt),
+      inArray(schema.products.id, productIds)
+    ),
     with: {
       images: {
         orderBy: [schema.productImages.sortOrder],

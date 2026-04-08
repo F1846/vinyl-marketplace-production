@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { AddToCart } from "@/components/product/add-to-cart";
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 async function getProduct(id: string) {
   const d = db();
   return d.query.products.findFirst({
-    where: eq(schema.products.id, id),
+    where: and(eq(schema.products.id, id), isNull(schema.products.deletedAt)),
     with: { images: { orderBy: [schema.productImages.sortOrder] } },
   });
 }

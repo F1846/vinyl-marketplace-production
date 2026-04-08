@@ -55,6 +55,7 @@ export const products = pgTable("products", {
   discogsReleaseId: integer("discogs_release_id"),
   description: text("description").notNull(),
   status: productStatusEnum("status").notNull().default("active"),
+  deletedAt: timestamp("deleted_at"),
   version: integer("version").notNull().default(1),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { eq } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import {
   buildCatalogUrl,
@@ -13,7 +13,11 @@ export const revalidate = 3600;
 async function getActiveProducts() {
   try {
     return await db().query.products.findMany({
-      where: eq(schema.products.status, "active"),
+      where: and(
+        eq(schema.products.status, "active"),
+        gt(schema.products.stockQuantity, 0),
+        isNull(schema.products.deletedAt)
+      ),
       columns: {
         id: true,
         updatedAt: true,

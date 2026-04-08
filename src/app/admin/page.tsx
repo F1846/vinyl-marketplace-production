@@ -1,6 +1,6 @@
 import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { db } from "@/db";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { schema } from "@/db";
 import Link from "next/link";
 
@@ -11,11 +11,20 @@ export default async function AdminDashboard() {
 
   const d = db();
 
-  const productCount = await d.select({ count: sql<number>`count(*)` }).from(schema.products);
+  const productCount = await d
+    .select({ count: sql<number>`count(*)` })
+    .from(schema.products)
+    .where(isNull(schema.products.deletedAt));
   const activeCount = await d
     .select({ count: sql<number>`count(*)` })
     .from(schema.products)
-    .where(eq(schema.products.status, "active"));
+    .where(
+      and(
+        isNull(schema.products.deletedAt),
+        eq(schema.products.status, "active"),
+        gt(schema.products.stockQuantity, 0)
+      )
+    );
   const orderCount = await d.select({ count: sql<number>`count(*)` }).from(schema.orders);
 
   return (

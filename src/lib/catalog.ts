@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, isNull, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { MediaCondition, ProductFormat } from "@/types/product";
 
@@ -48,7 +48,11 @@ export async function getCatalogPage({
   limit = 24,
 }: CatalogQuery) {
   const d = db();
-  const whereConditions = [eq(schema.products.status, "active")];
+  const whereConditions = [
+    eq(schema.products.status, "active"),
+    gt(schema.products.stockQuantity, 0),
+    isNull(schema.products.deletedAt),
+  ];
 
   if (format) {
     whereConditions.push(eq(schema.products.format, format));
@@ -107,7 +111,11 @@ export async function getCatalogPage({
 export async function getCatalogFilters() {
   const d = db();
   const allActive = await d.query.products.findMany({
-    where: eq(schema.products.status, "active"),
+    where: and(
+      eq(schema.products.status, "active"),
+      gt(schema.products.stockQuantity, 0),
+      isNull(schema.products.deletedAt)
+    ),
     columns: { genre: true, format: true },
   });
 

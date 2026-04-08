@@ -21,6 +21,7 @@ export interface Product {
   pressingCatalogNumber: string | null;
   description: string;
   status: ProductStatus;
+  deletedAt: Date | null;
   version: number;
   createdAt: Date;
   updatedAt: Date;

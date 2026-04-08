@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { schema } from "@/db";
 import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { updateProduct } from "@/actions/products";
@@ -21,7 +21,7 @@ export default async function EditProductPage({
   const query = await searchParams;
   const d = db();
   const product = await d.query.products.findFirst({
-    where: eq(schema.products.id, id),
+    where: and(eq(schema.products.id, id), isNull(schema.products.deletedAt)),
     with: { images: { orderBy: [schema.productImages.sortOrder] } },
   });
 
