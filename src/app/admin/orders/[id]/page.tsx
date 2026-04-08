@@ -206,7 +206,7 @@ export default async function AdminOrderDetailPage({
                 {trackingError ??
                   (isTrackingSyncConfigured()
                     ? "Waiting for the tracking service to return updates."
-                    : "Tracking sync is ready in code. Add AFTERSHIP_API_KEY to production to enable automatic carrier updates.")}
+                    : "Tracking sync is ready in code. Add SEVENTEENTRACK_API_KEY for the free 17TRACK option, or AFTERSHIP_API_KEY for AfterShip, to enable automatic carrier updates.")}
               </div>
             ) : (
               <p className="text-sm text-muted">No tracking number saved yet.</p>

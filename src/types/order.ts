@@ -101,7 +101,7 @@ export interface TrackingCheckpoint {
 }
 
 export interface TrackingSummary {
-  provider: "aftership" | "carrier";
+  provider: "17track" | "aftership" | "carrier";
   trackingNumber: string;
   carrierSlug: string | null;
   carrierName: string | null;

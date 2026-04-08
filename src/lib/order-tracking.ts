@@ -10,6 +10,7 @@ import {
 } from "@/types/order";
 
 const AFTERSHIP_BASE_URL = "https://api.aftership.com/tracking/2025-07";
+const SEVENTEENTRACK_BASE_URL = "https://api.17track.net/track/v2";
 
 const CARRIER_TRACKING_URLS: Record<string, string> = {
   dhl: "https://www.dhl.com/global-en/home/tracking/tracking-express.html?submit=1&tracking-id={trackingNumber}",
@@ -27,7 +28,23 @@ const CARRIER_TRACKING_URLS: Record<string, string> = {
   bpost: "https://track.bpost.cloud/track/items?itemIdentifier={trackingNumber}",
 };
 
+const TRACKING_STATUS_LABELS: Record<string, string> = {
+  pending: "Label created",
+  inforeceived: "Info received",
+  notfound: "Not found",
+  intransit: "In transit",
+  outfordelivery: "Out for delivery",
+  availableforpickup: "Available for pickup",
+  delivered: "Delivered",
+  exception: "Delivery exception",
+  deliveryfailure: "Delivery failure",
+  attemptfail: "Delivery attempt failed",
+  expired: "Shipment expired",
+};
+
+type TrackingProviderId = "17track" | "aftership";
 type OrderRecord = typeof schema.orders.$inferSelect;
+type FetchInit = NonNullable<Parameters<typeof fetch>[1]>;
 
 type AfterShipTracking = {
   tracking_number?: string;
@@ -56,9 +73,128 @@ type AfterShipTracking = {
   shipment_delivery_url?: string;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getPath(value: unknown, path: Array<string | number>): unknown {
+  let current: unknown = value;
+
+  for (const key of path) {
+    if (typeof key === "number") {
+      if (!Array.isArray(current) || key >= current.length) {
+        return undefined;
+      }
+      current = current[key];
+      continue;
+    }
+
+    if (!isRecord(current) || !(key in current)) {
+      return undefined;
+    }
+
+    current = current[key];
+  }
+
+  return current;
+}
+
+function firstString(
+  value: unknown,
+  paths: Array<Array<string | number>>
+): string | null {
+  for (const path of paths) {
+    const candidate = getPath(value, path);
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  return null;
+}
+
+function firstObjectArray(
+  value: unknown,
+  paths: Array<Array<string | number>>
+): Array<Record<string, unknown>> | null {
+  for (const path of paths) {
+    const candidate = getPath(value, path);
+    if (Array.isArray(candidate)) {
+      const objects = candidate.filter(isRecord);
+      if (objects.length > 0) {
+        return objects;
+      }
+    }
+  }
+
+  return null;
+}
+
+function findFirstMatchingString(
+  value: unknown,
+  // eslint-disable-next-line no-unused-vars
+  predicate: (candidate: string) => boolean
+): string | null {
+  if (typeof value === "string" && predicate(value)) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findFirstMatchingString(item, predicate);
+      if (found) {
+        return found;
+      }
+    }
+    return null;
+  }
+
+  if (isRecord(value)) {
+    for (const nested of Object.values(value)) {
+      const found = findFirstMatchingString(nested, predicate);
+      if (found) {
+        return found;
+      }
+    }
+  }
+
+  return null;
+}
+
+function normalizeStatusKey(value: string | null | undefined): string {
+  return (value || "").toLowerCase().replace(/[\s_-]/g, "");
+}
+
 function getAfterShipApiKey(): string | null {
   const key = process.env.AFTERSHIP_API_KEY?.trim();
   return key || null;
+}
+
+function get17TrackApiKey(): string | null {
+  const key = process.env.SEVENTEENTRACK_API_KEY?.trim();
+  return key || null;
+}
+
+function getTrackingProvider(): TrackingProviderId | null {
+  const preferred = process.env.TRACKING_PROVIDER?.trim().toLowerCase();
+
+  if (preferred === "17track" && get17TrackApiKey()) {
+    return "17track";
+  }
+
+  if (preferred === "aftership" && getAfterShipApiKey()) {
+    return "aftership";
+  }
+
+  if (get17TrackApiKey()) {
+    return "17track";
+  }
+
+  if (getAfterShipApiKey()) {
+    return "aftership";
+  }
+
+  return null;
 }
 
 function normalizeCarrierSlug(value: string | null | undefined): string | null {
@@ -92,6 +228,15 @@ function humanizeCarrier(value: string | null | undefined): string | null {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function get17TrackCarrierCode(value: string | null | undefined): number | null {
+  const normalized = value?.trim();
+  if (!normalized || !/^\d+$/.test(normalized)) {
+    return null;
+  }
+
+  return Number(normalized);
 }
 
 export function buildTrackingUrl(
@@ -154,15 +299,13 @@ function buildDirectTrackingSummary(order: OrderRecord): TrackingSummary | null 
 }
 
 export function isTrackingSyncConfigured(): boolean {
-  return Boolean(getAfterShipApiKey());
+  return Boolean(getTrackingProvider());
 }
-
-type FetchInit = NonNullable<Parameters<typeof fetch>[1]>;
 
 async function afterShipFetch<T>(path: string, init?: FetchInit): Promise<T> {
   const apiKey = getAfterShipApiKey();
   if (!apiKey) {
-    throw new Error("Tracking sync is not configured.");
+    throw new Error("AfterShip tracking sync is not configured.");
   }
 
   const response = await fetch(`${AFTERSHIP_BASE_URL}${path}`, {
@@ -182,7 +325,7 @@ async function afterShipFetch<T>(path: string, init?: FetchInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-function getTrackingFromEnvelope(payload: unknown): AfterShipTracking | null {
+function getAfterShipTrackingFromEnvelope(payload: unknown): AfterShipTracking | null {
   if (!payload || typeof payload !== "object") {
     return null;
   }
@@ -201,7 +344,7 @@ function getTrackingFromEnvelope(payload: unknown): AfterShipTracking | null {
   return null;
 }
 
-async function findTracking(
+async function findAfterShipTracking(
   trackingNumber: string,
   carrierSlug?: string | null
 ): Promise<AfterShipTracking | null> {
@@ -211,10 +354,10 @@ async function findTracking(
   }
 
   const payload = await afterShipFetch<unknown>(`/trackings?${params.toString()}`);
-  return getTrackingFromEnvelope(payload);
+  return getAfterShipTrackingFromEnvelope(payload);
 }
 
-async function createTracking(order: OrderRecord): Promise<AfterShipTracking | null> {
+async function createAfterShipTracking(order: OrderRecord): Promise<AfterShipTracking | null> {
   if (!order.trackingNumber) {
     return null;
   }
@@ -231,10 +374,12 @@ async function createTracking(order: OrderRecord): Promise<AfterShipTracking | n
     }),
   });
 
-  return getTrackingFromEnvelope(payload);
+  return getAfterShipTrackingFromEnvelope(payload);
 }
 
-function mapCheckpoint(checkpoint: AfterShipTracking["latest_checkpoint"]): TrackingCheckpoint {
+function mapAfterShipCheckpoint(
+  checkpoint: AfterShipTracking["latest_checkpoint"]
+): TrackingCheckpoint {
   return {
     message: checkpoint?.message?.trim() || "Tracking update received.",
     location:
@@ -246,14 +391,14 @@ function mapCheckpoint(checkpoint: AfterShipTracking["latest_checkpoint"]): Trac
   };
 }
 
-function normalizeTrackingSummary(
+function normalizeAfterShipTrackingSummary(
   tracking: AfterShipTracking,
-  order?: Pick<OrderRecord, "trackingCarrier" | "trackingNumber" | "orderNumber">
+  order?: Pick<OrderRecord, "trackingCarrier" | "trackingNumber">
 ): TrackingSummary {
   const checkpoints = Array.isArray(tracking.checkpoints)
-    ? tracking.checkpoints.map((checkpoint) => mapCheckpoint(checkpoint))
+    ? tracking.checkpoints.map((checkpoint) => mapAfterShipCheckpoint(checkpoint))
     : tracking.latest_checkpoint
-      ? [mapCheckpoint(tracking.latest_checkpoint)]
+      ? [mapAfterShipCheckpoint(tracking.latest_checkpoint)]
       : [];
 
   const latestCheckpoint = checkpoints[0] ?? null;
@@ -285,39 +430,254 @@ function normalizeTrackingSummary(
   };
 }
 
-export function getTrackingStatusLabel(tag: string | null): string {
-  switch ((tag || "").toLowerCase().replace(/[\s_]/g, "")) {
-    case "pending":
-      return "Label created";
-    case "inforeceived":
-      return "Info received";
-    case "intransit":
-      return "In transit";
-    case "outfordelivery":
-      return "Out for delivery";
-    case "availableforpickup":
-      return "Available for pickup";
-    case "delivered":
-      return "Delivered";
-    case "exception":
-      return "Delivery exception";
-    case "attemptfail":
-      return "Delivery attempt failed";
-    case "expired":
-      return "Shipment expired";
-    default:
-      return tag ? tag.replace(/_/g, " ") : "Tracking active";
+async function seventeenTrackFetch<T>(path: string, body: unknown): Promise<T> {
+  const apiKey = get17TrackApiKey();
+  if (!apiKey) {
+    throw new Error("17TRACK sync is not configured.");
   }
+
+  const response = await fetch(`${SEVENTEENTRACK_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "17token": apiKey,
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`17TRACK request failed with ${response.status}.`);
+  }
+
+  return (await response.json()) as T;
+}
+
+function get17TrackRecord(payload: unknown): Record<string, unknown> | null {
+  if (Array.isArray(payload)) {
+    const first = payload.find(isRecord);
+    return first ?? null;
+  }
+
+  if (!isRecord(payload)) {
+    return null;
+  }
+
+  const data = payload.data;
+  if (Array.isArray(data)) {
+    const first = data.find(isRecord);
+    return first ?? null;
+  }
+
+  if (isRecord(data)) {
+    if (Array.isArray(data.accepted)) {
+      const firstAccepted = data.accepted.find(isRecord);
+      if (firstAccepted) {
+        return firstAccepted;
+      }
+    }
+
+    if (Array.isArray(data.track_list)) {
+      const firstTrack = data.track_list.find(isRecord);
+      if (firstTrack) {
+        return firstTrack;
+      }
+    }
+
+    return data;
+  }
+
+  return payload;
+}
+
+async function register17TrackTracking(order: OrderRecord): Promise<void> {
+  if (!order.trackingNumber) {
+    return;
+  }
+
+  const carrierCode = get17TrackCarrierCode(order.trackingCarrier);
+
+  await seventeenTrackFetch<unknown>("/register", [
+    {
+      number: order.trackingNumber,
+      ...(carrierCode ? { carrier: carrierCode } : {}),
+      tag: order.orderNumber,
+    },
+  ]);
+}
+
+async function get17TrackTrackingInfo(order: OrderRecord): Promise<Record<string, unknown> | null> {
+  if (!order.trackingNumber) {
+    return null;
+  }
+
+  const carrierCode = get17TrackCarrierCode(order.trackingCarrier);
+  const payload = await seventeenTrackFetch<unknown>("/gettrackinfo", [
+    {
+      number: order.trackingNumber,
+      ...(carrierCode ? { carrier: carrierCode } : {}),
+    },
+  ]);
+
+  return get17TrackRecord(payload);
+}
+
+function map17TrackCheckpoint(checkpoint: Record<string, unknown>): TrackingCheckpoint {
+  const message =
+    firstString(checkpoint, [
+      ["description"],
+      ["event"],
+      ["message"],
+      ["status_description"],
+      ["content"],
+    ]) || "Tracking update received.";
+
+  const location =
+    firstString(checkpoint, [["location"], ["address"], ["site"], ["checkpoint_location"]]) ||
+    [firstString(checkpoint, [["city"]]), firstString(checkpoint, [["country"]])]
+      .filter(Boolean)
+      .join(", ") ||
+    null;
+
+  const timestamp =
+    firstString(checkpoint, [
+      ["time_iso"],
+      ["time_utc"],
+      ["time"],
+      ["date"],
+      ["date_time"],
+      ["checkpoint_time"],
+    ]) || null;
+
+  const status =
+    firstString(checkpoint, [["status"], ["tag"], ["sub_status"], ["checkpoint_status"]]) ||
+    null;
+
+  return {
+    message,
+    location,
+    status,
+    timestamp,
+  };
+}
+
+function normalize17TrackStatus(status: string | null | undefined): string | null {
+  if (!status) {
+    return null;
+  }
+
+  const normalized = status.trim();
+  return normalized || null;
+}
+
+function normalize17TrackTrackingSummary(
+  rawRecord: Record<string, unknown>,
+  order: OrderRecord
+): TrackingSummary | null {
+  const record = (getPath(rawRecord, ["track_info"]) as Record<string, unknown> | undefined) ?? rawRecord;
+
+  const carrierStatus =
+    normalize17TrackStatus(
+      firstString(record, [
+        ["tracking", "shipment_status"],
+        ["shipment_status"],
+        ["latest_status"],
+        ["status"],
+      ])
+    ) ||
+    normalize17TrackStatus(
+      findFirstMatchingString(record, (candidate) =>
+        Object.keys(TRACKING_STATUS_LABELS).includes(normalizeStatusKey(candidate))
+      )
+    );
+
+  const rawCheckpoints =
+    firstObjectArray(record, [
+      ["tracking", "providers", 0, "events"],
+      ["tracking", "events"],
+      ["events"],
+      ["checkpoints"],
+    ]) ?? [];
+
+  const checkpoints = rawCheckpoints.map((checkpoint) => map17TrackCheckpoint(checkpoint));
+  const latestCheckpoint = checkpoints[0] ?? null;
+
+  const carrierName =
+    firstString(record, [
+      ["tracking", "providers", 0, "provider", "name"],
+      ["tracking", "provider", "name"],
+      ["carrier_name"],
+      ["carrier", "name"],
+    ]) || humanizeCarrier(order.trackingCarrier);
+
+  const message =
+    firstString(record, [
+      ["latest_event"],
+      ["description"],
+      ["status_description"],
+      ["track", "z0", "z"],
+    ]) || latestCheckpoint?.message || null;
+
+  const trackingNumber =
+    firstString(rawRecord, [["number"], ["tracking_number"]]) ||
+    order.trackingNumber ||
+    "";
+
+  if (!trackingNumber) {
+    return null;
+  }
+
+  return {
+    provider: "17track",
+    trackingNumber,
+    carrierSlug: normalizeCarrierSlug(order.trackingCarrier),
+    carrierName,
+    carrierStatus,
+    carrierStatusLabel: getTrackingStatusLabel(carrierStatus),
+    message,
+    trackingUrl: buildTrackingUrl(order.trackingCarrier, trackingNumber),
+    lastUpdatedAt: latestCheckpoint?.timestamp || null,
+    checkpoints,
+  };
+}
+
+async function fetch17TrackSummary(order: OrderRecord): Promise<TrackingSummary | null> {
+  let trackingRecord = await get17TrackTrackingInfo(order);
+  let summary = trackingRecord
+    ? normalize17TrackTrackingSummary(trackingRecord, order)
+    : null;
+
+  if (summary?.carrierStatus || summary?.checkpoints.length) {
+    return summary;
+  }
+
+  await register17TrackTracking(order);
+  trackingRecord = await get17TrackTrackingInfo(order);
+  summary = trackingRecord
+    ? normalize17TrackTrackingSummary(trackingRecord, order)
+    : null;
+
+  return summary;
+}
+
+export function getTrackingStatusLabel(tag: string | null): string {
+  const normalized = normalizeStatusKey(tag);
+  if (!normalized) {
+    return "Tracking active";
+  }
+
+  return TRACKING_STATUS_LABELS[normalized] ?? tag!.replace(/_/g, " ");
 }
 
 function mapTrackingTagToOrderStatus(tag: string | null): OrderStatus | null {
-  switch ((tag || "").toLowerCase().replace(/[\s_]/g, "")) {
+  switch (normalizeStatusKey(tag)) {
     case "delivered":
       return "delivered";
     case "intransit":
     case "outfordelivery":
     case "availableforpickup":
     case "attemptfail":
+    case "deliveryfailure":
     case "exception":
     case "expired":
       return "shipped";
@@ -335,22 +695,27 @@ export async function fetchTrackingSummary(order: OrderRecord): Promise<Tracking
   }
 
   const directSummary = buildDirectTrackingSummary(order);
+  const provider = getTrackingProvider();
 
-  if (!isTrackingSyncConfigured()) {
+  if (!provider) {
     return directSummary;
   }
 
   try {
-    let tracking = await findTracking(order.trackingNumber, order.trackingCarrier);
+    if (provider === "17track") {
+      return (await fetch17TrackSummary(order)) ?? directSummary;
+    }
+
+    let tracking = await findAfterShipTracking(order.trackingNumber, order.trackingCarrier);
     if (!tracking) {
-      tracking = await createTracking(order);
+      tracking = await createAfterShipTracking(order);
     }
 
     if (!tracking) {
       return directSummary;
     }
 
-    return normalizeTrackingSummary(tracking, order);
+    return normalizeAfterShipTrackingSummary(tracking, order);
   } catch {
     return directSummary;
   }
@@ -379,7 +744,8 @@ export async function syncOrderTracking(order: OrderRecord): Promise<{
 
   if (
     trackingSummary.carrierSlug &&
-    trackingSummary.carrierSlug !== order.trackingCarrier
+    trackingSummary.carrierSlug !== order.trackingCarrier &&
+    !/^\d+$/.test(trackingSummary.carrierSlug)
   ) {
     updates.trackingCarrier = trackingSummary.carrierSlug;
   }
