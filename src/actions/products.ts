@@ -212,3 +212,31 @@ export async function restoreProduct(id: string) {
 
   revalidateProductPaths(id);
 }
+
+// ─── Relist Product (sold out -> active with quantity 1) ───
+
+export async function relistSoldOutProduct(id: string) {
+  "use server";
+  await requireAuthenticatedAdmin();
+
+  const d = db();
+  const product = await d.query.products.findFirst({
+    where: eq(schema.products.id, id),
+  });
+
+  if (!product || product.status !== "sold_out") {
+    return;
+  }
+
+  await d
+    .update(schema.products)
+    .set({
+      stockQuantity: 1,
+      status: "active",
+      updatedAt: new Date(),
+      version: product.version + 1,
+    })
+    .where(eq(schema.products.id, id));
+
+  revalidateProductPaths(id);
+}

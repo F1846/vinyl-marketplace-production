@@ -1,26 +1,67 @@
 import { db } from "@/db";
-import { desc } from "drizzle-orm";
+import { asc, desc, sql } from "drizzle-orm";
 import { schema } from "@/db";
 import { requireAuthenticatedAdmin } from "@/lib/auth";
 import Link from "next/link";
-import { Plus, Pencil, EyeOff, RotateCcw } from "lucide-react";
-import { archiveProduct, restoreProduct } from "@/actions/products";
+import { Plus, Pencil, EyeOff, RotateCcw, ArrowDown, ArrowUp } from "lucide-react";
+import {
+  archiveProduct,
+  relistSoldOutProduct,
+  restoreProduct,
+} from "@/actions/products";
 import type { ProductStatus } from "@/types/product";
 import { formatEuroFromCents } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
+type SortKey = "created" | "price" | "stock" | "status";
+type SortDirection = "asc" | "desc";
+
+function parseSortKey(value?: string): SortKey {
+  if (value === "price" || value === "stock" || value === "status") {
+    return value;
+  }
+  return "created";
+}
+
+function parseSortDirection(value?: string): SortDirection {
+  return value === "asc" ? "asc" : "desc";
+}
+
 export default async function AdminProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ updated?: string }>;
+  searchParams: Promise<{ updated?: string; sort?: string; dir?: string }>;
 }) {
   await requireAuthenticatedAdmin();
   const params = await searchParams;
+  const sort = parseSortKey(params.sort);
+  const dir = parseSortDirection(params.dir);
 
   const d = db();
+  const statusOrder = sql<number>`
+    case
+      when ${schema.products.status} = 'active' then 0
+      when ${schema.products.status} = 'sold_out' then 1
+      when ${schema.products.status} = 'archived' then 2
+      else 3
+    end
+  `;
+  const orderBy =
+    sort === "price"
+      ? [dir === "asc" ? asc(schema.products.priceCents) : desc(schema.products.priceCents), desc(schema.products.createdAt)]
+      : sort === "stock"
+        ? [
+            dir === "asc"
+              ? asc(schema.products.stockQuantity)
+              : desc(schema.products.stockQuantity),
+            desc(schema.products.createdAt),
+          ]
+        : sort === "status"
+          ? [dir === "asc" ? asc(statusOrder) : desc(statusOrder), desc(schema.products.createdAt)]
+          : [desc(schema.products.createdAt)];
   const products = await d.query.products.findMany({
-    orderBy: [desc(schema.products.createdAt)],
+    orderBy,
     with: { images: { orderBy: [schema.productImages.sortOrder] } },
   });
 
@@ -31,6 +72,36 @@ export default async function AdminProductsPage({
       archived: "badge-archived",
     }[status];
     return <span className={cls}>{status}</span>;
+  };
+
+  const buildSortHref = (column: Exclude<SortKey, "created">) => {
+    const nextParams = new URLSearchParams();
+    const nextDirection: SortDirection =
+      sort === column ? (dir === "asc" ? "desc" : "asc") : "desc";
+
+    if (params.updated) {
+      nextParams.set("updated", params.updated);
+    }
+
+    nextParams.set("sort", column);
+    nextParams.set("dir", nextDirection);
+
+    return `/admin/products?${nextParams.toString()}`;
+  };
+
+  const renderSortHeader = (label: string, column: Exclude<SortKey, "created">) => {
+    const isActive = sort === column;
+    const Icon = isActive && dir === "asc" ? ArrowUp : ArrowDown;
+
+    return (
+      <Link
+        href={buildSortHref(column)}
+        className="inline-flex items-center gap-1.5 transition-colors hover:text-accent"
+      >
+        <span>{label}</span>
+        <Icon className="h-3.5 w-3.5" />
+      </Link>
+    );
   };
 
   return (
@@ -59,9 +130,15 @@ export default async function AdminProductsPage({
             <tr>
               <th className="px-4 py-3 text-left font-medium text-foreground">Product</th>
               <th className="px-4 py-3 text-left font-medium text-foreground">Format</th>
-              <th className="px-4 py-3 text-left font-medium text-foreground">Price</th>
-              <th className="px-4 py-3 text-left font-medium text-foreground">Stock</th>
-              <th className="px-4 py-3 text-left font-medium text-foreground">Status</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">
+                {renderSortHeader("Price", "price")}
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">
+                {renderSortHeader("Stock", "stock")}
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">
+                {renderSortHeader("Status", "status")}
+              </th>
               <th className="px-4 py-3 text-right font-medium text-foreground">Actions</th>
             </tr>
           </thead>
@@ -82,7 +159,19 @@ export default async function AdminProductsPage({
                       <Pencil className="h-3.5 w-3.5" />
                       Edit
                     </Link>
-                    {product.status !== "active" && (
+                    {product.status === "sold_out" && (
+                      <form action={relistSoldOutProduct.bind(null, product.id)}>
+                        <button
+                          type="submit"
+                          title="Relist and set stock to 1"
+                          className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted transition-colors hover:border-success hover:text-success"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          Relist
+                        </button>
+                      </form>
+                    )}
+                    {product.status !== "active" && product.status !== "sold_out" && (
                       <form action={restoreProduct.bind(null, product.id)}>
                         <button
                           type="submit"
