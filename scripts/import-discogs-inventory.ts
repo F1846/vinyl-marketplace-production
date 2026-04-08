@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import dotenv from "dotenv";
-import { and, eq, isNotNull, notInArray, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, notInArray, or, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { productImages, products } from "../db/schema.js";
 
@@ -52,10 +52,12 @@ interface DiscogsRelease {
 const DISCOGS_API_BASE = "https://api.discogs.com";
 const DEFAULT_USER_AGENT =
   "federico-shop/1.0 +https://www.federicoshop.de";
+const MIN_DISCOGS_REQUEST_INTERVAL_MS = 1100;
 
 function usage(): string {
   return [
     'Usage: npm run catalog:import-discogs -- "C:\\path\\to\\inventory.csv"',
+    '       npm run catalog:import-discogs -- "C:\\path\\to\\inventory.csv" --replace-catalog --price-factor=0.9',
     "",
     "Required env vars:",
     "  DATABASE_URL",
@@ -64,6 +66,37 @@ function usage(): string {
     "Optional env vars:",
     "  DISCOGS_USER_AGENT",
   ].join("\n");
+}
+
+type ImportOptions = {
+  csvPath: string;
+  replaceCatalog: boolean;
+  priceFactor: number;
+};
+
+function parseArgs(argv: string[]): ImportOptions {
+  const args = argv.slice(2);
+  const csvPath = args.find((arg) => !arg.startsWith("--"));
+
+  if (!csvPath) {
+    throw new Error(usage());
+  }
+
+  const replaceCatalog = args.includes("--replace-catalog");
+  const priceFactorArg = args.find((arg) => arg.startsWith("--price-factor="));
+  const priceFactor = priceFactorArg
+    ? Number.parseFloat(priceFactorArg.slice("--price-factor=".length))
+    : 1;
+
+  if (!Number.isFinite(priceFactor) || priceFactor <= 0) {
+    throw new Error("Price factor must be a positive number.");
+  }
+
+  return {
+    csvPath,
+    replaceCatalog,
+    priceFactor,
+  };
 }
 
 function requireEnv(name: string): string {
@@ -145,8 +178,11 @@ async function fetchDiscogsRelease(
   token: string,
   userAgent: string
 ): Promise<DiscogsRelease | null> {
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const waitMs = Math.max(0, 250 - (Date.now() - lastDiscogsRequestAt));
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    const waitMs = Math.max(
+      0,
+      MIN_DISCOGS_REQUEST_INTERVAL_MS - (Date.now() - lastDiscogsRequestAt)
+    );
     if (waitMs > 0) {
       await sleep(waitMs);
     }
@@ -168,8 +204,15 @@ async function fetchDiscogsRelease(
       return null;
     }
 
-    if (response.status === 429 && attempt < 3) {
-      await sleep(attempt * 1000);
+    if (response.status === 429 && attempt < 5) {
+      const retryAfterSeconds = Number.parseInt(
+        response.headers.get("Retry-After") ?? "",
+        10
+      );
+      const retryDelayMs = Number.isFinite(retryAfterSeconds)
+        ? retryAfterSeconds * 1000
+        : attempt * 2000;
+      await sleep(retryDelayMs);
       continue;
     }
 
@@ -227,6 +270,10 @@ function toProductStatus(value: string): ProductStatus {
 
 function toCents(value: string): number {
   return Math.round(Number.parseFloat(value || "0") * 100);
+}
+
+function applyPriceFactor(priceCents: number, factor: number): number {
+  return Math.max(0, Math.round(priceCents * factor));
 }
 
 function safeYear(value: number | undefined): number | null {
@@ -320,11 +367,7 @@ function imageUrlsFor(release: DiscogsRelease | null): string[] {
 }
 
 async function main() {
-  const csvPath = process.argv[2];
-
-  if (!csvPath) {
-    throw new Error(usage());
-  }
+  const { csvPath, replaceCatalog, priceFactor } = parseArgs(process.argv);
 
   requireEnv("DATABASE_URL");
   const discogsToken = requireEnv("DISCOGS_USER_TOKEN");
@@ -347,6 +390,12 @@ async function main() {
 
   console.log(`Loaded ${rows.length} rows from ${csvPath}`);
   console.log(`Importing ${catalogRows.length} active catalog rows from Discogs inventory...`);
+  if (priceFactor !== 1) {
+    console.log(`Applying price factor ${priceFactor.toFixed(2)} to imported prices.`);
+  }
+  if (replaceCatalog) {
+    console.log("Replacement mode enabled: products not present in the CSV will be archived.");
+  }
 
   for (const [index, row] of catalogRows.entries()) {
     const listingId = row.listing_id.trim();
@@ -386,7 +435,7 @@ async function main() {
       title: row.title.trim(),
       format: toFormat(row.format),
       genre: toGenre(release),
-      priceCents: toCents(row.price),
+      priceCents: applyPriceFactor(toCents(row.price), priceFactor),
       stockQuantity: 1,
       conditionMedia: toMediaCondition(row.media_condition),
       conditionSleeve: toMediaCondition(row.sleeve_condition),
@@ -397,6 +446,7 @@ async function main() {
       discogsReleaseId: releaseId,
       description: descriptionFor(row, release),
       status: "active" as const,
+      deletedAt: null,
     };
 
     const updateValues = {
@@ -414,6 +464,7 @@ async function main() {
       discogsReleaseId: insertValues.discogsReleaseId,
       description: insertValues.description,
       status: insertValues.status,
+      deletedAt: null,
       version: sql`${products.version} + 1`,
     };
 
@@ -462,10 +513,15 @@ async function main() {
             version: sql`${products.version} + 1`,
           })
           .where(
-            and(
-              isNotNull(products.discogsListingId),
-              notInArray(products.discogsListingId, importedListingIds)
-            )
+            replaceCatalog
+              ? or(
+                  isNull(products.discogsListingId),
+                  notInArray(products.discogsListingId, importedListingIds)
+                )
+              : and(
+                  isNotNull(products.discogsListingId),
+                  notInArray(products.discogsListingId, importedListingIds)
+                )
           )
           .returning({ id: products.id })
       : [];
