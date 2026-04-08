@@ -59,6 +59,14 @@ export function Footer() {
               <Link href="/refund" className="text-muted transition-colors hover:text-accent">
                 {dictionary.footer.refundPolicy}
               </Link>
+              <a
+                href="https://www.discogs.com/it/user/F1846"
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted transition-colors hover:text-accent"
+              >
+                Discogs
+              </a>
             </div>
           </div>
           <div className="space-y-3 text-sm">
