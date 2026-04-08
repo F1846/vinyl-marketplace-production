@@ -1,6 +1,48 @@
+import type { ProductFormat } from "@/types/product";
+
 function clean(value: string | undefined | null): string | null {
   const normalized = value?.trim();
   return normalized ? normalized : null;
+}
+
+export type CatalogLinkQuery = {
+  q?: string;
+  format?: ProductFormat;
+  genre?: string;
+};
+
+export const catalogFormatCollections: Array<{ label: string; format: ProductFormat }> = [
+  { label: "Vinyl records", format: "vinyl" },
+  { label: "Cassette tapes", format: "cassette" },
+  { label: "CDs", format: "cd" },
+];
+
+export const catalogGenreCollections: Array<{ label: string; genre: string }> = [
+  { label: "Techno", genre: "Techno" },
+  { label: "Electro", genre: "Electro" },
+  { label: "Darkwave", genre: "Darkwave" },
+  { label: "EBM", genre: "EBM" },
+  { label: "Ambient", genre: "Ambient" },
+  { label: "Post-Punk", genre: "Post-Punk" },
+];
+
+export function buildCatalogPath(query: CatalogLinkQuery = {}): string {
+  const params = new URLSearchParams();
+
+  if (query.q?.trim()) {
+    params.set("q", query.q.trim());
+  }
+
+  if (query.format) {
+    params.set("format", query.format);
+  }
+
+  if (query.genre?.trim()) {
+    params.set("genre", query.genre.trim());
+  }
+
+  const search = params.toString();
+  return search ? `/catalog?${search}` : "/catalog";
 }
 
 const fallbackOrderEmail = "orders@federicoshop.de";
@@ -16,8 +58,26 @@ export const siteConfig = {
   name: "Federico Shop",
   shortName: "Federico Shop",
   description:
-    "Berlin electronic music record shop for techno, EBM, darkwave, post-punk, vinyl, cassette, and CD. Buy graded used records online from Federico Shop.",
+    "Federico Shop is a Berlin electronic music record shop for techno, electro, EBM, darkwave, ambient, and post-punk vinyl, cassette, and CD collector copies.",
   tagline: "Electronic music record shop",
+  seoKeywords: [
+    "Federico Shop",
+    "Federico Shop Berlin",
+    "Federico Berlin vinyl",
+    "Berlin record shop",
+    "Berlin vinyl store",
+    "electronic music record shop",
+    "techno vinyl",
+    "electro vinyl",
+    "EBM records",
+    "darkwave vinyl",
+    "ambient records",
+    "post-punk records",
+    "used vinyl online",
+    "vinyl records",
+    "cassette tapes",
+    "CD shop",
+  ],
   orderEmail: configuredOrderEmail ?? fallbackOrderEmail,
   supportEmail: configuredSupportEmail ?? fallbackSupportEmail,
   baseUrl:
@@ -62,6 +122,10 @@ export const siteConfig = {
 
 export function siteUrl(path = ""): string {
   return new URL(path, siteConfig.baseUrl).toString();
+}
+
+export function buildCatalogUrl(query: CatalogLinkQuery = {}): string {
+  return siteUrl(buildCatalogPath(query));
 }
 
 export function legalAddressLines(): string[] {

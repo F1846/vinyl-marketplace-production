@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useDictionary } from "@/components/providers/locale-provider";
-import { siteConfig } from "@/lib/site";
+import {
+  buildCatalogPath,
+  catalogFormatCollections,
+  catalogGenreCollections,
+  siteConfig,
+} from "@/lib/site";
 
 export function Footer() {
   const dictionary = useDictionary();
@@ -10,7 +15,7 @@ export function Footer() {
   return (
     <footer className="border-t border-border bg-[rgba(255,255,255,0.76)]">
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr_1fr]">
+        <div className="grid gap-8 lg:grid-cols-[1.35fr_1fr_1fr_1fr]">
           <div>
             <span className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground">
               {siteConfig.name}
@@ -54,6 +59,31 @@ export function Footer() {
               <Link href="/refund" className="text-muted transition-colors hover:text-accent">
                 {dictionary.footer.refundPolicy}
               </Link>
+            </div>
+          </div>
+          <div className="space-y-3 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+              {dictionary.footer.popularSearches}
+            </p>
+            <div className="flex flex-col gap-3">
+              {catalogFormatCollections.map((collection) => (
+                <Link
+                  key={collection.format}
+                  href={buildCatalogPath({ format: collection.format })}
+                  className="text-muted transition-colors hover:text-accent"
+                >
+                  {collection.label}
+                </Link>
+              ))}
+              {catalogGenreCollections.slice(0, 4).map((collection) => (
+                <Link
+                  key={collection.genre}
+                  href={buildCatalogPath({ genre: collection.genre })}
+                  className="text-muted transition-colors hover:text-accent"
+                >
+                  {collection.label}
+                </Link>
+              ))}
             </div>
           </div>
         </div>

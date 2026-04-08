@@ -7,6 +7,12 @@ export const metadata: Metadata = {
   title: "About Federico Shop",
   description:
     "Learn about Federico Shop, a Berlin-based electronic music record shop focused on graded vinyl, cassette, and CD finds.",
+  keywords: [
+    "about Federico Shop",
+    "Federico Shop Berlin",
+    "Berlin record shop",
+    "electronic music record shop",
+  ],
   alternates: {
     canonical: siteUrl("/about"),
   },

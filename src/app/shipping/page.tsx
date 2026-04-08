@@ -1,9 +1,22 @@
+import type { Metadata } from "next";
 import { formatMessage } from "@/lib/i18n/format";
 import { getRequestDictionary } from "@/lib/i18n/server";
-import { siteConfig } from "@/lib/site";
+import { siteConfig, siteUrl } from "@/lib/site";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Shipping and Pickup",
+  description:
+    "Review Federico Shop shipping rates, local pickup in Berlin Neukolln, and format-aware delivery information for vinyl, cassette, and CD orders.",
+  keywords: [
+    "Federico Shop shipping",
+    "Berlin local pickup records",
+    "vinyl shipping Europe",
+    "cassette shipping Germany",
+    "CD shipping Europe",
+  ],
+  alternates: {
+    canonical: siteUrl("/shipping"),
+  },
 };
 
 export default async function ShippingPage() {

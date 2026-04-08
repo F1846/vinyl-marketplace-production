@@ -7,7 +7,7 @@ import { ProductImageGallery } from "@/components/product/product-image-gallery"
 import { formatMessage } from "@/lib/i18n/format";
 import { getRequestDictionary } from "@/lib/i18n/server";
 import { formatEuroFromCents } from "@/lib/money";
-import { siteUrl } from "@/lib/site";
+import { siteConfig, siteUrl } from "@/lib/site";
 import { conditionLabel } from "@/types/product";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +41,7 @@ export async function generateMetadata({
   const title = `${product.artist} - ${product.title}`;
   const description =
     product.description?.trim() ||
-    `${product.format.toUpperCase()} / ${product.genre} / ${formatEuroFromCents(product.priceCents)}`;
+    `${product.artist} - ${product.title}. ${product.format.toUpperCase()} / ${product.genre} / ${formatEuroFromCents(product.priceCents)} from Federico Shop Berlin.`;
   const imageUrl = product.images[0]?.url;
 
   return {
@@ -52,7 +52,8 @@ export async function generateMetadata({
       `${product.genre} ${product.format}`,
       `${product.pressingLabel ?? "electronic music"} record`,
       "used vinyl record",
-      "Federico Shop",
+      "Federico Shop Berlin",
+      "electronic music record shop",
     ],
     alternates: {
       canonical: siteUrl(`/products/${product.id}`),
@@ -62,6 +63,7 @@ export async function generateMetadata({
       description,
       type: "website",
       url: siteUrl(`/products/${product.id}`),
+      siteName: siteConfig.name,
       images: imageUrl ? [{ url: imageUrl }] : undefined,
     },
   };
@@ -107,7 +109,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           : "https://schema.org/UsedCondition",
       seller: {
         "@type": "Organization",
-        name: "Federico Shop",
+        name: siteConfig.name,
       },
     },
   };

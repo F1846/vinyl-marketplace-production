@@ -1,7 +1,12 @@
 import type { MetadataRoute } from "next";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { siteUrl } from "@/lib/site";
+import {
+  buildCatalogUrl,
+  catalogFormatCollections,
+  catalogGenreCollections,
+  siteUrl,
+} from "@/lib/site";
 
 export const revalidate = 3600;
 
@@ -37,12 +42,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/refund", changeFrequency: "monthly" as const, priority: 0.4 },
     { path: "/imprint", changeFrequency: "monthly" as const, priority: 0.4 },
   ];
+  const collectionRoutes = [
+    ...catalogFormatCollections.map((collection) => ({
+      url: buildCatalogUrl({ format: collection.format }),
+      changeFrequency: "weekly" as const,
+      priority: 0.65,
+    })),
+    ...catalogGenreCollections.map((collection) => ({
+      url: buildCatalogUrl({ genre: collection.genre }),
+      changeFrequency: "weekly" as const,
+      priority: 0.65,
+    })),
+  ];
 
   const products = await getActiveProducts();
 
   return [
     ...staticRoutes.map((route) => ({
       url: siteUrl(route.path),
+      lastModified: new Date(),
+      changeFrequency: route.changeFrequency,
+      priority: route.priority,
+    })),
+    ...collectionRoutes.map((route) => ({
+      url: route.url,
       lastModified: new Date(),
       changeFrequency: route.changeFrequency,
       priority: route.priority,

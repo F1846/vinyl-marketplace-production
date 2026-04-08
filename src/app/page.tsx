@@ -13,7 +13,12 @@ import { ProductCard } from "@/components/catalog/product-card";
 import { formatMessage } from "@/lib/i18n/format";
 import { getRequestDictionary } from "@/lib/i18n/server";
 import { formatEuroFromCents } from "@/lib/money";
-import { siteConfig } from "@/lib/site";
+import {
+  buildCatalogPath,
+  catalogFormatCollections,
+  catalogGenreCollections,
+  siteConfig,
+} from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -79,6 +84,11 @@ export default async function HomePage() {
   const newArrivalProducts = shuffleProducts(shuffledLatestProducts).slice(0, 12);
   const shelfPicks = shuffledLatestProducts.slice(12, 20);
   const featureStripProducts = shuffledLatestProducts.slice(20, 23);
+  const visibleGenreCollections = catalogGenreCollections
+    .filter((collection) =>
+      latestProducts.some((product) => product.genre.toLowerCase() === collection.genre.toLowerCase())
+    )
+    .slice(0, 6);
   const featuredHeroProduct = heroPreviewProducts[0] ?? latestProducts[0] ?? null;
   const formatSpotlight = heroPreviewProducts[1] ?? latestProducts[1] ?? null;
   const storefrontStructuredData = {
@@ -187,7 +197,7 @@ export default async function HomePage() {
               </p>
             </Link>
           </div>
-          {featureStripProducts.length > 0 && (
+      {featureStripProducts.length > 0 && (
             <div className="grid gap-2.5 sm:grid-cols-3">
               {featureStripProducts.map((product) => (
                 <ProductCard key={product.id} product={product} size="compact" />
@@ -199,6 +209,41 @@ export default async function HomePage() {
           {heroPreviewProducts.map((product) => (
             <ProductCard key={product.id} product={product} size="mini" />
           ))}
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-[1.2rem] border border-border bg-white p-4 shadow-card">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+            {dictionary.home.shopByFormat}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2.5">
+            {catalogFormatCollections.map((collection) => (
+              <Link
+                key={collection.format}
+                href={buildCatalogPath({ format: collection.format })}
+                className="rounded-full border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground transition hover:border-foreground/20 hover:bg-surface-hover"
+              >
+                {collection.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-[1.2rem] border border-border bg-white p-4 shadow-card">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+            {dictionary.home.popularGenres}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2.5">
+            {visibleGenreCollections.map((collection) => (
+              <Link
+                key={collection.genre}
+                href={buildCatalogPath({ genre: collection.genre })}
+                className="rounded-full border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground transition hover:border-foreground/20 hover:bg-surface-hover"
+              >
+                {collection.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 

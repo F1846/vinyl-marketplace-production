@@ -8,7 +8,13 @@ import { Footer } from "@/components/layout/footer";
 import { LocaleProvider } from "@/components/providers/locale-provider";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { getRequestLocale } from "@/lib/i18n/server";
-import { siteConfig, siteUrl } from "@/lib/site";
+import {
+  buildCatalogUrl,
+  catalogFormatCollections,
+  catalogGenreCollections,
+  siteConfig,
+  siteUrl,
+} from "@/lib/site";
 
 const sansFont = Manrope({
   subsets: ["latin"],
@@ -31,23 +37,10 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   description: siteConfig.description,
   applicationName: siteConfig.name,
-  keywords: [
-    "Federico Shop",
-    "Federico Shop Berlin",
-    "vinyl records",
-    "electronic music record shop",
-    "Berlin record shop",
-    "Berlin vinyl store",
-    "techno vinyl",
-    "EBM vinyl",
-    "darkwave vinyl",
-    "post-punk records",
-    "house records",
-    "cassettes",
-    "CDs",
-    "used vinyl online",
-  ],
+  keywords: siteConfig.seoKeywords,
   authors: [{ name: siteConfig.name }],
+  creator: siteConfig.name,
+  publisher: siteConfig.name,
   category: "music store",
   openGraph: {
     title: "Federico Shop | Berlin Electronic Music Record Shop",
@@ -109,6 +102,7 @@ const websiteStructuredData = [
     name: siteConfig.name,
     url: siteConfig.baseUrl,
     email: siteConfig.supportEmail,
+    knowsAbout: siteConfig.seoKeywords,
     contactPoint: [
       {
         "@type": "ContactPoint",
@@ -138,6 +132,23 @@ const websiteStructuredData = [
     paymentAccepted: ["PayPal", "Credit Card", "Local Pickup"],
     priceRange: "EUR",
     areaServed: ["Germany", "Europe"],
+    knowsAbout: siteConfig.seoKeywords,
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Federico Shop catalog collections",
+      itemListElement: [
+        ...catalogFormatCollections.map((collection) => ({
+          "@type": "OfferCatalog",
+          name: collection.label,
+          url: buildCatalogUrl({ format: collection.format }),
+        })),
+        ...catalogGenreCollections.map((collection) => ({
+          "@type": "OfferCatalog",
+          name: collection.label,
+          url: buildCatalogUrl({ genre: collection.genre }),
+        })),
+      ],
+    },
     address: {
       "@type": "PostalAddress",
       streetAddress: [siteConfig.legal.street, siteConfig.legal.street2]
