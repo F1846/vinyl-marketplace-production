@@ -17,12 +17,12 @@ export const siteConfig = {
   name: "Federico Shop",
   shortName: "Federico Shop",
   description:
-    "Curated electronic music on vinyl, cassette, and CD with honest grading, fair euro pricing, and collector-friendly shipping.",
-  tagline: "Curated records, tapes, and CDs for collectors.",
+    "Electronic music record shop with graded vinyl, cassette, and CD picks, fair euro pricing, and collector-friendly shipping.",
+  tagline: "Electronic music record shop",
   supportEmail: emailFromAddress() ?? "hello@federicoshop.de",
   baseUrl:
     clean(process.env.NEXT_PUBLIC_SITE_URL) ?? "https://www.federicoshop.de",
-  pickupLabel: clean(process.env.STORE_PICKUP_LABEL) ?? "Berlin studio pickup",
+  pickupLabel: clean(process.env.STORE_PICKUP_LABEL) ?? "Berlin local pickup",
   pickupNote:
     clean(process.env.STORE_PICKUP_NOTE) ??
     "Pickup is arranged by email after your order is placed.",

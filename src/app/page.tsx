@@ -32,10 +32,24 @@ export default async function HomePage() {
       current === null ? product.priceCents : Math.min(current, product.priceCents),
     null
   );
+  const storefrontStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "MusicStore",
+    name: siteConfig.name,
+    url: siteConfig.baseUrl,
+    description: siteConfig.description,
+    areaServed: "Europe",
+    paymentAccepted: ["PayPal", "Credit Card", "Local Pickup"],
+  };
 
   return (
     <div className="space-y-12">
-      <section className="grid gap-8 overflow-hidden rounded-[2rem] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(241,240,236,0.92))] px-6 py-10 shadow-soft lg:grid-cols-[1.1fr_0.9fr] lg:px-10 lg:py-14">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(storefrontStructuredData) }}
+      />
+
+      <section className="grid gap-8 overflow-hidden rounded-[1.75rem] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(243,242,238,0.96))] px-6 py-10 shadow-card lg:grid-cols-[1.1fr_0.9fr] lg:px-10 lg:py-14">
         <div className="space-y-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-muted">
             <RecordIcon className="h-4 w-4 text-foreground" />
@@ -43,12 +57,11 @@ export default async function HomePage() {
           </div>
           <div className="space-y-5">
             <h1 className="max-w-3xl font-serif text-5xl leading-none text-foreground sm:text-6xl">
-              Records worth opening the parcel for.
+              Records worth having on the shelf.
             </h1>
             <p className="max-w-2xl text-lg leading-8 text-muted">
-              {siteConfig.name} brings together graded electronic music on vinyl,
-              cassette, and CD with clean pricing in euro and collector-friendly
-              shipping.
+              {siteConfig.name} is an electronic music record shop with graded vinyl,
+              cassette, and CD finds, fair euro pricing, and collector-friendly shipping.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -60,17 +73,17 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-[1.5rem] border border-border bg-white p-4">
+            <div className="rounded-[1.2rem] border border-border bg-white p-4 shadow-card">
               <p className="text-xs uppercase tracking-[0.2em] text-muted">Available now</p>
               <p className="mt-2 font-serif text-4xl text-foreground">{count ?? 0}</p>
             </div>
-            <div className="rounded-[1.5rem] border border-border bg-white p-4">
+            <div className="rounded-[1.2rem] border border-border bg-white p-4 shadow-card">
               <p className="text-xs uppercase tracking-[0.2em] text-muted">From</p>
               <p className="mt-2 font-serif text-4xl text-foreground">
                 {cheapest === null ? "0 EUR" : formatEuroFromCents(cheapest)}
               </p>
             </div>
-            <div className="rounded-[1.5rem] border border-border bg-white p-4">
+            <div className="rounded-[1.2rem] border border-border bg-white p-4 shadow-card">
               <p className="text-xs uppercase tracking-[0.2em] text-muted">Format mix</p>
               <p className="mt-2 font-serif text-3xl text-foreground">Vinyl / Tape / CD</p>
             </div>

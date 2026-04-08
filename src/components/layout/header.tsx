@@ -8,13 +8,13 @@ export function Header() {
     <header className="sticky top-0 z-50 border-b border-border/80 bg-[rgba(250,249,246,0.92)] backdrop-blur">
       <div className="border-b border-border/60 bg-white/70">
         <div className="container mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-xs uppercase tracking-[0.22em] text-muted sm:px-6 lg:px-8">
-          <span>Curated electronic music archive</span>
+          <span>{siteConfig.tagline}</span>
           <span>{siteConfig.pickupLabel}</span>
         </div>
       </div>
       <div className="container mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-3 text-foreground">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white">
+          <span className="flex h-11 w-11 items-center justify-center rounded-[1rem] border border-border bg-white">
             <RecordIcon className="h-6 w-6" />
           </span>
           <span>
@@ -41,7 +41,7 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-4">
-          <Link href="/catalog" className="hidden items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-foreground/20 hover:bg-surface-hover md:inline-flex">
+          <Link href="/catalog" className="hidden items-center gap-2 rounded-[1rem] border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-foreground/20 hover:bg-surface-hover md:inline-flex">
             Shop now <ChevronRight className="h-4 w-4" />
           </Link>
           <Link href="/cart" className="relative text-foreground transition-colors hover:text-accent" aria-label="View cart">

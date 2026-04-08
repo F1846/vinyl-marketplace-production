@@ -19,8 +19,8 @@ export default {
         success: "#157347",
       },
       fontFamily: {
-        sans: ["'Helvetica Neue'", "'Avenir Next'", "sans-serif"],
-        serif: ["Iowan Old Style", "Palatino Linotype", "Book Antiqua", "Georgia", "serif"],
+        sans: ["var(--font-sans)", "sans-serif"],
+        serif: ["var(--font-serif)", "serif"],
         mono: ["JetBrains Mono", "Fira Code", "monospace"],
       },
       fontSize: {
@@ -34,7 +34,8 @@ export default {
         "4xl": ["2.25rem", { lineHeight: "2.5rem" }],
       },
       boxShadow: {
-        soft: "0 18px 50px rgba(15, 15, 15, 0.08)",
+        soft: "0 18px 44px rgba(15, 15, 15, 0.08)",
+        card: "0 12px 30px rgba(17, 17, 17, 0.07)",
       },
     },
   },
