@@ -51,7 +51,7 @@ export default async function HomePage() {
     with: { images: { orderBy: [schema.productImages.sortOrder] } },
   });
   const shuffledLatestProducts = shuffleProducts(latestProducts);
-  const newArrivalProducts = shuffledLatestProducts.slice(0, 12);
+  const newArrivalProducts = shuffleProducts(shuffledLatestProducts).slice(0, 12);
   const shelfPicks = shuffledLatestProducts.slice(12, 20);
   const featuredHeroProduct = heroPreviewProducts[0] ?? latestProducts[0] ?? null;
   const formatSpotlight = heroPreviewProducts[1] ?? latestProducts[1] ?? null;
@@ -109,9 +109,6 @@ export default async function HomePage() {
                   ? `${featuredHeroProduct.artist} - ${featuredHeroProduct.title}`
                   : "Current records, tapes, and CDs ready to open and play."}
               </p>
-              <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground">
-                Open a featured record
-              </p>
             </Link>
             <Link
               href={cheapestProduct ? `/products/${cheapestProduct.id}` : "/catalog?sort=price-asc"}
@@ -125,9 +122,6 @@ export default async function HomePage() {
                 {cheapestProduct
                   ? `Start with ${cheapestProduct.artist} - ${cheapestProduct.title}`
                   : "Start with the lowest-priced copy currently in the catalog."}
-              </p>
-              <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground">
-                Shop entry points
               </p>
             </Link>
             <Link
@@ -147,10 +141,21 @@ export default async function HomePage() {
                   ? `${formatSpotlight.artist} - ${formatSpotlight.title}`
                   : "Browse by format and jump straight into the shelf you want."}
               </p>
-              <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground">
-                Browse this format
-              </p>
             </Link>
+          </div>
+          <div className="grid gap-2.5 sm:grid-cols-3">
+            {[
+              "Detailed grading notes on every listing",
+              "PayPal, card, or Berlin local pickup",
+              "Shipping rates matched to format and quantity",
+            ].map((item) => (
+              <div
+                key={item}
+                className="rounded-[0.95rem] border border-border/90 bg-white px-3 py-2.5 text-[12px] leading-5 text-muted shadow-card"
+              >
+                {item}
+              </div>
+            ))}
           </div>
         </div>
         <div className="grid gap-2.5 sm:grid-cols-2">
