@@ -11,6 +11,7 @@ import {
 
 const AFTERSHIP_BASE_URL = "https://api.aftership.com/tracking/2025-07";
 const SEVENTEENTRACK_BASE_URL = "https://api.17track.net/track/v2";
+const SHIP24_BASE_URL = "https://api.ship24.com/public/v1";
 
 const CARRIER_TRACKING_URLS: Record<string, string> = {
   dhl: "https://www.dhl.com/global-en/home/tracking/tracking-express.html?submit=1&tracking-id={trackingNumber}",
@@ -38,13 +39,50 @@ const TRACKING_STATUS_LABELS: Record<string, string> = {
   delivered: "Delivered",
   exception: "Delivery exception",
   deliveryfailure: "Delivery failure",
+  failedattempt: "Delivery attempt failed",
   attemptfail: "Delivery attempt failed",
   expired: "Shipment expired",
 };
 
-type TrackingProviderId = "17track" | "aftership";
+type TrackingProviderId = "ship24" | "17track" | "aftership";
 type OrderRecord = typeof schema.orders.$inferSelect;
 type FetchInit = NonNullable<Parameters<typeof fetch>[1]>;
+
+type Ship24Tracking = {
+  tracker?: {
+    trackingNumber?: string;
+    courierCode?: string | string[];
+  };
+  shipment?: {
+    statusCode?: string | null;
+    statusCategory?: string | null;
+    statusMilestone?: string | null;
+    delivery?: {
+      estimatedDeliveryDate?: string | null;
+    };
+    trackingNumbers?: Array<{ tn?: string }>;
+  };
+  events?: Array<{
+    status?: string;
+    occurrenceDatetime?: string;
+    location?: string | null;
+    courierCode?: string | null;
+    statusCode?: string | null;
+    statusCategory?: string | null;
+    statusMilestone?: string | null;
+  }>;
+  statistics?: {
+    timestamps?: {
+      infoReceivedDatetime?: string | null;
+      inTransitDatetime?: string | null;
+      outForDeliveryDatetime?: string | null;
+      failedAttemptDatetime?: string | null;
+      availableForPickupDatetime?: string | null;
+      exceptionDatetime?: string | null;
+      deliveredDatetime?: string | null;
+    };
+  };
+};
 
 type AfterShipTracking = {
   tracking_number?: string;
@@ -170,6 +208,11 @@ function getAfterShipApiKey(): string | null {
   return key || null;
 }
 
+function getShip24ApiKey(): string | null {
+  const key = process.env.SHIP24_API_KEY?.trim();
+  return key || null;
+}
+
 function get17TrackApiKey(): string | null {
   const key = process.env.SEVENTEENTRACK_API_KEY?.trim();
   return key || null;
@@ -178,12 +221,20 @@ function get17TrackApiKey(): string | null {
 function getTrackingProvider(): TrackingProviderId | null {
   const preferred = process.env.TRACKING_PROVIDER?.trim().toLowerCase();
 
+  if (preferred === "ship24" && getShip24ApiKey()) {
+    return "ship24";
+  }
+
   if (preferred === "17track" && get17TrackApiKey()) {
     return "17track";
   }
 
   if (preferred === "aftership" && getAfterShipApiKey()) {
     return "aftership";
+  }
+
+  if (getShip24ApiKey()) {
+    return "ship24";
   }
 
   if (get17TrackApiKey()) {
@@ -300,6 +351,143 @@ function buildDirectTrackingSummary(order: OrderRecord): TrackingSummary | null 
 
 export function isTrackingSyncConfigured(): boolean {
   return Boolean(getTrackingProvider());
+}
+
+async function ship24Fetch<T>(path: string, init?: FetchInit): Promise<T> {
+  const apiKey = getShip24ApiKey();
+  if (!apiKey) {
+    throw new Error("Ship24 tracking sync is not configured.");
+  }
+
+  const response = await fetch(`${SHIP24_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+      ...(init?.headers ?? {}),
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Ship24 request failed with ${response.status}.`);
+  }
+
+  return (await response.json()) as T;
+}
+
+function getShip24TrackingFromEnvelope(payload: unknown): Ship24Tracking | null {
+  if (!isRecord(payload) || !isRecord(payload.data) || !Array.isArray(payload.data.trackings)) {
+    return null;
+  }
+
+  const firstTracking = payload.data.trackings.find((item) => isRecord(item));
+  return firstTracking as Ship24Tracking | null;
+}
+
+function firstShip24CarrierCode(value: string | string[] | null | undefined): string | null {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  if (Array.isArray(value)) {
+    const first = value.find((item) => typeof item === "string" && item.trim());
+    return typeof first === "string" ? first.trim() : null;
+  }
+
+  return null;
+}
+
+function mapShip24Checkpoint(event: NonNullable<Ship24Tracking["events"]>[number]): TrackingCheckpoint {
+  return {
+    message: event.status?.trim() || "Tracking update received.",
+    location: event.location?.trim() || null,
+    status: event.statusMilestone?.trim() || event.statusCode?.trim() || event.statusCategory?.trim() || null,
+    timestamp: event.occurrenceDatetime?.trim() || null,
+  };
+}
+
+function getShip24StatisticsTimestamp(tracking: Ship24Tracking): string | null {
+  const timestamps = tracking.statistics?.timestamps;
+  if (!timestamps) {
+    return null;
+  }
+
+  return (
+    timestamps.deliveredDatetime ||
+    timestamps.outForDeliveryDatetime ||
+    timestamps.inTransitDatetime ||
+    timestamps.infoReceivedDatetime ||
+    timestamps.availableForPickupDatetime ||
+    timestamps.failedAttemptDatetime ||
+    timestamps.exceptionDatetime ||
+    null
+  );
+}
+
+function normalizeShip24TrackingSummary(
+  tracking: Ship24Tracking,
+  order: Pick<OrderRecord, "trackingCarrier" | "trackingNumber" | "orderNumber">
+): TrackingSummary | null {
+  const trackingNumber =
+    tracking.tracker?.trackingNumber?.trim() ||
+    tracking.shipment?.trackingNumbers?.find((entry) => entry.tn?.trim())?.tn?.trim() ||
+    order.trackingNumber?.trim() ||
+    "";
+
+  if (!trackingNumber) {
+    return null;
+  }
+
+  const carrierSlug =
+    normalizeCarrierSlug(firstShip24CarrierCode(tracking.tracker?.courierCode)) ||
+    normalizeCarrierSlug(order.trackingCarrier);
+
+  const checkpoints = Array.isArray(tracking.events)
+    ? tracking.events.map((event) => mapShip24Checkpoint(event))
+    : [];
+
+  const latestCheckpoint = checkpoints[0] ?? null;
+  const carrierStatus =
+    tracking.shipment?.statusMilestone?.trim() ||
+    tracking.shipment?.statusCode?.trim() ||
+    tracking.shipment?.statusCategory?.trim() ||
+    latestCheckpoint?.status ||
+    null;
+
+  return {
+    provider: "ship24",
+    trackingNumber,
+    carrierSlug,
+    carrierName: humanizeCarrier(carrierSlug),
+    carrierStatus,
+    carrierStatusLabel: getTrackingStatusLabel(carrierStatus),
+    message:
+      latestCheckpoint?.message ||
+      tracking.shipment?.delivery?.estimatedDeliveryDate?.trim() ||
+      `Tracking is active for ${order.orderNumber}.`,
+    trackingUrl: buildTrackingUrl(carrierSlug || order.trackingCarrier, trackingNumber),
+    lastUpdatedAt: latestCheckpoint?.timestamp || getShip24StatisticsTimestamp(tracking),
+    checkpoints,
+  };
+}
+
+async function fetchShip24Summary(order: OrderRecord): Promise<TrackingSummary | null> {
+  if (!order.trackingNumber) {
+    return null;
+  }
+
+  const payload = await ship24Fetch<unknown>("/trackers/track", {
+    method: "POST",
+    body: JSON.stringify({
+      trackingNumber: order.trackingNumber,
+      shipmentReference: order.orderNumber,
+      clientTrackerId: order.id,
+    }),
+  });
+
+  const tracking = getShip24TrackingFromEnvelope(payload);
+  return tracking ? normalizeShip24TrackingSummary(tracking, order) : null;
 }
 
 async function afterShipFetch<T>(path: string, init?: FetchInit): Promise<T> {
@@ -676,6 +864,7 @@ function mapTrackingTagToOrderStatus(tag: string | null): OrderStatus | null {
     case "intransit":
     case "outfordelivery":
     case "availableforpickup":
+    case "failedattempt":
     case "attemptfail":
     case "deliveryfailure":
     case "exception":
@@ -702,6 +891,10 @@ export async function fetchTrackingSummary(order: OrderRecord): Promise<Tracking
   }
 
   try {
+    if (provider === "ship24") {
+      return (await fetchShip24Summary(order)) ?? directSummary;
+    }
+
     if (provider === "17track") {
       return (await fetch17TrackSummary(order)) ?? directSummary;
     }
