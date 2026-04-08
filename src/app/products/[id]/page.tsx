@@ -4,7 +4,6 @@ import { db, schema } from "@/db";
 import { AddToCart } from "@/components/product/add-to-cart";
 import { ProductImageGallery } from "@/components/product/product-image-gallery";
 import { formatEuroFromCents } from "@/lib/money";
-import { siteConfig } from "@/lib/site";
 import { conditionLabel } from "@/types/product";
 
 export const dynamic = "force-dynamic";
@@ -65,7 +64,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             </h1>
           </div>
 
-          <div className="grid gap-3 rounded-[1.15rem] border border-border bg-white p-3.5 shadow-soft sm:grid-cols-3">
+          <div className="grid gap-3 rounded-[1.15rem] border border-border bg-white p-3.5 shadow-soft sm:grid-cols-2">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
                 Price
@@ -83,12 +82,6 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               >
                 {inStock ? `${product.stockQuantity} in stock` : "Sold out"}
               </p>
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                Pickup
-              </p>
-              <p className="mt-1 text-sm text-foreground">{siteConfig.pickupLabel}</p>
             </div>
           </div>
 
@@ -146,14 +139,14 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           </div>
 
           {product.description && (
-            <details className="rounded-[1.1rem] border border-border bg-white p-3.5 shadow-soft">
-              <summary className="cursor-pointer list-none font-sans text-[1.15rem] font-bold tracking-[-0.04em] text-foreground">
+            <section className="rounded-[1.1rem] border border-border bg-white p-3.5 shadow-soft">
+              <h2 className="font-sans text-[1.15rem] font-bold tracking-[-0.04em] text-foreground">
                 Release notes
-              </summary>
+              </h2>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted">
                 {product.description}
               </p>
-            </details>
+            </section>
           )}
         </div>
       </div>
