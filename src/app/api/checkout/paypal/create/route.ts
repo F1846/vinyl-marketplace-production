@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createCheckoutStateToken } from "@/lib/checkout-state";
+import {
+  createCheckoutStateToken,
+  isCheckoutStateConfigured,
+} from "@/lib/checkout-state";
 import {
   calculateOrderShipping,
   createShippingAddressFromCheckout,
@@ -13,6 +16,18 @@ export async function POST(req: NextRequest) {
   if (!process.env.DATABASE_URL || !isPayPalConfigured()) {
     return NextResponse.json(
       { error: { code: "PAYPAL_UNAVAILABLE", message: "PayPal is not configured." } },
+      { status: 503 }
+    );
+  }
+
+  if (!isCheckoutStateConfigured()) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "CHECKOUT_STATE_UNAVAILABLE",
+          message: "Secure checkout state is not configured.",
+        },
+      },
       { status: 503 }
     );
   }

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { schema } from "@/db";
 import { and, eq } from "drizzle-orm";
 import { syncOrderTracking } from "@/lib/order-tracking";
+import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const lookupSchema = z.object({
@@ -11,6 +12,29 @@ const lookupSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const lookupRateLimit = rateLimit(
+    `order-lookup:${getRequestIp(req)}`,
+    10,
+    10 * 60 * 1000
+  );
+
+  if (!lookupRateLimit.success) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "RATE_LIMITED",
+          message: "Too many lookup attempts. Please try again shortly.",
+        },
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(lookupRateLimit.retryAfterSeconds),
+        },
+      }
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();

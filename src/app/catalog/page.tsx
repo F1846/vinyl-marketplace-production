@@ -1,8 +1,17 @@
+import type { Metadata } from "next";
 import { CatalogBrowser } from "@/components/catalog/catalog-browser";
 import { catalogSortValues, getCatalogFilters, getCatalogPage } from "@/lib/catalog";
 import type { ProductFormat } from "@/types/product";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Catalog",
+  description:
+    "Browse graded electronic music vinyl, cassette, and CD listings from Federico Shop.",
+  alternates: {
+    canonical: "/catalog",
+  },
+};
 
 export default async function CatalogPage({
   searchParams,

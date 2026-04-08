@@ -8,6 +8,11 @@ type CheckoutStatePayload = {
   createdAt: number;
 };
 
+function clean(value: string | undefined | null): string | null {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
 function isShippingDetails(value: unknown): value is ShippingDetailsInput {
   if (!value || typeof value !== "object") {
     return false;
@@ -29,13 +34,31 @@ function isShippingDetails(value: unknown): value is ShippingDetailsInput {
   return requiredKeys.every((key) => typeof candidate[key] === "string");
 }
 
+export function isCheckoutStateConfigured(): boolean {
+  return Boolean(
+    clean(process.env.CHECKOUT_STATE_SECRET) ||
+      clean(process.env.ADMIN_SESSION_SECRET) ||
+      process.env.NODE_ENV !== "production"
+  );
+}
+
 function getCheckoutStateSecret(): string {
-  return (
-    process.env.CHECKOUT_STATE_SECRET?.trim() ||
-    process.env.ADMIN_SESSION_SECRET?.trim() ||
-    process.env.STRIPE_SECRET_KEY?.trim() ||
-    process.env.PAYPAL_CLIENT_SECRET?.trim() ||
-    "federico-shop-checkout-secret"
+  const dedicatedSecret = clean(process.env.CHECKOUT_STATE_SECRET);
+  if (dedicatedSecret) {
+    return dedicatedSecret;
+  }
+
+  const adminSessionSecret = clean(process.env.ADMIN_SESSION_SECRET);
+  if (adminSessionSecret) {
+    return adminSessionSecret;
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return "federico-shop-dev-checkout-state-secret";
+  }
+
+  throw new Error(
+    "CHECKOUT_STATE_SECRET or ADMIN_SESSION_SECRET must be configured in production."
   );
 }
 
@@ -64,7 +87,13 @@ export function verifyCheckoutStateToken(token: string): CheckoutStatePayload | 
     return null;
   }
 
-  const expected = signPayload(payload);
+  let expected: string;
+  try {
+    expected = signPayload(payload);
+  } catch {
+    return null;
+  }
+
   const signatureBuffer = Buffer.from(signature, "hex");
   const expectedBuffer = Buffer.from(expected, "hex");
 

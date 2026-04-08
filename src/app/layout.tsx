@@ -25,6 +25,7 @@ export const metadata: Metadata = {
     template: "%s | Federico Shop",
   },
   metadataBase: new URL(siteConfig.baseUrl),
+  manifest: "/manifest.webmanifest",
   description: siteConfig.description,
   applicationName: siteConfig.name,
   keywords: [
@@ -71,12 +72,38 @@ export const metadata: Metadata = {
   },
 };
 
+const websiteStructuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: siteConfig.name,
+    url: siteConfig.baseUrl,
+    description: siteConfig.description,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${siteConfig.baseUrl}/catalog?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: siteConfig.name,
+    url: siteConfig.baseUrl,
+    email: siteConfig.supportEmail,
+  },
+];
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body
         className={`${sansFont.variable} ${serifFont.variable} flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
       >
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteStructuredData) }}
+        />
         <Header />
         <main className="container mx-auto flex-1 px-4 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
           {children}

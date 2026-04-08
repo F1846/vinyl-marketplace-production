@@ -1,30 +1,113 @@
+import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { AddToCart } from "@/components/product/add-to-cart";
 import { ProductImageGallery } from "@/components/product/product-image-gallery";
 import { formatEuroFromCents } from "@/lib/money";
+import { siteUrl } from "@/lib/site";
 import { conditionLabel } from "@/types/product";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-
+async function getProduct(id: string) {
   const d = db();
-  const product = await d.query.products.findFirst({
+  return d.query.products.findFirst({
     where: eq(schema.products.id, id),
     with: { images: { orderBy: [schema.productImages.sortOrder] } },
   });
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const product = await getProduct(id);
+
+  if (!product || product.status === "archived") {
+    return {
+      title: "Record not found",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  const title = `${product.artist} - ${product.title}`;
+  const description =
+    product.description?.trim() ||
+    `${product.format.toUpperCase()} / ${product.genre} / ${formatEuroFromCents(product.priceCents)}`;
+  const imageUrl = product.images[0]?.url;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: siteUrl(`/products/${product.id}`),
+    },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      url: siteUrl(`/products/${product.id}`),
+      images: imageUrl ? [{ url: imageUrl }] : undefined,
+    },
+  };
+}
+
+export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const product = await getProduct(id);
 
   if (!product || product.status === "archived") {
     notFound();
   }
 
   const inStock = product.stockQuantity > 0;
+  const productStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: `${product.artist} - ${product.title}`,
+    description:
+      product.description?.trim() ||
+      `${product.format.toUpperCase()} / ${product.genre} / ${formatEuroFromCents(product.priceCents)}`,
+    image: product.images.map((image) => image.url),
+    sku: product.pressingCatalogNumber || product.id,
+    category: [product.genre, product.format].filter(Boolean).join(" / "),
+    brand: product.pressingLabel
+      ? {
+          "@type": "Brand",
+          name: product.pressingLabel,
+        }
+      : undefined,
+    offers: {
+      "@type": "Offer",
+      url: siteUrl(`/products/${product.id}`),
+      priceCurrency: "EUR",
+      price: (product.priceCents / 100).toFixed(2),
+      availability: inStock
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      itemCondition:
+        product.conditionMedia === "M"
+          ? "https://schema.org/NewCondition"
+          : "https://schema.org/UsedCondition",
+      seller: {
+        "@type": "Organization",
+        name: "Federico Shop",
+      },
+    },
+  };
 
   return (
     <div className="mx-auto max-w-5xl">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productStructuredData) }}
+      />
       <div className="grid gap-5 lg:grid-cols-[0.84fr_1.06fr] lg:items-start">
         <div className="lg:max-w-[24.5rem]">
           <ProductImageGallery

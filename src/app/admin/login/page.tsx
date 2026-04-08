@@ -19,6 +19,10 @@ export default async function AdminLoginPage({
       ? "Invalid password"
       : params.error === "missing-password"
         ? "Password is required"
+        : params.error === "session-expired"
+          ? "Your admin session expired after 15 minutes. Please sign in again."
+          : params.error === "too-many-attempts"
+            ? "Too many login attempts. Please wait a few minutes and try again."
         : params.error === "auth-not-configured"
           ? "Admin login is not configured"
           : null;
