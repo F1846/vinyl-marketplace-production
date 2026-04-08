@@ -1,15 +1,45 @@
+import type { Metadata } from "next";
 import { getRequestDictionary } from "@/lib/i18n/server";
-import { legalAddressLines, siteConfig } from "@/lib/site";
+import { legalAddressLines, siteConfig, siteUrl } from "@/lib/site";
 
-export const metadata = {
-  title: "Contact",
+export const metadata: Metadata = {
+  title: "Contact Federico Shop",
+  description:
+    "Contact Federico Shop in Berlin for orders, local pickup, shipping questions, and record requests.",
+  alternates: {
+    canonical: siteUrl("/contact"),
+  },
 };
 
 export default async function ContactPage() {
   const dictionary = await getRequestDictionary();
+  const contactStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    name: "Contact Federico Shop",
+    url: siteUrl("/contact"),
+    mainEntity: {
+      "@type": "MusicStore",
+      name: siteConfig.name,
+      email: siteConfig.supportEmail,
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: [siteConfig.legal.street, siteConfig.legal.street2]
+          .filter(Boolean)
+          .join(", "),
+        addressLocality: siteConfig.legal.city,
+        postalCode: siteConfig.legal.postalCode,
+        addressCountry: siteConfig.legal.country,
+      },
+    },
+  };
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(contactStructuredData) }}
+      />
       <div className="space-y-3">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-muted">
           {dictionary.footer.contact}

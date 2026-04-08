@@ -12,7 +12,7 @@ export const siteConfig = {
   name: "Federico Shop",
   shortName: "Federico Shop",
   description:
-    "Electronic music record shop with graded vinyl, cassette, and CD picks, fair euro pricing, and collector-friendly shipping.",
+    "Berlin electronic music record shop for techno, EBM, darkwave, post-punk, vinyl, cassette, and CD. Buy graded used records online from Federico Shop.",
   tagline: "Electronic music record shop",
   supportEmail: configuredContactEmail ?? fallbackSupportEmail,
   emergencyEmail:

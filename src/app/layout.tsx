@@ -8,7 +8,7 @@ import { Footer } from "@/components/layout/footer";
 import { LocaleProvider } from "@/components/providers/locale-provider";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { getRequestLocale } from "@/lib/i18n/server";
-import { siteConfig } from "@/lib/site";
+import { siteConfig, siteUrl } from "@/lib/site";
 
 const sansFont = Manrope({
   subsets: ["latin"],
@@ -24,7 +24,7 @@ const serifFont = Fraunces({
 
 export const metadata: Metadata = {
   title: {
-    default: "Federico Shop | Records, Tapes & CDs",
+    default: "Federico Shop | Berlin Electronic Music Vinyl, Cassettes & CDs",
     template: "%s | Federico Shop",
   },
   metadataBase: new URL(siteConfig.baseUrl),
@@ -32,31 +32,46 @@ export const metadata: Metadata = {
   description: siteConfig.description,
   applicationName: siteConfig.name,
   keywords: [
+    "Federico Shop",
+    "Federico Shop Berlin",
     "vinyl records",
     "electronic music record shop",
+    "Berlin record shop",
+    "Berlin vinyl store",
     "techno vinyl",
+    "EBM vinyl",
+    "darkwave vinyl",
+    "post-punk records",
     "house records",
-    "EBM records",
     "cassettes",
     "CDs",
-    "Berlin record shop",
+    "used vinyl online",
   ],
   authors: [{ name: siteConfig.name }],
   category: "music store",
   openGraph: {
-    title: siteConfig.name,
+    title: "Federico Shop | Berlin Electronic Music Record Shop",
     description: siteConfig.description,
     type: "website",
     url: siteConfig.baseUrl,
     siteName: siteConfig.name,
+    images: [
+      {
+        url: siteUrl("/opengraph-image"),
+        width: 1200,
+        height: 630,
+        alt: "Federico Shop - Berlin electronic music record shop",
+      },
+    ],
   },
   alternates: {
     canonical: siteConfig.baseUrl,
   },
   twitter: {
     card: "summary_large_image",
-    title: siteConfig.name,
+    title: "Federico Shop | Berlin Electronic Music Record Shop",
     description: siteConfig.description,
+    images: [siteUrl("/twitter-image")],
   },
   robots: {
     index: true,
@@ -94,6 +109,37 @@ const websiteStructuredData = [
     name: siteConfig.name,
     url: siteConfig.baseUrl,
     email: siteConfig.supportEmail,
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        email: siteConfig.supportEmail,
+        contactType: "customer support",
+        areaServed: ["DE", "EU"],
+        availableLanguage: ["en", "de", "it"],
+      },
+    ],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "MusicStore",
+    name: siteConfig.name,
+    url: siteConfig.baseUrl,
+    image: siteUrl("/opengraph-image"),
+    description: siteConfig.description,
+    email: siteConfig.supportEmail,
+    telephone: siteConfig.legal.phone ?? undefined,
+    paymentAccepted: ["PayPal", "Credit Card", "Local Pickup"],
+    priceRange: "EUR",
+    areaServed: ["Germany", "Europe"],
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: [siteConfig.legal.street, siteConfig.legal.street2]
+        .filter(Boolean)
+        .join(", "),
+      addressLocality: siteConfig.legal.city,
+      postalCode: siteConfig.legal.postalCode,
+      addressCountry: siteConfig.legal.country,
+    },
   },
 ];
 

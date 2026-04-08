@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   ArrowRight,
   Check,
@@ -15,6 +16,22 @@ import { formatEuroFromCents } from "@/lib/money";
 import { siteConfig } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Berlin Electronic Music Record Shop",
+  description:
+    "Shop graded techno, EBM, darkwave, post-punk, vinyl, cassette, and CD online from Federico Shop in Berlin.",
+  keywords: [
+    "Berlin electronic music record shop",
+    "techno vinyl Berlin",
+    "EBM records",
+    "darkwave vinyl",
+    "post-punk records",
+    "vinyl cassette CD shop",
+  ],
+  alternates: {
+    canonical: siteConfig.baseUrl,
+  },
+};
 
 function shuffleProducts<T>(items: T[]): T[] {
   const next = [...items];
@@ -68,12 +85,29 @@ export default async function HomePage() {
     areaServed: "Europe",
     paymentAccepted: ["PayPal", "Credit Card", "Local Pickup"],
   };
+  const newArrivalsStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "New arrivals at Federico Shop",
+    itemListOrder: "https://schema.org/ItemListOrderDescending",
+    numberOfItems: newArrivalProducts.length,
+    itemListElement: newArrivalProducts.map((product, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      url: siteConfig.baseUrl + `/products/${product.id}`,
+      name: `${product.artist} - ${product.title}`,
+    })),
+  };
 
   return (
     <div className="space-y-10">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(storefrontStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(newArrivalsStructuredData) }}
       />
 
       <section className="grid gap-4 overflow-hidden rounded-[1.35rem] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(243,242,238,0.95))] px-4 py-6 shadow-card sm:px-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.82fr)] lg:px-6 lg:py-7">

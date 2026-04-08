@@ -47,6 +47,13 @@ export async function generateMetadata({
   return {
     title,
     description,
+    keywords: [
+      `${product.artist} ${product.title}`,
+      `${product.genre} ${product.format}`,
+      `${product.pressingLabel ?? "electronic music"} record`,
+      "used vinyl record",
+      "Federico Shop",
+    ],
     alternates: {
       canonical: siteUrl(`/products/${product.id}`),
     },
@@ -104,12 +111,40 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       },
     },
   };
+  const breadcrumbStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: siteUrl("/"),
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Catalog",
+        item: siteUrl("/catalog"),
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: `${product.artist} - ${product.title}`,
+        item: siteUrl(`/products/${product.id}`),
+      },
+    ],
+  };
 
   return (
     <div className="mx-auto max-w-5xl">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
       />
       <div className="grid gap-5 lg:grid-cols-[0.84fr_1.06fr] lg:items-start">
         <div className="lg:max-w-[24.5rem]">

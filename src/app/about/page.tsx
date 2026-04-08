@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { formatMessage } from "@/lib/i18n/format";
 import { getRequestDictionary } from "@/lib/i18n/server";
-import { siteConfig } from "@/lib/site";
+import { siteConfig, siteUrl } from "@/lib/site";
 
-export const metadata = {
-  title: "About",
+export const metadata: Metadata = {
+  title: "About Federico Shop",
+  description:
+    "Learn about Federico Shop, a Berlin-based electronic music record shop focused on graded vinyl, cassette, and CD finds.",
+  alternates: {
+    canonical: siteUrl("/about"),
+  },
 };
 
 export default async function AboutPage() {
