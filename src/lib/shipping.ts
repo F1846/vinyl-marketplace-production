@@ -135,6 +135,28 @@ function groupQuantitiesByFormat(items: ShippingLineInput[]): Map<ProductFormat,
   return quantities;
 }
 
+function summarizeShippingItems(items: ShippingLineInput[]): {
+  totalQuantity: number;
+  rateFormat: ProductFormat;
+} | null {
+  const formatQuantities = groupQuantitiesByFormat(items);
+  if (formatQuantities.size === 0) {
+    return null;
+  }
+
+  const totalQuantity = [...formatQuantities.values()].reduce((sum, quantity) => sum + quantity, 0);
+  const rateFormat = formatQuantities.has("vinyl")
+    ? "vinyl"
+    : formatQuantities.has("cassette")
+      ? "cassette"
+      : "cd";
+
+  return {
+    totalQuantity,
+    rateFormat,
+  };
+}
+
 function pickBestShippingRate(
   rates: ShippingRateRow[],
   countryCode: string,
@@ -223,8 +245,8 @@ export async function calculateShippingQuote(
     throw new Error("Shipping country must be a 2-letter ISO code");
   }
 
-  const formatQuantities = groupQuantitiesByFormat(items);
-  if (formatQuantities.size === 0) {
+  const shippingSummary = summarizeShippingItems(items);
+  if (!shippingSummary) {
     return {
       countryCode: normalizedCountryCode,
       countryLabel: getCountryLabel(normalizedCountryCode),
@@ -233,7 +255,7 @@ export async function calculateShippingQuote(
     };
   }
 
-  const formats = [...formatQuantities.keys()];
+  const { totalQuantity, rateFormat } = shippingSummary;
   const countryCandidates = getShippingCountryCandidates(normalizedCountryCode);
   const d = db();
   const rates = await d
@@ -244,32 +266,32 @@ export async function calculateShippingQuote(
         inArray(schema.shippingRates.countryCode, countryCandidates),
         or(
           eq(schema.shippingRates.formatScope, FORMAT_FALLBACK_SCOPE),
-          inArray(schema.shippingRates.formatScope, formats)
+          eq(schema.shippingRates.formatScope, rateFormat)
         )
       )
     );
 
-  const lines: ShippingQuoteLine[] = [];
+  const rate = pickBestShippingRate(rates, normalizedCountryCode, rateFormat, totalQuantity);
+  if (!rate) {
+    throw new Error(
+      `No shipping rate configured for ${rateFormat} cart (${totalQuantity} items) to ${normalizedCountryCode}`
+    );
+  }
 
-  for (const [format, quantity] of formatQuantities.entries()) {
-    const rate = pickBestShippingRate(rates, normalizedCountryCode, format, quantity);
-    if (!rate) {
-      throw new Error(`No shipping rate configured for ${format} x${quantity} to ${normalizedCountryCode}`);
-    }
-
-    lines.push({
-      format,
-      quantity,
+  const lines: ShippingQuoteLine[] = [
+    {
+      format: rateFormat,
+      quantity: totalQuantity,
       rateCents: rate.rateCents,
       matchedCountryCode: rate.countryCode,
       matchedFormatScope: rate.formatScope,
-    });
-  }
+    },
+  ];
 
   return {
     countryCode: normalizedCountryCode,
     countryLabel: getCountryLabel(normalizedCountryCode),
-    totalCents: lines.reduce((sum, line) => sum + line.rateCents, 0),
+    totalCents: rate.rateCents,
     lines,
   };
 }
