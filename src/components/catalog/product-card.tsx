@@ -44,8 +44,8 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
   const imageAspect = isMini ? "aspect-[0.82]" : isCompact ? "aspect-[0.85]" : "aspect-[0.88]";
   const paddingClass = isMini ? "p-2.5" : isCompact ? "p-3" : "p-[0.8125rem]";
   const artistClass = isMini
-    ? "text-[8px] font-semibold uppercase tracking-[0.18em] text-muted"
-    : "text-[9px] font-semibold uppercase tracking-[0.18em] text-muted";
+    ? "min-h-[1.55rem] text-[8px] font-semibold uppercase tracking-[0.18em] text-muted"
+    : "min-h-[2.05rem] text-[9px] font-semibold uppercase tracking-[0.18em] text-muted";
   const titleClass = isMini
     ? "min-h-[2rem] text-[0.88rem]"
     : isCompact
@@ -63,7 +63,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
   return (
     <Link
       href={`/products/${product.id}`}
-      className="group block overflow-hidden rounded-[1rem] border border-border/90 bg-surface shadow-card transition duration-300 hover:-translate-y-0.5 hover:border-foreground/15"
+      className="group flex h-full flex-col overflow-hidden rounded-[1rem] border border-border/90 bg-surface shadow-card transition duration-300 hover:-translate-y-0.5 hover:border-foreground/15"
     >
       <div className={`relative overflow-hidden bg-[#ebe8e1] ${imageAspect}`}>
         {imageUrl ? (
@@ -86,26 +86,28 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
         )}
         <div className="absolute left-2.5 top-2.5">{formatBadge(product.format)}</div>
       </div>
-      <div className={paddingClass}>
-        <p className={artistClass}>{product.artist}</p>
+      <div className={`${paddingClass} flex flex-1 flex-col`}>
+        <p className={`${artistClass} line-clamp-2`}>{product.artist}</p>
         <p
           className={`mt-1.5 line-clamp-2 font-sans font-bold leading-tight tracking-[-0.04em] text-foreground ${titleClass}`}
         >
           {product.title}
         </p>
-        <div className="mt-2.5 flex items-center justify-between gap-2.5">
+        <div className="mt-auto pt-2.5">
+          <div className="flex items-center justify-between gap-2.5">
           <span className={priceClass}>{formatEuroFromCents(product.priceCents)}</span>
           {product.conditionMedia && (
             <span className="rounded-full border border-border px-2 py-1 text-[9px] font-medium text-muted">
               {product.conditionMedia}
             </span>
           )}
-        </div>
-        <div className={metaClass}>
-          <span className="line-clamp-1">{product.genre}</span>
-          <span>
-            {product.stockQuantity > 0 ? `${product.stockQuantity} in stock` : "Unavailable"}
-          </span>
+          </div>
+          <div className={metaClass}>
+            <span className="line-clamp-1">{product.genre}</span>
+            <span>
+              {product.stockQuantity > 0 ? `${product.stockQuantity} in stock` : "Unavailable"}
+            </span>
+          </div>
         </div>
       </div>
     </Link>
