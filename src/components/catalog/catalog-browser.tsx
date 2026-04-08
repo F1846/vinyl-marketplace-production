@@ -40,6 +40,20 @@ const SORT_OPTIONS: Array<{ value: CatalogSort; label: string }> = [
   { value: "label-desc", label: "Label: Z to A" },
 ];
 
+const filterButtonBaseClass =
+  "rounded-full border px-3 py-1.5 text-[0.84rem] font-medium transition-colors";
+
+function getFilterButtonClass(isActive: boolean, extra = "") {
+  return [
+    isActive
+      ? `${filterButtonBaseClass} border-foreground bg-accent text-white`
+      : `${filterButtonBaseClass} border-border bg-surface text-foreground hover:border-foreground/20 hover:bg-surface-hover`,
+    extra,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 export function CatalogBrowser({
   initialProducts,
   initialHasMore,
@@ -148,12 +162,12 @@ export function CatalogBrowser({
   }, [handleLoadMore, hasMore, loading, loadingMore]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="space-y-3">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Catalog</p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="font-serif text-4xl text-foreground">Shop the archive</h1>
+            <h1 className="font-serif text-[2.35rem] text-foreground">Shop the archive</h1>
             <p className="mt-2 text-sm leading-7 text-muted">
               Browse collector copies without leaving the page every time you filter.
             </p>
@@ -164,9 +178,9 @@ export function CatalogBrowser({
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+      <div className="grid gap-5 lg:grid-cols-[240px_1fr]">
         <aside className="space-y-4">
-          <div className="card space-y-4">
+          <div className="card space-y-4 p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Filter className="h-4 w-4" /> Filters
             </div>
@@ -197,12 +211,12 @@ export function CatalogBrowser({
             </form>
 
             <div className="space-y-3">
-              <p className="text-sm font-semibold text-foreground">Format</p>
+              <p className="font-serif text-base text-foreground">Format</p>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => void applyQuery({ ...query, format: undefined })}
-                  className={query.format ? "btn-secondary" : "btn-primary"}
+                  className={getFilterButtonClass(!query.format)}
                 >
                   All
                 </button>
@@ -211,7 +225,7 @@ export function CatalogBrowser({
                     key={format}
                     type="button"
                     onClick={() => void applyQuery({ ...query, format })}
-                    className={query.format === format ? "btn-primary capitalize" : "btn-secondary capitalize"}
+                    className={getFilterButtonClass(query.format === format, "capitalize")}
                   >
                     {format}
                   </button>
@@ -220,12 +234,12 @@ export function CatalogBrowser({
             </div>
 
             <div className="space-y-3">
-              <p className="text-sm font-semibold text-foreground">Genre</p>
+              <p className="font-serif text-base text-foreground">Genre</p>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => void applyQuery({ ...query, genre: "" })}
-                  className={query.genre ? "btn-secondary" : "btn-primary"}
+                  className={getFilterButtonClass(!query.genre)}
                 >
                   All
                 </button>
@@ -234,7 +248,7 @@ export function CatalogBrowser({
                     key={genre}
                     type="button"
                     onClick={() => void applyQuery({ ...query, genre })}
-                    className={query.genre === genre ? "btn-primary" : "btn-secondary"}
+                    className={getFilterButtonClass(query.genre === genre)}
                   >
                     {genre}
                   </button>
@@ -251,7 +265,7 @@ export function CatalogBrowser({
             </div>
           ) : products.length > 0 ? (
             <>
-              <div className="flex flex-col gap-4 rounded-[1.5rem] border border-border bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-4 rounded-[1.3rem] border border-border bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted">
                   Showing {products.length} of {totalCount} record{totalCount === 1 ? "" : "s"}
                 </p>
@@ -278,7 +292,7 @@ export function CatalogBrowser({
                   </select>
                 </div>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}

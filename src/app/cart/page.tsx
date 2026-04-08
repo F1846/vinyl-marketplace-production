@@ -586,91 +586,105 @@ export default function CartPage() {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-      <div className="space-y-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Cart</p>
-          <h1 className="mt-2 font-serif text-4xl text-foreground">
-            Your selection ({totalItems} item{totalItems !== 1 ? "s" : ""})
-          </h1>
+    <div className="mx-auto max-w-6xl space-y-8">
+      <div className="max-w-3xl space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Cart</p>
+        <h1 className="font-serif text-4xl text-foreground">
+          Your cart ({totalItems} item{totalItems !== 1 ? "s" : ""})
+        </h1>
+        <p className="text-sm leading-7 text-muted">
+          Review the records in your basket and fill in the shipping details without
+          losing sight of the order summary.
+        </p>
+      </div>
+
+      {cartNotice && (
+        <div className="max-w-3xl rounded-[1.2rem] border border-border bg-white px-4 py-3 text-sm text-foreground">
+          {cartNotice}
         </div>
+      )}
 
-        {cartNotice && (
-          <div className="rounded-3xl border border-border bg-white px-4 py-3 text-sm text-foreground">
-            {cartNotice}
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_430px] xl:items-start">
+        <div className="order-2 space-y-4 xl:order-1">
+          <div className="rounded-[1.2rem] border border-border bg-white px-4 py-3 text-sm text-muted">
+            Keep the cart open while you enter your details. Quantity and prices stay visible here.
           </div>
-        )}
 
-        <div className="space-y-4">
-          {items.map((item) => (
-            <div key={item.productId} className="card flex gap-4">
-              <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-[1.25rem] bg-[#ebe8e1]">
-                {item.imageUrl ? (
-                  <Image
-                    src={item.imageUrl}
-                    alt={item.title}
-                    fill
-                    className="object-cover"
-                    sizes="112px"
-                  />
-                ) : null}
-              </div>
-              <div className="flex-1">
-                <Link
-                  href={`/products/${item.productId}`}
-                  className="font-serif text-2xl text-foreground hover:text-accent"
-                >
-                  {item.title}
-                </Link>
-                {item.format && (
-                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-muted">
-                    {item.format}
-                  </p>
-                )}
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-surface-hover"
-                      disabled={item.quantity <= 1}
-                    >
-                      -
-                    </button>
-                    <span className="w-10 text-center text-sm">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-surface-hover"
-                      disabled={item.quantity >= item.maxQuantity}
-                    >
-                      +
-                    </button>
+          <div className="space-y-3">
+            {items.map((item) => (
+              <div
+                key={item.productId}
+                className="rounded-[1.2rem] border border-border/90 bg-white p-4 shadow-card"
+              >
+                <div className="flex gap-4">
+                  <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-[1rem] bg-[#ebe8e1]">
+                    {item.imageUrl ? (
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.title}
+                        fill
+                        className="object-cover"
+                        sizes="96px"
+                      />
+                    ) : null}
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-lg font-semibold text-foreground">
-                      {formatEuroFromCents(item.priceCents * item.quantity)}
-                    </span>
-                    <button
-                      onClick={() => removeItem(item.productId)}
-                      className="text-muted transition-colors hover:text-danger"
-                      title="Remove"
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/products/${item.productId}`}
+                      className="line-clamp-2 font-serif text-[1.45rem] leading-tight text-foreground hover:text-accent"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                      {item.title}
+                    </Link>
+                    {item.format && (
+                      <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-muted">
+                        {item.format}
+                      </p>
+                    )}
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-surface-hover"
+                          disabled={item.quantity <= 1}
+                        >
+                          -
+                        </button>
+                        <span className="w-10 text-center text-sm">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-surface-hover"
+                          disabled={item.quantity >= item.maxQuantity}
+                        >
+                          +
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-base font-semibold text-foreground">
+                          {formatEuroFromCents(item.priceCents * item.quantity)}
+                        </span>
+                        <button
+                          onClick={() => removeItem(item.productId)}
+                          className="text-muted transition-colors hover:text-danger"
+                          title="Remove"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="space-y-5 lg:sticky lg:top-28 lg:self-start">
-        <div className="card space-y-5">
+        <div className="order-1 mx-auto w-full max-w-2xl space-y-5 xl:order-2 xl:max-w-none xl:sticky xl:top-28 xl:self-start">
+          <div className="card space-y-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
               Checkout
             </p>
-            <h2 className="mt-2 font-serif text-3xl text-foreground">Choose how to finish</h2>
+            <h2 className="mt-2 font-serif text-3xl text-foreground">Finish your order</h2>
           </div>
 
           <div className="grid gap-3">
@@ -1048,6 +1062,7 @@ export default function CartPage() {
           </Link>
         </div>
       </div>
+    </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { siteConfig } from "@/lib/site";
 
 export const metadata = {
-  title: "Refunds and Returns",
+  title: "Refund Policy",
 };
 
 export default function RefundPage() {
@@ -9,9 +9,9 @@ export default function RefundPage() {
     <div className="mx-auto max-w-3xl space-y-8">
       <div className="space-y-3">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-muted">
-          Returns
+          Refunds
         </p>
-        <h1 className="font-serif text-4xl text-foreground">Refunds and Returns</h1>
+        <h1 className="font-serif text-4xl text-foreground">Refund Policy</h1>
         <p className="text-base leading-7 text-muted">
           If an order arrives damaged or materially different from its listing,
           contact {siteConfig.legal.contactEmail} and include your order number.

@@ -45,7 +45,7 @@ export function Footer() {
                 Terms
               </Link>
               <Link href="/refund" className="text-muted transition-colors hover:text-accent">
-                Refunds
+                Refund policy
               </Link>
             </div>
           </div>

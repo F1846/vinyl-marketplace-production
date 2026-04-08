@@ -19,8 +19,15 @@ export default {
         success: "#157347",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "sans-serif"],
-        serif: ["var(--font-serif)", "serif"],
+        sans: ["var(--font-sans)", "'Helvetica Neue'", "'Avenir Next'", "sans-serif"],
+        serif: [
+          "var(--font-serif)",
+          "Iowan Old Style",
+          "Palatino Linotype",
+          "Book Antiqua",
+          "Georgia",
+          "serif",
+        ],
         mono: ["JetBrains Mono", "Fira Code", "monospace"],
       },
       fontSize: {

@@ -18,7 +18,9 @@ export function Header() {
             <RecordIcon className="h-6 w-6" />
           </span>
           <span>
-            <span className="block font-serif text-2xl leading-none">{siteConfig.name}</span>
+            <span className="block font-serif text-[1.95rem] leading-none tracking-[-0.02em]">
+              {siteConfig.name}
+            </span>
             <span className="mt-1 block text-xs uppercase tracking-[0.26em] text-muted">
               Records, tapes, and CDs
             </span>
