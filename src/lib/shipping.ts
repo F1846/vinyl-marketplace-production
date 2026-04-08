@@ -10,11 +10,74 @@ import type {
 } from "@/types/shipping";
 
 const COUNTRY_FALLBACK_CODE = "ALL";
+const EUROPE_GROUP_CODE = "EUROPE";
+const UK_SWITZERLAND_GROUP_CODE = "GB_CH";
 const FORMAT_FALLBACK_SCOPE = "all";
 const countryNames =
   typeof Intl.DisplayNames === "function"
     ? new Intl.DisplayNames(["en"], { type: "region" })
     : null;
+
+const EUROPE_COUNTRY_CODES = [
+  "AL",
+  "AD",
+  "AT",
+  "BA",
+  "BE",
+  "BG",
+  "CY",
+  "CZ",
+  "DK",
+  "EE",
+  "ES",
+  "FI",
+  "FR",
+  "GR",
+  "HR",
+  "HU",
+  "IE",
+  "IS",
+  "IT",
+  "LI",
+  "LT",
+  "LU",
+  "LV",
+  "MC",
+  "MD",
+  "ME",
+  "MK",
+  "MT",
+  "NL",
+  "NO",
+  "PL",
+  "PT",
+  "RO",
+  "RS",
+  "SE",
+  "SI",
+  "SK",
+  "SM",
+  "UA",
+  "VA",
+] as const;
+const EUROPE_COUNTRY_CODE_SET = new Set<string>(EUROPE_COUNTRY_CODES);
+const UK_SWITZERLAND_COUNTRY_CODES = ["GB", "CH"] as const;
+const COUNTRY_GROUP_EXPANSIONS: Record<string, readonly string[]> = {
+  [EUROPE_GROUP_CODE]: EUROPE_COUNTRY_CODES,
+  [UK_SWITZERLAND_GROUP_CODE]: UK_SWITZERLAND_COUNTRY_CODES,
+};
+const COUNTRY_LABEL_OVERRIDES: Record<string, string> = {
+  [COUNTRY_FALLBACK_CODE]: "All countries",
+  [EUROPE_GROUP_CODE]: "Europe",
+  [UK_SWITZERLAND_GROUP_CODE]: "UK and Switzerland",
+  PS: "Palestine",
+};
+
+export const SHIPPING_RULE_GROUP_CODES = [
+  COUNTRY_FALLBACK_CODE,
+  EUROPE_GROUP_CODE,
+  UK_SWITZERLAND_GROUP_CODE,
+] as const;
 
 type ShippingLineInput = {
   format: ProductFormat;
@@ -31,13 +94,34 @@ export function isIsoCountryCode(countryCode: string): boolean {
   return /^[A-Z]{2}$/.test(normalizeCountryCode(countryCode));
 }
 
+export function isShippingRuleCountryCode(countryCode: string): boolean {
+  const normalized = normalizeCountryCode(countryCode);
+  return isIsoCountryCode(normalized) || SHIPPING_RULE_GROUP_CODES.includes(normalized as (typeof SHIPPING_RULE_GROUP_CODES)[number]);
+}
+
 export function getCountryLabel(countryCode: string): string {
   const normalized = normalizeCountryCode(countryCode);
-  if (normalized === COUNTRY_FALLBACK_CODE) {
-    return "All countries";
+  const overridden = COUNTRY_LABEL_OVERRIDES[normalized];
+  if (overridden) {
+    return overridden;
   }
 
   return countryNames?.of(normalized) ?? normalized;
+}
+
+function getShippingCountryCandidates(countryCode: string): string[] {
+  const normalized = normalizeCountryCode(countryCode);
+  const candidates = [normalized];
+
+  if (EUROPE_COUNTRY_CODE_SET.has(normalized)) {
+    candidates.push(EUROPE_GROUP_CODE);
+  }
+  if (normalized === "GB" || normalized === "CH") {
+    candidates.push(UK_SWITZERLAND_GROUP_CODE);
+  }
+
+  candidates.push(COUNTRY_FALLBACK_CODE);
+  return candidates;
 }
 
 function groupQuantitiesByFormat(items: ShippingLineInput[]): Map<ProductFormat, number> {
@@ -57,9 +141,12 @@ function pickBestShippingRate(
   format: ProductFormat,
   quantity: number
 ): ShippingRateRow | null {
+  const candidateRank = new Map(
+    getShippingCountryCandidates(countryCode).map((candidate, index) => [candidate, index])
+  );
   const matches = rates
     .filter((rate) => {
-      if (rate.countryCode !== countryCode && rate.countryCode !== COUNTRY_FALLBACK_CODE) {
+      if (!candidateRank.has(rate.countryCode)) {
         return false;
       }
       if (rate.formatScope !== format && rate.formatScope !== FORMAT_FALLBACK_SCOPE) {
@@ -75,7 +162,8 @@ function pickBestShippingRate(
     })
     .sort((left, right) => {
       const countryPriority =
-        Number(right.countryCode === countryCode) - Number(left.countryCode === countryCode);
+        (candidateRank.get(left.countryCode) ?? Number.MAX_SAFE_INTEGER) -
+        (candidateRank.get(right.countryCode) ?? Number.MAX_SAFE_INTEGER);
       if (countryPriority !== 0) return countryPriority;
 
       const formatPriority =
@@ -97,20 +185,30 @@ export async function getShippingCountryOptions(): Promise<ShippingCountryOption
     .select({ countryCode: schema.shippingRates.countryCode })
     .from(schema.shippingRates);
 
-  const exactCountries = [...new Set(
-    rows
-      .map((row) => normalizeCountryCode(row.countryCode))
-      .filter((countryCode) => isIsoCountryCode(countryCode))
-  )];
+  const exactCountries = new Set<string>();
 
-  exactCountries.sort((left, right) => getCountryLabel(left).localeCompare(getCountryLabel(right)));
+  for (const row of rows) {
+    const normalized = normalizeCountryCode(row.countryCode);
+    if (isIsoCountryCode(normalized)) {
+      exactCountries.add(normalized);
+      continue;
+    }
 
-  if (exactCountries.includes("DE")) {
-    exactCountries.splice(exactCountries.indexOf("DE"), 1);
-    exactCountries.unshift("DE");
+    for (const countryCode of COUNTRY_GROUP_EXPANSIONS[normalized] ?? []) {
+      exactCountries.add(countryCode);
+    }
   }
 
-  return exactCountries.map((code) => ({
+  const sortedCountries = [...exactCountries].sort((left, right) =>
+    getCountryLabel(left).localeCompare(getCountryLabel(right))
+  );
+
+  if (sortedCountries.includes("DE")) {
+    sortedCountries.splice(sortedCountries.indexOf("DE"), 1);
+    sortedCountries.unshift("DE");
+  }
+
+  return sortedCountries.map((code) => ({
     code,
     label: getCountryLabel(code),
   }));
@@ -136,16 +234,14 @@ export async function calculateShippingQuote(
   }
 
   const formats = [...formatQuantities.keys()];
+  const countryCandidates = getShippingCountryCandidates(normalizedCountryCode);
   const d = db();
   const rates = await d
     .select()
     .from(schema.shippingRates)
     .where(
       and(
-        or(
-          eq(schema.shippingRates.countryCode, normalizedCountryCode),
-          eq(schema.shippingRates.countryCode, COUNTRY_FALLBACK_CODE)
-        ),
+        inArray(schema.shippingRates.countryCode, countryCandidates),
         or(
           eq(schema.shippingRates.formatScope, FORMAT_FALLBACK_SCOPE),
           inArray(schema.shippingRates.formatScope, formats)

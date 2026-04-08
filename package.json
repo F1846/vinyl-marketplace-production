@@ -12,6 +12,7 @@
     "email:test-order-flow": "tsx scripts/send-test-order-flow.ts",
     "admin:hash-password": "tsx scripts/hash-password.ts",
     "catalog:import-discogs": "tsx scripts/import-discogs-inventory.ts",
+    "shipping:apply": "tsx scripts/apply-shipping-rates.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",

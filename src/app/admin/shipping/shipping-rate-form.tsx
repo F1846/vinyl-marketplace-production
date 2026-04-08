@@ -34,12 +34,12 @@ export function ShippingRateForm() {
             id="countryCode"
             name="countryCode"
             className="input uppercase"
-            placeholder="DE"
+            placeholder="DE or EUROPE"
             defaultValue="DE"
-            maxLength={3}
+            maxLength={8}
             required
           />
-          <p className="mt-1 text-xs text-muted">Use `ALL` as a fallback rule.</p>
+          <p className="mt-1 text-xs text-muted">Use `DE`, `PS`, `EUROPE`, `GB_CH`, or `ALL`.</p>
         </div>
 
         <div>

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { requireAuthenticatedAdmin } from "@/lib/auth";
-import { isIsoCountryCode, normalizeCountryCode } from "@/lib/shipping";
+import { isShippingRuleCountryCode, normalizeCountryCode } from "@/lib/shipping";
 import type { ShippingRateFormat } from "@/types/shipping";
 
 const SHIPPING_RATE_FORMATS = new Set<ShippingRateFormat>(["all", "vinyl", "cassette", "cd"]);
@@ -31,8 +31,8 @@ export async function createShippingRateAction(
   const maxQuantity = maxQuantityRaw ? Number.parseInt(maxQuantityRaw, 10) : null;
   const rateCents = parsePositiveInteger(formData.get("rateCents"));
 
-  if (!(countryCode === "ALL" || isIsoCountryCode(countryCode))) {
-    return { error: "Country must be a 2-letter code like DE, FR, or US, or ALL.", success: false };
+  if (!isShippingRuleCountryCode(countryCode)) {
+    return { error: "Country must be a 2-letter code like DE, FR, or PS, or a group like ALL, EUROPE, or GB_CH.", success: false };
   }
   if (!SHIPPING_RATE_FORMATS.has(formatScope)) {
     return { error: "Choose a valid format scope.", success: false };
