@@ -50,6 +50,27 @@ export function OrderConfirmationClient({
     paymentMethod,
   ]);
 
+  const nextSteps = useMemo(() => {
+    if (paymentMethod === "pickup") {
+      return [
+        dictionary.orderConfirmation.step1,
+        dictionary.orderConfirmation.pickupStep2,
+      ];
+    }
+
+    return [
+      dictionary.orderConfirmation.step1,
+      dictionary.orderConfirmation.step2,
+      dictionary.orderConfirmation.step3,
+    ];
+  }, [
+    dictionary.orderConfirmation.pickupStep2,
+    dictionary.orderConfirmation.step1,
+    dictionary.orderConfirmation.step2,
+    dictionary.orderConfirmation.step3,
+    paymentMethod,
+  ]);
+
   return (
     <div className="mx-auto max-w-2xl space-y-6 py-8 text-center">
       <div className="flex justify-center">
@@ -74,9 +95,9 @@ export function OrderConfirmationClient({
           {dictionary.orderConfirmation.whatNext}
         </h2>
         <ul className="space-y-2 text-sm leading-7 text-muted">
-          <li>{dictionary.orderConfirmation.step1}</li>
-          <li>{dictionary.orderConfirmation.step2}</li>
-          <li>{dictionary.orderConfirmation.step3}</li>
+          {nextSteps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
         </ul>
       </div>
 

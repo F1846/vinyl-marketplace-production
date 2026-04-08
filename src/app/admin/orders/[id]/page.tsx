@@ -122,6 +122,9 @@ export default async function AdminOrderDetailPage({
             <p className="text-xs leading-6 text-muted">
               You can move the order forward or backward here if you need to correct it.
             </p>
+            <p className="text-xs leading-6 text-muted">
+              Carrier tracking updates can also move shipping orders forward automatically, but you can still override the status here at any time.
+            </p>
           </div>
 
           <div className="card space-y-4">

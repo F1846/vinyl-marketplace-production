@@ -260,20 +260,20 @@ function buildCustomerEmailHtmlShell({
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body{font-family:'Helvetica Neue',Arial,sans-serif;background:#f4f3ef;color:#171717;margin:0;padding:24px}
+    body{font-family:Manrope,'Helvetica Neue',Arial,sans-serif;background:#f4f3ef;color:#171717;margin:0;padding:24px}
     .container{max-width:620px;margin:0 auto;padding:28px;background:#ffffff;border-radius:24px;border:1px solid #dbd8d0}
-    .brand{margin:0 0 8px;color:#6f6c66;font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase}
-    h1{margin:0 0 10px;font-size:28px;line-height:1.05;font-weight:700;color:#171717}
+    .brand{margin:0 0 8px;color:#6f6c66;font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;font-family:Manrope,'Helvetica Neue',Arial,sans-serif}
+    h1{margin:0 0 10px;font-size:28px;line-height:1.05;font-weight:700;color:#171717;font-family:Manrope,'Helvetica Neue',Arial,sans-serif;letter-spacing:-0.04em}
     .intro{margin:0 0 18px;font-size:15px;line-height:1.7;color:#3d3a35}
-    .order-chip{display:inline-block;margin:0 0 18px;padding:8px 14px;border:1px solid #dbd8d0;border-radius:999px;background:#faf8f2;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#6f6c66}
+    .order-chip{display:inline-block;margin:0 0 18px;padding:8px 14px;border:1px solid #dbd8d0;border-radius:999px;background:#faf8f2;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#6f6c66;font-family:Manrope,'Helvetica Neue',Arial,sans-serif}
     .section{padding:16px 0;border-top:1px solid #ece8e0}
     .section:first-of-type{border-top:0;padding-top:0}
-    .section h2{margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#6f6c66}
-    .body-copy{margin:0;font-size:14px;line-height:1.7;color:#3d3a35}
-    .body-pre{margin:0;white-space:pre-wrap;font-size:14px;line-height:1.7;color:#3d3a35;font-family:'Helvetica Neue',Arial,sans-serif}
+    .section h2{margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#6f6c66;font-family:Manrope,'Helvetica Neue',Arial,sans-serif}
+    .body-copy{margin:0;font-size:14px;line-height:1.7;color:#3d3a35;font-family:Manrope,'Helvetica Neue',Arial,sans-serif}
+    .body-pre{margin:0;white-space:pre-wrap;font-size:14px;line-height:1.7;color:#3d3a35;font-family:Manrope,'Helvetica Neue',Arial,sans-serif}
     .totals{font-size:15px;line-height:1.8;color:#171717}
     .totals strong{font-weight:700}
-    .footer{margin-top:24px;padding-top:16px;border-top:1px solid #ece8e0;font-size:12px;line-height:1.8;color:#6f6c66}
+    .footer{margin-top:24px;padding-top:16px;border-top:1px solid #ece8e0;font-size:12px;line-height:1.8;color:#6f6c66;font-family:Manrope,'Helvetica Neue',Arial,sans-serif}
     a{color:#171717}
   </style>
 </head>
@@ -331,10 +331,13 @@ function buildOrderEmailHtml({
 }: Record<string, string>): string {
   const deliveryLabel =
     deliveryMethod === "pickup" ? "Pickup details" : "Shipping address";
+  const isPickup = deliveryMethod === "pickup";
 
   return buildCustomerEmailHtmlShell({
     title: "Order confirmed",
-    intro: `Thanks, ${customerName}. Your order is confirmed.`,
+    intro: isPickup
+      ? `Thanks, ${customerName}. Your pickup reservation is confirmed.`
+      : `Thanks, ${customerName}. Your order is confirmed.`,
     orderNumber,
     bodyHtml: `
       <div class="section">
@@ -349,10 +352,22 @@ function buildOrderEmailHtml({
         <h2>${deliveryLabel}</h2>
         <pre class="body-pre">${address}</pre>
       </div>
+      ${
+        isPickup
+          ? `<div class="section">
+              <h2>Next</h2>
+              <p class="body-copy">We will send another email with your pickup confirmation details.</p>
+            </div>`
+          : ""
+      }
     `,
     footerHtml: `
-      <p>Track your order: <a href="${siteUrl("/track-order")}">${siteUrl("/track-order")}</a></p>
       <p>Download invoice: <a href="${invoiceUrl}">${invoiceUrl}</a></p>
+      ${
+        isPickup
+          ? `<p>Questions about pickup: <a href="mailto:${siteConfig.supportEmail}">${siteConfig.supportEmail}</a></p>`
+          : `<p>Track your order: <a href="${siteUrl("/track-order")}">${siteUrl("/track-order")}</a></p>`
+      }
     `,
   });
 }
@@ -370,10 +385,13 @@ function buildOrderEmailText({
 }: Record<string, string>): string {
   const deliveryLabel =
     deliveryMethod === "pickup" ? "Pickup details" : "Shipping address";
+  const isPickup = deliveryMethod === "pickup";
 
   return buildCustomerEmailTextShell({
     title: "Order confirmed",
-    intro: `Thanks, ${customerName}. Your order is confirmed.`,
+    intro: isPickup
+      ? `Thanks, ${customerName}. Your pickup reservation is confirmed.`
+      : `Thanks, ${customerName}. Your order is confirmed.`,
     orderNumber,
     bodyLines: [
       "Items:",
@@ -385,10 +403,13 @@ function buildOrderEmailText({
       "",
       `${deliveryLabel}:`,
       address,
+      ...(isPickup ? ["", "We will send another email with your pickup confirmation details."] : []),
     ],
     footerLines: [
       `Download invoice: ${invoiceUrl}`,
-      `Track your order: ${siteUrl("/track-order")}`,
+      ...(isPickup
+        ? [`Questions about pickup: ${siteConfig.supportEmail}`]
+        : [`Track your order: ${siteUrl("/track-order")}`]),
     ],
   });
 }
