@@ -1,6 +1,11 @@
 import { formatEuroFromCents } from "@/lib/money";
 import { createInvoiceToken } from "@/lib/invoice";
-import { pickupAddressLines, siteConfig, siteUrl } from "@/lib/site";
+import {
+  pickupAddressCoreLines,
+  pickupContactLine,
+  siteConfig,
+  siteUrl,
+} from "@/lib/site";
 import type { OrderStatus, TrackingSummary } from "@/types/order";
 import { OrderWithItems, type ShippingAddress } from "@/types/order";
 
@@ -17,7 +22,11 @@ type TransactionalEmail = {
   subject: string;
   html: string;
   text: string;
+  from?: string | null;
+  replyTo?: string | null;
 };
+
+export type CustomerEmailSender = "orders" | "support";
 
 function getMailgunConfig(): MailgunConfig {
   const apiKey = process.env.MAILGUN_API_KEY?.trim();
@@ -49,11 +58,13 @@ async function sendTransactionalEmail({
   subject,
   html,
   text,
+  from,
+  replyTo,
 }: TransactionalEmail) {
   const config = getMailgunConfig();
   const auth = Buffer.from(`api:${config.apiKey}`).toString("base64");
   const body = new URLSearchParams({
-    from: config.from,
+    from: from?.trim() || config.from,
     to,
     subject,
     html,
@@ -61,6 +72,9 @@ async function sendTransactionalEmail({
   });
   if (config.bcc) {
     body.append("bcc", config.bcc);
+  }
+  if (replyTo?.trim()) {
+    body.append("h:Reply-To", replyTo.trim());
   }
 
   const response = await fetch(`${config.baseUrl}/v3/${config.domain}/messages`, {
@@ -237,8 +251,79 @@ export async function sendTestEmail(to: string) {
   });
 }
 
+export async function sendManualOrderMessage(
+  order: OrderWithItems,
+  input: {
+    sender: CustomerEmailSender;
+    subject: string;
+    message: string;
+  }
+) {
+  const subject =
+    input.subject.trim() || buildCustomerEmailSubject(order.orderNumber, "Order update");
+  const messageText = formatPlainTextBlock(input.message);
+  const replyAddress = senderEmailAddress(input.sender);
+
+  await sendTransactionalEmail({
+    to: order.customerEmail,
+    from: senderMailboxFromValue(input.sender),
+    replyTo: replyAddress,
+    subject,
+    html: buildCustomerEmailHtmlShell({
+      title: subject,
+      intro: `Hi ${order.customerName}, here is a message about your order ${order.orderNumber}.`,
+      orderNumber: order.orderNumber,
+      bodyHtml: `
+        <div class="section">
+          <h2>Message</h2>
+          <p class="body-copy">${formatHtmlBlock(messageText)}</p>
+        </div>
+      `,
+      footerHtml: `
+        <p>Reply to this email or write to <a href="mailto:${replyAddress}">${replyAddress}</a>.</p>
+        <p>Track your order: <a href="${siteUrl("/track-order")}">${siteUrl("/track-order")}</a></p>
+      `,
+    }),
+    text: buildCustomerEmailTextShell({
+      title: subject,
+      intro: `Hi ${order.customerName}, here is a message about your order ${order.orderNumber}.`,
+      orderNumber: order.orderNumber,
+      bodyLines: ["Message:", messageText],
+      footerLines: [
+        `Reply to this email or write to ${replyAddress}.`,
+        `Track your order: ${siteUrl("/track-order")}`,
+      ],
+    }),
+  });
+}
+
 function buildCustomerEmailSubject(orderNumber: string, label: string): string {
   return `${siteConfig.name} - ${orderNumber} - ${label}`;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatPlainTextBlock(value: string): string {
+  return value.trim().replace(/\r\n/g, "\n");
+}
+
+function formatHtmlBlock(value: string): string {
+  return escapeHtml(formatPlainTextBlock(value)).replace(/\n/g, "<br>");
+}
+
+function senderEmailAddress(sender: CustomerEmailSender): string {
+  return sender === "support" ? siteConfig.supportEmail : siteConfig.orderEmail;
+}
+
+function senderMailboxFromValue(sender: CustomerEmailSender): string {
+  return `${siteConfig.name} <${senderEmailAddress(sender)}>`;
 }
 
 function buildCustomerEmailHtmlShell({
@@ -332,6 +417,8 @@ function buildOrderEmailHtml({
   const deliveryLabel =
     deliveryMethod === "pickup" ? "Pickup details" : "Shipping address";
   const isPickup = deliveryMethod === "pickup";
+  const pickupNext =
+    pickupContactLine() ?? `Contact ${siteConfig.supportEmail} for order pickup details.`;
 
   return buildCustomerEmailHtmlShell({
     title: "Order confirmed",
@@ -356,7 +443,7 @@ function buildOrderEmailHtml({
         isPickup
           ? `<div class="section">
               <h2>Next</h2>
-              <p class="body-copy">We will send another email with your pickup confirmation details.</p>
+              <p class="body-copy">${escapeHtml(pickupNext)}</p>
             </div>`
           : ""
       }
@@ -386,6 +473,8 @@ function buildOrderEmailText({
   const deliveryLabel =
     deliveryMethod === "pickup" ? "Pickup details" : "Shipping address";
   const isPickup = deliveryMethod === "pickup";
+  const pickupNext =
+    pickupContactLine() ?? `Contact ${siteConfig.supportEmail} for order pickup details.`;
 
   return buildCustomerEmailTextShell({
     title: "Order confirmed",
@@ -403,7 +492,7 @@ function buildOrderEmailText({
       "",
       `${deliveryLabel}:`,
       address,
-      ...(isPickup ? ["", "We will send another email with your pickup confirmation details."] : []),
+      ...(isPickup ? ["", pickupNext] : []),
     ],
     footerLines: [
       `Download invoice: ${invoiceUrl}`,
@@ -524,7 +613,7 @@ function buildStatusEmailText({
 
 function formatAddress(addr: ShippingAddress): string {
   if (addr.country === "PICKUP") {
-    return pickupAddressLines().join("\n");
+    return pickupAddressCoreLines().join("\n");
   }
 
   const locality = [addr.postalCode, addr.city].filter(Boolean).join(" ");

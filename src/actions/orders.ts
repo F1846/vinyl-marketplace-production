@@ -9,14 +9,22 @@ import {
   isTrackingSyncConfigured,
   syncOrderTrackingById,
 } from "@/lib/order-tracking";
-import { sendOrderUpdateEmailById } from "@/lib/order-notifications";
+import {
+  sendManualOrderMessageById,
+  sendOrderUpdateEmailById,
+} from "@/lib/order-notifications";
 import { allOrderStatuses, getOrderStatusRank, type OrderStatus } from "@/types/order";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 function revalidateOrderPaths(orderId: string) {
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath("/track-order");
+}
+
+function buildOrderDetailPath(orderId: string, query?: string) {
+  return query ? `/admin/orders/${orderId}?${query}` : `/admin/orders/${orderId}`;
 }
 
 export async function updateOrderStatus(orderId: string, formData: FormData): Promise<void> {
@@ -202,4 +210,36 @@ export async function updateOrderVat(orderId: string, formData: FormData): Promi
     .where(eq(schema.orders.id, orderId));
 
   revalidateOrderPaths(orderId);
+}
+
+export async function sendManualOrderEmail(orderId: string, formData: FormData): Promise<void> {
+  "use server";
+  await requireAuthenticatedAdmin();
+
+  const senderRaw = formData.get("sender");
+  const subjectRaw = formData.get("subject");
+  const messageRaw = formData.get("message");
+  const sender =
+    senderRaw === "support" || senderRaw === "orders" ? senderRaw : "support";
+  const subject = typeof subjectRaw === "string" ? subjectRaw.trim() : "";
+  const message = typeof messageRaw === "string" ? messageRaw.trim() : "";
+
+  if (!message) {
+    redirect(buildOrderDetailPath(orderId, "email=missing"));
+  }
+
+  let sent = false;
+  try {
+    sent = await sendManualOrderMessageById({
+      orderId,
+      sender,
+      subject,
+      message,
+    });
+  } catch (error) {
+    console.error("Failed to send manual customer email:", error);
+    redirect(buildOrderDetailPath(orderId, "email=failed"));
+  }
+
+  redirect(buildOrderDetailPath(orderId, sent ? "email=sent" : "email=missing"));
 }

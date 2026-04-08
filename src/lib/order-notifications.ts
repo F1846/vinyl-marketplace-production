@@ -1,6 +1,11 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { sendOrderStatusUpdate, sendShippingNotification } from "@/lib/email";
+import {
+  sendManualOrderMessage,
+  sendOrderStatusUpdate,
+  sendShippingNotification,
+  type CustomerEmailSender,
+} from "@/lib/email";
 import { fetchTrackingSummary } from "@/lib/order-tracking";
 import type {
   OrderStatus,
@@ -67,6 +72,25 @@ export async function sendOrderUpdateEmailById(input: {
   await sendOrderStatusUpdate(order, {
     previousStatus: input.previousStatus ?? null,
     trackingSummary,
+  });
+  return true;
+}
+
+export async function sendManualOrderMessageById(input: {
+  orderId: string;
+  sender: CustomerEmailSender;
+  subject: string;
+  message: string;
+}): Promise<boolean> {
+  const order = await getOrderWithItemsForEmail(input.orderId);
+  if (!order) {
+    return false;
+  }
+
+  await sendManualOrderMessage(order, {
+    sender: input.sender,
+    subject: input.subject,
+    message: input.message,
   });
   return true;
 }

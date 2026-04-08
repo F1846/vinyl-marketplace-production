@@ -138,12 +138,30 @@ export function legalAddressLines(): string[] {
   ].filter((value): value is string => Boolean(value));
 }
 
-export function pickupAddressLines(): string[] {
+export function pickupAddressCoreLines(): string[] {
   return [
     siteConfig.pickupContactName,
     siteConfig.pickupStreet,
     [siteConfig.pickupPostalCode, siteConfig.pickupCity].filter(Boolean).join(" "),
     siteConfig.pickupCountry,
+  ].filter((value): value is string => Boolean(value));
+}
+
+export function pickupContactLine(): string | null {
+  if (!siteConfig.pickupPhone) {
+    return null;
+  }
+
+  const methodLabel = siteConfig.pickupPhoneLabel
+    ? ` via ${siteConfig.pickupPhoneLabel}`
+    : "";
+
+  return `Contact ${siteConfig.pickupPhone}${methodLabel} for order pickup.`;
+}
+
+export function pickupAddressLines(): string[] {
+  return [
+    ...pickupAddressCoreLines(),
     siteConfig.pickupPhone
       ? `${siteConfig.pickupPhone}${siteConfig.pickupPhoneLabel ? ` (${siteConfig.pickupPhoneLabel})` : ""}`
       : null,

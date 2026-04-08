@@ -5,6 +5,7 @@ import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { isTrackingSyncConfigured, syncOrderTracking } from "@/lib/order-tracking";
 import { notFound } from "next/navigation";
 import {
+  sendManualOrderEmail,
   saveOrderTracking,
   syncOrderTrackingAction,
   updateOrderStatus,
@@ -16,18 +17,21 @@ import {
   type TrackingSummary,
 } from "@/types/order";
 import { formatEuroFromCents } from "@/lib/money";
-import { pickupAddressLines } from "@/lib/site";
+import { pickupAddressLines, siteConfig } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminOrderDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ email?: string }>;
 }) {
   await requireAuthenticatedAdmin();
 
   const { id } = await params;
+  const resolvedSearchParams = await searchParams;
   const d = db();
   const foundOrder = await d.query.orders.findFirst({
     where: eq(schema.orders.id, id),
@@ -69,9 +73,34 @@ export default async function AdminOrderDetailPage({
             .join(" "),
           shippingAddress.country,
         ].filter(Boolean);
+  const emailStatus = resolvedSearchParams.email;
+  const defaultManualSubject =
+    order.deliveryMethod === "pickup"
+      ? `${siteConfig.name} - ${order.orderNumber} - Pickup details`
+      : `${siteConfig.name} - ${order.orderNumber} - Order update`;
+  const defaultManualMessage =
+    order.deliveryMethod === "pickup"
+      ? `Hi ${order.customerName},\n\nYour order is ready for local pickup.\n\nPickup address:\n${siteConfig.pickupContactName}\n${siteConfig.pickupStreet}\n${siteConfig.pickupPostalCode} ${siteConfig.pickupCity}\n${siteConfig.pickupCountry}\n\nContact ${siteConfig.pickupPhone}${siteConfig.pickupPhoneLabel ? ` via ${siteConfig.pickupPhoneLabel}` : ""} for order pickup.\n\nBest,\n${siteConfig.name}`
+      : `Hi ${order.customerName},\n\nHere is an update about your order ${order.orderNumber}.\n\nBest,\n${siteConfig.name}`;
 
   return (
     <div className="max-w-4xl space-y-6">
+      {emailStatus === "sent" && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-success">
+          Customer email sent successfully.
+        </div>
+      )}
+      {emailStatus === "failed" && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-danger">
+          The customer email could not be sent. Please try again.
+        </div>
+      )}
+      {emailStatus === "missing" && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-foreground">
+          Add a message before sending the email.
+        </div>
+      )}
+
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
@@ -248,6 +277,62 @@ export default async function AdminOrderDetailPage({
             <p className="text-sm capitalize text-muted">
               Payment: {order.paymentMethod} / Delivery: {order.deliveryMethod}
             </p>
+          </div>
+
+          <div className="card space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-foreground">Email customer</h2>
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+                Same shop mail layout
+              </span>
+            </div>
+
+            <form action={sendManualOrderEmail.bind(null, order.id)} className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
+                <div>
+                  <label htmlFor="sender" className="label">
+                    Send from
+                  </label>
+                  <select id="sender" name="sender" className="input" defaultValue="support">
+                    <option value="support">{siteConfig.supportEmail}</option>
+                    <option value="orders">{siteConfig.orderEmail}</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="subject" className="label">
+                    Subject
+                  </label>
+                  <input
+                    id="subject"
+                    name="subject"
+                    className="input"
+                    defaultValue={defaultManualSubject}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="message" className="label">
+                  Message
+                </label>
+                <textarea
+                  id="message"
+                  name="message"
+                  rows={8}
+                  className="input min-h-[220px]"
+                  defaultValue={defaultManualMessage}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs leading-6 text-muted">
+                  Sends to {order.customerEmail} with the same font and mail style as the other customer emails.
+                </p>
+                <button type="submit" className="btn-primary">
+                  Send email
+                </button>
+              </div>
+            </form>
           </div>
 
           <div className="card space-y-3">
