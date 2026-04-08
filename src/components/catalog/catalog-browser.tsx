@@ -76,6 +76,26 @@ export function CatalogBrowser({
   const autoLoadRef = useRef<HTMLDivElement | null>(null);
   const autoLoadEnabled = hasMore && autoLoadBurstCount < AUTO_LOAD_BURST_LIMIT;
 
+  useEffect(() => {
+    setProducts(initialProducts);
+    setHasMore(initialHasMore);
+    setTotalCount(initialTotalCount);
+    setQuery(initialQuery);
+    setDraftQuery(initialQuery.q);
+    setLoading(false);
+    setLoadingMore(false);
+    setAutoLoadBurstCount(0);
+  }, [
+    initialHasMore,
+    initialProducts,
+    initialQuery,
+    initialQuery.format,
+    initialQuery.genre,
+    initialQuery.q,
+    initialQuery.sort,
+    initialTotalCount,
+  ]);
+
   const activeLabel = useMemo(() => {
     if (query.q) {
       return formatMessage(dictionary.catalog.activeResultsFor, { query: query.q });
