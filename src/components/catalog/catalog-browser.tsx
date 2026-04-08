@@ -174,8 +174,10 @@ export function CatalogBrowser({
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Catalog</p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="font-serif text-[2.35rem] text-foreground">Shop the archive</h1>
-            <p className="mt-2 text-sm leading-7 text-muted">
+            <h1 className="font-serif text-[2rem] leading-[0.98] text-foreground sm:text-[2.15rem]">
+              Shop the archive
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-muted">
               Browse collector copies without leaving the page every time you filter.
             </p>
           </div>
@@ -185,7 +187,7 @@ export function CatalogBrowser({
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[240px_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[220px_1fr] xl:grid-cols-[230px_1fr]">
         <aside className="space-y-4">
           <div className="card space-y-4 p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -299,9 +301,9 @@ export function CatalogBrowser({
                   </select>
                 </div>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                 {products.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <ProductCard key={product.id} product={product} size="compact" />
                 ))}
               </div>
               <div ref={autoLoadRef} className="flex min-h-16 items-center justify-center">

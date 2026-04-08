@@ -72,7 +72,7 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(storefrontStructuredData) }}
       />
 
-      <section className="grid gap-5 overflow-hidden rounded-[1.45rem] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(243,242,238,0.95))] px-5 py-7 shadow-card lg:grid-cols-[minmax(0,1.08fr)_minmax(300px,0.84fr)] lg:px-7 lg:py-8">
+      <section className="grid gap-4 overflow-hidden rounded-[1.35rem] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(243,242,238,0.95))] px-4 py-6 shadow-card sm:px-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.82fr)] lg:px-6 lg:py-7">
         <div className="space-y-5">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">
             <RecordIcon className="h-3.5 w-3.5 text-foreground" />
@@ -95,16 +95,16 @@ export default async function HomePage() {
               Shipping and pickup
             </Link>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-2.5 sm:grid-cols-3">
             <Link
               href={featuredHeroProduct ? `/products/${featuredHeroProduct.id}` : "/catalog"}
-              className="group rounded-[0.95rem] border border-border bg-white p-3 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
+              className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted">Available now</p>
-              <p className="mt-2 font-serif text-[1.75rem] leading-none text-foreground">
+              <p className="mt-1.5 font-serif text-[1.55rem] leading-none text-foreground">
                 {count ?? 0}
               </p>
-              <p className="mt-2 line-clamp-2 text-[13px] leading-5 text-muted">
+              <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
                 {featuredHeroProduct
                   ? `${featuredHeroProduct.artist} - ${featuredHeroProduct.title}`
                   : "Current records, tapes, and CDs ready to open and play."}
@@ -112,13 +112,13 @@ export default async function HomePage() {
             </Link>
             <Link
               href={cheapestProduct ? `/products/${cheapestProduct.id}` : "/catalog?sort=price-asc"}
-              className="group rounded-[0.95rem] border border-border bg-white p-3 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
+              className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted">From</p>
-              <p className="mt-2 font-serif text-[1.75rem] leading-none text-foreground">
+              <p className="mt-1.5 font-serif text-[1.55rem] leading-none text-foreground">
                 {minPrice === null ? "0 EUR" : formatEuroFromCents(minPrice)}
               </p>
-              <p className="mt-2 line-clamp-2 text-[13px] leading-5 text-muted">
+              <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
                 {cheapestProduct
                   ? `Start with ${cheapestProduct.artist} - ${cheapestProduct.title}`
                   : "Start with the lowest-priced copy currently in the catalog."}
@@ -130,13 +130,13 @@ export default async function HomePage() {
                   ? `/catalog?format=${encodeURIComponent(formatSpotlight.format)}`
                   : "/catalog"
               }
-              className="group rounded-[0.95rem] border border-border bg-white p-3 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
+              className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted">Format mix</p>
-              <p className="mt-2 font-serif text-[1.45rem] capitalize text-foreground">
+              <p className="mt-1.5 font-serif text-[1.22rem] capitalize text-foreground">
                 Vinyl / Tape / CD
               </p>
-              <p className="mt-2 line-clamp-2 text-[13px] leading-5 text-muted">
+              <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
                 {formatSpotlight
                   ? `${formatSpotlight.artist} - ${formatSpotlight.title}`
                   : "Browse by format and jump straight into the shelf you want."}
@@ -158,9 +158,9 @@ export default async function HomePage() {
             ))}
           </div>
         </div>
-        <div className="grid gap-2.5 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           {heroPreviewProducts.map((product) => (
-            <ProductCard key={product.id} product={product} compact />
+            <ProductCard key={product.id} product={product} size="mini" />
           ))}
         </div>
       </section>
@@ -178,10 +178,10 @@ export default async function HomePage() {
           </Link>
         </div>
         {newArrivalProducts.length > 0 ? (
-          <div className="flex gap-2.5 overflow-x-auto pb-2">
+          <div className="flex gap-2 overflow-x-auto pb-2">
             {newArrivalProducts.map((product) => (
-              <div key={product.id} className="w-[160px] flex-none sm:w-[170px] lg:w-[178px]">
-                <ProductCard product={product} />
+              <div key={product.id} className="w-[148px] flex-none sm:w-[156px] lg:w-[164px]">
+                <ProductCard product={product} size="compact" />
               </div>
             ))}
           </div>
@@ -209,7 +209,7 @@ export default async function HomePage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {shelfPicks.map((product) => (
-              <ProductCard key={product.id} product={product} compact />
+              <ProductCard key={product.id} product={product} size="compact" />
             ))}
           </div>
         </section>

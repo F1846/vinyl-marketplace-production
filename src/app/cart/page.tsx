@@ -202,6 +202,7 @@ export default function CartPage() {
 
   const isPickup = checkoutMode === "pickup";
   const total = totalPriceCents + (isPickup || items.length === 0 ? 0 : shippingCents);
+  const cartPreviewItems = items.slice(0, 3);
   const phoneCodeOptions = useMemo(
     () => getPhoneCodeOptions(shippingCountries),
     [shippingCountries]
@@ -587,15 +588,54 @@ export default function CartPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
-      <div className="mx-auto max-w-3xl space-y-3 text-center sm:text-left">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Cart</p>
-        <h1 className="font-serif text-[2.75rem] leading-[0.95] text-foreground sm:text-[3.1rem]">
-          Your cart ({totalItems} item{totalItems !== 1 ? "s" : ""})
-        </h1>
-        <p className="text-sm leading-7 text-muted">
-          Fill in the checkout details in one centered form, then review the records in
-          your basket below.
-        </p>
+      <div className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+        <div className="space-y-3 text-center sm:text-left">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Cart</p>
+          <h1 className="font-serif text-[2.5rem] leading-[0.95] text-foreground sm:text-[2.9rem]">
+            Your cart ({totalItems} item{totalItems !== 1 ? "s" : ""})
+          </h1>
+          <p className="text-sm leading-7 text-muted">
+            Fill in the checkout details in one centered form, then review the records in
+            your basket below.
+          </p>
+        </div>
+
+        <div className="rounded-[1.15rem] border border-border bg-white p-3.5 shadow-card">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+            Current cart
+          </p>
+          <div className="mt-3 space-y-2.5">
+            {cartPreviewItems.map((item) => (
+              <div key={item.productId} className="flex items-center gap-3">
+                <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-[0.8rem] bg-[#ebe8e1]">
+                  {item.imageUrl ? (
+                    <Image
+                      src={item.imageUrl}
+                      alt={item.title}
+                      fill
+                      className="object-cover"
+                      sizes="48px"
+                    />
+                  ) : null}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-1 font-serif text-[0.98rem] text-foreground">
+                    {item.title}
+                  </p>
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-muted">
+                    {item.quantity} x {formatEuroFromCents(item.priceCents)}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {items.length > cartPreviewItems.length && (
+              <p className="pt-1 text-[11px] uppercase tracking-[0.16em] text-muted">
+                + {items.length - cartPreviewItems.length} more item
+                {items.length - cartPreviewItems.length !== 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       {cartNotice && (
