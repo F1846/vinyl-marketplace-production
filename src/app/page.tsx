@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -53,6 +54,7 @@ export default async function HomePage() {
   const shuffledLatestProducts = shuffleProducts(latestProducts);
   const newArrivalProducts = shuffleProducts(shuffledLatestProducts).slice(0, 12);
   const shelfPicks = shuffledLatestProducts.slice(12, 20);
+  const heroSupportProducts = shuffledLatestProducts.slice(0, 3);
   const featuredHeroProduct = heroPreviewProducts[0] ?? latestProducts[0] ?? null;
   const formatSpotlight = heroPreviewProducts[1] ?? latestProducts[1] ?? null;
   const storefrontStructuredData = {
@@ -143,20 +145,38 @@ export default async function HomePage() {
               </p>
             </Link>
           </div>
-          <div className="grid gap-2.5 sm:grid-cols-3">
-            {[
-              "Detailed grading notes on every listing",
-              "PayPal, card, or Berlin local pickup",
-              "Shipping rates matched to format and quantity",
-            ].map((item) => (
-              <div
-                key={item}
-                className="rounded-[0.9rem] border border-border/90 bg-white px-3 py-2 text-[11px] leading-5 text-muted shadow-card"
-              >
-                {item}
-              </div>
-            ))}
-          </div>
+          {heroSupportProducts.length > 0 && (
+            <div className="grid gap-2 sm:grid-cols-3">
+              {heroSupportProducts.map((product) => (
+                <Link
+                  key={product.id}
+                  href={`/products/${product.id}`}
+                  className="flex items-center gap-2.5 rounded-[0.9rem] border border-border/90 bg-white px-2.5 py-2 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
+                >
+                  <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-[0.75rem] bg-[#ebe8e1]">
+                    {product.images[0]?.url ? (
+                      <Image
+                        src={product.images[0].url}
+                        alt={`${product.artist} - ${product.title}`}
+                        fill
+                        className="object-cover"
+                        sizes="44px"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[9px] uppercase tracking-[0.18em] text-muted">
+                      {product.format}
+                    </p>
+                    <p className="line-clamp-1 font-sans text-[0.88rem] font-bold tracking-[-0.04em] text-foreground">
+                      {product.artist}
+                    </p>
+                    <p className="line-clamp-1 text-[11px] text-muted">{product.title}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-2 justify-items-center sm:justify-items-stretch">
           {heroPreviewProducts.map((product) => (
