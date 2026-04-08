@@ -74,12 +74,12 @@ export default function TrackOrderPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div className="space-y-3 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
           Order status
         </p>
-        <h1 className="font-sans text-4xl font-bold tracking-[-0.04em] text-foreground">
+        <h1 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground sm:text-4xl">
           Track your order
         </h1>
         <p className="mx-auto max-w-xl text-muted">

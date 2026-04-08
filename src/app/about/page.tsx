@@ -6,12 +6,12 @@ export const metadata = {
 
 export default function AboutPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div className="space-y-3">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-muted">
           About
         </p>
-        <h1 className="font-sans text-4xl font-bold tracking-[-0.04em] text-foreground">
+        <h1 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground sm:text-4xl">
           About {siteConfig.name}
         </h1>
         <p className="text-base leading-7 text-muted">

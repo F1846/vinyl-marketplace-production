@@ -78,7 +78,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         className={`${sansFont.variable} ${serifFont.variable} flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
       >
         <Header />
-        <main className="container mx-auto flex-1 px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+        <main className="container mx-auto flex-1 px-4 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
+          {children}
+        </main>
         <Footer />
         <SpeedInsights />
       </body>

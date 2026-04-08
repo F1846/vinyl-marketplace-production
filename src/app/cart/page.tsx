@@ -596,10 +596,6 @@ export default function CartPage() {
           <h1 className="font-sans text-[2.5rem] font-bold leading-[0.95] tracking-[-0.04em] text-foreground sm:text-[2.9rem]">
             Your cart ({totalItems} item{totalItems !== 1 ? "s" : ""})
           </h1>
-          <p className="text-sm leading-7 text-muted">
-            Fill in the checkout details in one centered form, then review the records in
-            your basket below.
-          </p>
         </div>
 
         <div className="rounded-[1.15rem] border border-border bg-white p-3.5 shadow-card">
@@ -648,10 +644,6 @@ export default function CartPage() {
 
       <div className="grid gap-6">
         <div className="order-2 mx-auto w-full max-w-5xl space-y-4">
-          <div className="rounded-[1.2rem] border border-border bg-white px-4 py-3 text-sm text-muted">
-            Adjust quantities here while your checkout details stay centered above.
-          </div>
-
           <div className="grid gap-3 md:grid-cols-2">
             {items.map((item) => (
               <div
