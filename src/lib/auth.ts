@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 const ADMIN_COOKIE_NAME = "federico_shop_admin_session";
-export const ADMIN_SESSION_TTL_SECONDS = 60 * 15;
+export const ADMIN_SESSION_TTL_SECONDS = 60 * 5;
 
 type AdminSessionPayload = {
   exp: number;
