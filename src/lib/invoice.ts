@@ -1,5 +1,12 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { eq, and } from "drizzle-orm";
+import {
+  PDFDocument,
+  StandardFonts,
+  rgb,
+  type PDFFont,
+  type PDFPage,
+} from "pdf-lib";
 import { db, schema } from "@/db";
 import { formatEuroFromCents } from "@/lib/money";
 import { legalAddressLines, siteConfig } from "@/lib/site";
@@ -32,13 +39,25 @@ function signValue(value: string, secret: string): string {
   return createHmac("sha256", secret).update(value).digest("base64url");
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+function sanitizePdfText(value: string): string {
+  const normalized = value
+    .normalize("NFKC")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/[\u2012-\u2015]/g, "-")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/\u00A0/g, " ");
+
+  return Array.from(normalized)
+    .filter((character) => {
+      if (character === "\t" || character === "\n" || character === "\r") {
+        return true;
+      }
+
+      const code = character.charCodeAt(0);
+      return code >= 32 && code <= 255;
+    })
+    .join("");
 }
 
 function formatInvoiceDate(value: Date): string {
@@ -91,6 +110,95 @@ function paymentMethodLabel(method: OrderWithItems["paymentMethod"]): string {
 
 function deliveryMethodLabel(method: OrderWithItems["deliveryMethod"]): string {
   return method === "pickup" ? "Berlin local pickup" : "Shipping";
+}
+
+function formatInvoiceMoney(cents: number): string {
+  return sanitizePdfText(formatEuroFromCents(cents).replace(/\s?€/u, " EUR"));
+}
+
+function wrapPdfText(
+  text: string,
+  font: PDFFont,
+  size: number,
+  maxWidth: number
+): string[] {
+  const normalized = sanitizePdfText(text).trim();
+  if (!normalized) {
+    return [""];
+  }
+
+  const words = normalized.split(/\s+/);
+  const lines: string[] = [];
+  let currentLine = "";
+
+  const commitLine = (line: string) => {
+    if (line.trim()) {
+      lines.push(line.trim());
+    }
+  };
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    if (font.widthOfTextAtSize(testLine, size) <= maxWidth) {
+      currentLine = testLine;
+      continue;
+    }
+
+    if (currentLine) {
+      commitLine(currentLine);
+      currentLine = "";
+    }
+
+    if (font.widthOfTextAtSize(word, size) <= maxWidth) {
+      currentLine = word;
+      continue;
+    }
+
+    let partial = "";
+    for (const character of Array.from(word)) {
+      const nextPartial = `${partial}${character}`;
+      if (font.widthOfTextAtSize(nextPartial, size) <= maxWidth) {
+        partial = nextPartial;
+      } else {
+        commitLine(partial);
+        partial = character;
+      }
+    }
+
+    currentLine = partial;
+  }
+
+  if (currentLine) {
+    commitLine(currentLine);
+  }
+
+  return lines.length > 0 ? lines : [normalized];
+}
+
+function drawPdfTextLines(
+  page: PDFPage,
+  lines: string[],
+  options: {
+    x: number;
+    y: number;
+    lineHeight: number;
+    size: number;
+    font: PDFFont;
+    color?: ReturnType<typeof rgb>;
+  }
+): number {
+  let currentY = options.y;
+  for (const line of lines) {
+    page.drawText(sanitizePdfText(line), {
+      x: options.x,
+      y: currentY,
+      size: options.size,
+      font: options.font,
+      color: options.color,
+    });
+    currentY -= options.lineHeight;
+  }
+  return currentY;
 }
 
 export function createInvoiceToken(orderId: string, ttlMs = DEFAULT_TOKEN_TTL_MS): string {
@@ -215,241 +323,301 @@ export async function getOrderWithItemsByLookup(
 }
 
 export function buildInvoiceFilename(orderNumber: string): string {
-  return `invoice-${orderNumber.toLowerCase()}.html`;
+  return `invoice-${orderNumber.toLowerCase()}.pdf`;
 }
 
-export function buildInvoiceHtml(order: OrderWithItems): string {
+export async function buildInvoicePdf(order: OrderWithItems): Promise<Uint8Array> {
+  const pdf = await PDFDocument.create();
+  const regularFont = await pdf.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const pageWidth = 595.28;
+  const pageHeight = 841.89;
+  const margin = 48;
+  const muted = rgb(0.44, 0.42, 0.4);
+  const foreground = rgb(0.09, 0.09, 0.09);
+  const border = rgb(0.88, 0.86, 0.82);
+  const panel = rgb(0.984, 0.98, 0.965);
   const storeLines = legalAddressLines();
   const customerLines = formatAddressLines(order.shippingAddress);
-  const rows = order.items
-    .map((item) => {
-      const label = `${item.product.artist} - ${item.product.title}`;
-      const lineTotal = formatEuroFromCents(item.priceAtPurchaseCents * item.quantity);
+  let page = pdf.addPage([pageWidth, pageHeight]);
+  let y = pageHeight - margin;
 
-      return `
-        <tr>
-          <td>${escapeHtml(label)}</td>
-          <td>${escapeHtml(item.product.format.toUpperCase())}</td>
-          <td>${item.quantity}</td>
-          <td>${escapeHtml(formatEuroFromCents(item.priceAtPurchaseCents))}</td>
-          <td>${escapeHtml(lineTotal)}</td>
-        </tr>`;
-    })
-    .join("");
+  const createPage = () => {
+    page = pdf.addPage([pageWidth, pageHeight]);
+    y = pageHeight - margin;
+  };
 
-  const customerSection = customerLines
-    .map((line) => `<div>${escapeHtml(line)}</div>`)
-    .join("");
-  const storeSection = storeLines.map((line) => `<div>${escapeHtml(line)}</div>`).join("");
-  const vatLine = siteConfig.legal.vatId
-    ? `<div>VAT ID: ${escapeHtml(siteConfig.legal.vatId)}</div>`
-    : "";
+  const ensureSpace = (neededHeight: number) => {
+    if (y - neededHeight < margin) {
+      createPage();
+      return true;
+    }
+    return false;
+  };
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Invoice ${escapeHtml(order.orderNumber)} - ${escapeHtml(siteConfig.name)}</title>
-  <style>
-    :root { color-scheme: light; }
-    body {
-      margin: 0;
-      padding: 32px;
-      background: #f5f4ef;
-      color: #171717;
-      font-family: "Helvetica Neue", Arial, sans-serif;
-    }
-    .sheet {
-      max-width: 920px;
-      margin: 0 auto;
-      background: #ffffff;
-      border: 1px solid #dedbd2;
-      border-radius: 28px;
-      padding: 36px;
-      box-shadow: 0 30px 80px rgba(17, 17, 17, 0.08);
-    }
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      gap: 24px;
-      align-items: flex-start;
-      margin-bottom: 28px;
-    }
-    .eyebrow {
-      margin: 0 0 8px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: #6f6c66;
-    }
-    h1 {
-      margin: 0;
-      font-size: 38px;
-      line-height: 0.95;
-      letter-spacing: -0.04em;
-      font-weight: 700;
-    }
-    .meta {
-      display: grid;
-      gap: 6px;
-      text-align: right;
-      font-size: 14px;
-      color: #4b4a46;
-    }
-    .grid {
-      display: grid;
-      gap: 20px;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      margin: 28px 0;
-    }
-    .panel {
-      border: 1px solid #e7e3d9;
-      border-radius: 20px;
-      padding: 18px 20px;
-      background: #fbfaf6;
-    }
-    .panel h2 {
-      margin: 0 0 12px;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.18em;
-      color: #6f6c66;
-    }
-    .panel div {
-      margin: 4px 0;
-      font-size: 14px;
-      line-height: 1.6;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 16px;
-    }
-    th, td {
-      padding: 14px 10px;
-      border-bottom: 1px solid #ece8de;
-      text-align: left;
-      vertical-align: top;
-      font-size: 14px;
-    }
-    th {
-      color: #6f6c66;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-    }
-    .totals {
-      margin-top: 20px;
-      margin-left: auto;
-      width: min(320px, 100%);
-      border: 1px solid #e7e3d9;
-      border-radius: 20px;
-      padding: 18px 20px;
-      background: #fbfaf6;
-    }
-    .totals-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      margin: 8px 0;
-      font-size: 15px;
-    }
-    .totals-row.total {
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid #ddd6c9;
-      font-size: 20px;
-      font-weight: 700;
-    }
-    .note {
-      margin-top: 24px;
-      font-size: 13px;
-      color: #6f6c66;
-      line-height: 1.7;
-    }
-    @media print {
-      body { background: #ffffff; padding: 0; }
-      .sheet { box-shadow: none; border: none; border-radius: 0; padding: 0; }
-    }
-    @media (max-width: 720px) {
-      body { padding: 16px; }
-      .sheet { padding: 22px; border-radius: 22px; }
-      .topbar { flex-direction: column; }
-      .meta { text-align: left; }
-      .grid { grid-template-columns: 1fr; }
-      th:nth-child(2), td:nth-child(2) { display: none; }
-    }
-  </style>
-</head>
-<body>
-  <main class="sheet">
-    <section class="topbar">
-      <div>
-        <p class="eyebrow">Federico Shop</p>
-        <h1>Invoice</h1>
-      </div>
-      <div class="meta">
-        <div><strong>${escapeHtml(order.orderNumber)}</strong></div>
-        <div>Date: ${escapeHtml(formatInvoiceDate(order.createdAt))}</div>
-        <div>Payment: ${escapeHtml(paymentMethodLabel(order.paymentMethod))}</div>
-        <div>Delivery: ${escapeHtml(deliveryMethodLabel(order.deliveryMethod))}</div>
-      </div>
-    </section>
+  const drawPanel = (
+    x: number,
+    topY: number,
+    width: number,
+    heading: string,
+    lines: string[]
+  ) => {
+    const contentLines = lines.map((line) => sanitizePdfText(line));
+    const panelHeight = 26 + contentLines.length * 13 + 18;
+    page.drawRectangle({
+      x,
+      y: topY - panelHeight,
+      width,
+      height: panelHeight,
+      color: panel,
+      borderColor: border,
+      borderWidth: 1,
+    });
+    page.drawText(sanitizePdfText(heading.toUpperCase()), {
+      x: x + 14,
+      y: topY - 18,
+      size: 9,
+      font: boldFont,
+      color: muted,
+    });
+    drawPdfTextLines(page, contentLines, {
+      x: x + 14,
+      y: topY - 36,
+      lineHeight: 13,
+      size: 10.5,
+      font: regularFont,
+      color: foreground,
+    });
+    return panelHeight;
+  };
 
-    <section class="grid">
-      <div class="panel">
-        <h2>From</h2>
-        ${storeSection}
-        ${vatLine}
-        <div>${escapeHtml(siteConfig.supportEmail)}</div>
-      </div>
-      <div class="panel">
-        <h2>Bill to</h2>
-        ${customerSection}
-      </div>
-    </section>
+  const drawTableHeader = () => {
+    page.drawLine({
+      start: { x: margin, y },
+      end: { x: pageWidth - margin, y },
+      thickness: 1,
+      color: border,
+    });
+    y -= 18;
 
-    <table>
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Format</th>
-          <th>Qty</th>
-          <th>Unit</th>
-          <th>Line total</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows}
-      </tbody>
-    </table>
+    const headers = [
+      { text: "ITEM", x: margin, width: 220 },
+      { text: "FORMAT", x: margin + 230, width: 70 },
+      { text: "QTY", x: margin + 308, width: 30 },
+      { text: "UNIT", x: margin + 352, width: 70 },
+      { text: "LINE TOTAL", x: margin + 432, width: 90 },
+    ];
 
-    <section class="totals">
-      <div class="totals-row">
-        <span>Subtotal</span>
-        <strong>${escapeHtml(formatEuroFromCents(order.subtotalCents))}</strong>
-      </div>
-      <div class="totals-row">
-        <span>Shipping</span>
-        <strong>${escapeHtml(formatEuroFromCents(order.shippingCents))}</strong>
-      </div>
-      <div class="totals-row">
-        <span>Tax</span>
-        <strong>${escapeHtml(formatEuroFromCents(order.taxCents))}</strong>
-      </div>
-      <div class="totals-row total">
-        <span>Total</span>
-        <strong>${escapeHtml(formatEuroFromCents(order.totalCents))}</strong>
-      </div>
-    </section>
+    for (const header of headers) {
+      page.drawText(header.text, {
+        x: header.x,
+        y,
+        size: 8.5,
+        font: boldFont,
+        color: muted,
+      });
+    }
 
-    <p class="note">
-      Thank you for your order. If you need help with this invoice, contact
-      ${escapeHtml(siteConfig.supportEmail)}.
-    </p>
-  </main>
-</body>
-</html>`;
+    y -= 12;
+    page.drawLine({
+      start: { x: margin, y },
+      end: { x: pageWidth - margin, y },
+      thickness: 1,
+      color: border,
+    });
+    y -= 16;
+  };
+
+  page.drawText("FEDERICO SHOP", {
+    x: margin,
+    y,
+    size: 9,
+    font: boldFont,
+    color: muted,
+  });
+  page.drawText("Invoice", {
+    x: margin,
+    y: y - 26,
+    size: 28,
+    font: boldFont,
+    color: foreground,
+  });
+
+  const metadataX = pageWidth - margin - 180;
+  const metadataLines = [
+    sanitizePdfText(order.orderNumber),
+    `Date: ${formatInvoiceDate(order.createdAt)}`,
+    `Payment: ${paymentMethodLabel(order.paymentMethod)}`,
+    `Delivery: ${deliveryMethodLabel(order.deliveryMethod)}`,
+  ];
+  drawPdfTextLines(page, metadataLines, {
+    x: metadataX,
+    y: y - 2,
+    lineHeight: 15,
+    size: 10.5,
+    font: regularFont,
+    color: foreground,
+  });
+
+  y -= 92;
+
+  const fromLines = [...storeLines];
+  if (siteConfig.legal.vatId) {
+    fromLines.push(`VAT ID: ${siteConfig.legal.vatId}`);
+  }
+  fromLines.push(siteConfig.supportEmail);
+
+  const panelTop = y;
+  const leftHeight = drawPanel(margin, panelTop, 238, "From", fromLines);
+  const rightHeight = drawPanel(pageWidth - margin - 238, panelTop, 238, "Bill to", customerLines);
+  y -= Math.max(leftHeight, rightHeight) + 28;
+
+  drawTableHeader();
+
+  for (const item of order.items) {
+    const titleLines = wrapPdfText(
+      `${item.product.artist} - ${item.product.title}`,
+      regularFont,
+      10.5,
+      220
+    );
+    const rowHeight = Math.max(24, titleLines.length * 13 + 8);
+
+    if (y - rowHeight < 150) {
+      createPage();
+      drawTableHeader();
+    }
+
+    drawPdfTextLines(page, titleLines, {
+      x: margin,
+      y,
+      lineHeight: 13,
+      size: 10.5,
+      font: regularFont,
+      color: foreground,
+    });
+    page.drawText(sanitizePdfText(item.product.format.toUpperCase()), {
+      x: margin + 230,
+      y,
+      size: 10,
+      font: regularFont,
+      color: foreground,
+    });
+    page.drawText(String(item.quantity), {
+      x: margin + 308,
+      y,
+      size: 10,
+      font: regularFont,
+      color: foreground,
+    });
+    page.drawText(formatInvoiceMoney(item.priceAtPurchaseCents), {
+      x: margin + 352,
+      y,
+      size: 10,
+      font: regularFont,
+      color: foreground,
+    });
+    page.drawText(formatInvoiceMoney(item.priceAtPurchaseCents * item.quantity), {
+      x: margin + 432,
+      y,
+      size: 10,
+      font: regularFont,
+      color: foreground,
+    });
+
+    y -= rowHeight;
+    page.drawLine({
+      start: { x: margin, y: y + 2 },
+      end: { x: pageWidth - margin, y: y + 2 },
+      thickness: 1,
+      color: border,
+    });
+    y -= 12;
+  }
+
+  ensureSpace(120);
+
+  const totalsBoxWidth = 220;
+  const totalsBoxX = pageWidth - margin - totalsBoxWidth;
+  const totalsBoxTop = y;
+  const totalsBoxHeight = 92;
+  page.drawRectangle({
+    x: totalsBoxX,
+    y: totalsBoxTop - totalsBoxHeight,
+    width: totalsBoxWidth,
+    height: totalsBoxHeight,
+    color: panel,
+    borderColor: border,
+    borderWidth: 1,
+  });
+
+  const totals = [
+    ["Subtotal", formatInvoiceMoney(order.subtotalCents)],
+    ["Shipping", formatInvoiceMoney(order.shippingCents)],
+    ["Tax", formatInvoiceMoney(order.taxCents)],
+  ] as const;
+
+  let totalsY = totalsBoxTop - 18;
+  for (const [label, value] of totals) {
+    page.drawText(label, {
+      x: totalsBoxX + 14,
+      y: totalsY,
+      size: 10.5,
+      font: regularFont,
+      color: foreground,
+    });
+    page.drawText(value, {
+      x: totalsBoxX + 112,
+      y: totalsY,
+      size: 10.5,
+      font: boldFont,
+      color: foreground,
+    });
+    totalsY -= 18;
+  }
+
+  page.drawLine({
+    start: { x: totalsBoxX + 14, y: totalsY + 4 },
+    end: { x: totalsBoxX + totalsBoxWidth - 14, y: totalsY + 4 },
+    thickness: 1,
+    color: border,
+  });
+  totalsY -= 12;
+  page.drawText("Total", {
+    x: totalsBoxX + 14,
+    y: totalsY,
+    size: 13,
+    font: boldFont,
+    color: foreground,
+  });
+  page.drawText(formatInvoiceMoney(order.totalCents), {
+    x: totalsBoxX + 112,
+    y: totalsY,
+    size: 13,
+    font: boldFont,
+    color: foreground,
+  });
+
+  y = totalsBoxTop - totalsBoxHeight - 26;
+
+  ensureSpace(36);
+  drawPdfTextLines(
+    page,
+    wrapPdfText(
+      `Thank you for your order. If you need help with this invoice, contact ${siteConfig.supportEmail}.`,
+      regularFont,
+      9.5,
+      pageWidth - margin * 2
+    ),
+    {
+      x: margin,
+      y,
+      lineHeight: 13,
+      size: 9.5,
+      font: regularFont,
+      color: muted,
+    }
+  );
+
+  return pdf.save();
 }

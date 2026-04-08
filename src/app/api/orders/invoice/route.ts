@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildInvoiceFilename,
-  buildInvoiceHtml,
+  buildInvoicePdf,
   getOrderWithItemsById,
   verifyInvoiceToken,
 } from "@/lib/invoice";
@@ -25,9 +25,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  return new NextResponse(buildInvoiceHtml(order), {
+  return new NextResponse(Buffer.from(await buildInvoicePdf(order)), {
     headers: {
-      "Content-Type": "text/html; charset=utf-8",
+      "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${buildInvoiceFilename(order.orderNumber)}"`,
       "Cache-Control": "private, no-store, max-age=0",
       "X-Robots-Tag": "noindex, nofollow, noarchive",
