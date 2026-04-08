@@ -8,6 +8,7 @@ import {
   saveOrderTracking,
   syncOrderTrackingAction,
   updateOrderStatus,
+  updateOrderVat,
 } from "@/actions/orders";
 import {
   allOrderStatuses,
@@ -49,6 +50,10 @@ export default async function AdminOrderDetailPage({
   }
 
   const shippingAddress = order.shippingAddress as ShippingAddress;
+  const vatRate =
+    order.taxCents > 0 && order.subtotalCents + order.shippingCents > 0
+      ? (order.taxCents / (order.subtotalCents + order.shippingCents)) * 100
+      : 0;
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -260,12 +265,56 @@ export default async function AdminOrderDetailPage({
               <span>Shipping</span>
               <span>{formatEuroFromCents(order.shippingCents)}</span>
             </div>
+            {order.taxCents > 0 && (
+              <div className="flex justify-between text-sm text-muted">
+                <span>VAT</span>
+                <span>{formatEuroFromCents(order.taxCents)}</span>
+              </div>
+            )}
             <div className="border-t border-border pt-2">
               <div className="flex justify-between text-lg font-bold text-foreground">
                 <span>Total</span>
                 <span>{formatEuroFromCents(order.totalCents)}</span>
               </div>
             </div>
+          </div>
+
+          <div className="card space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-foreground">Invoice VAT</h2>
+              <a href={`/api/admin/orders/${order.id}/invoice`} className="btn-secondary">
+                Download invoice
+              </a>
+            </div>
+
+            <form
+              action={updateOrderVat.bind(null, order.id)}
+              className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end"
+            >
+              <div>
+                <label htmlFor="vatRate" className="label">
+                  VAT %
+                </label>
+                <input
+                  id="vatRate"
+                  name="vatRate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  className="input"
+                  defaultValue={vatRate > 0 ? vatRate.toFixed(1) : ""}
+                  placeholder="0"
+                />
+              </div>
+              <button type="submit" className="btn-primary">
+                Save VAT
+              </button>
+            </form>
+
+            <p className="text-xs leading-6 text-muted">
+              Leave this empty or set it to 0 if the invoice should not show a VAT line.
+            </p>
           </div>
 
           <div className="card space-y-3">

@@ -162,3 +162,44 @@ export async function syncOrderTrackingAction(orderId: string): Promise<void> {
 
   revalidateOrderPaths(orderId);
 }
+
+export async function updateOrderVat(orderId: string, formData: FormData): Promise<void> {
+  "use server";
+  await requireAuthenticatedAdmin();
+
+  const vatRateRaw = formData.get("vatRate");
+  const vatRateInput = typeof vatRateRaw === "string" ? vatRateRaw.trim() : "";
+  const vatRateValue =
+    vatRateInput.length > 0 ? Number.parseFloat(vatRateInput.replace(",", ".")) : 0;
+
+  if (!Number.isFinite(vatRateValue) || vatRateValue < 0 || vatRateValue > 100) {
+    return;
+  }
+
+  const d = db();
+  const order = await d.query.orders.findFirst({
+    where: eq(schema.orders.id, orderId),
+  });
+
+  if (!order) return;
+
+  const taxableBaseCents = Math.max(order.subtotalCents + order.shippingCents, 0);
+  const normalizedVatRate = vatRateValue > 0 ? vatRateValue : 0;
+  const nextTaxCents = Math.round((taxableBaseCents * normalizedVatRate) / 100);
+  const nextTotalCents = order.subtotalCents + order.shippingCents + nextTaxCents;
+
+  if (order.taxCents === nextTaxCents && order.totalCents === nextTotalCents) {
+    return;
+  }
+
+  await d
+    .update(schema.orders)
+    .set({
+      taxCents: nextTaxCents,
+      totalCents: nextTotalCents,
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.orders.id, orderId));
+
+  revalidateOrderPaths(orderId);
+}

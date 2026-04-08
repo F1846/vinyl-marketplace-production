@@ -337,6 +337,7 @@ export async function buildInvoicePdf(order: OrderWithItems): Promise<Uint8Array
   const foreground = rgb(0.09, 0.09, 0.09);
   const border = rgb(0.88, 0.86, 0.82);
   const panel = rgb(0.984, 0.98, 0.965);
+  const showTaxLine = order.taxCents > 0;
   const storeLines = legalAddressLines();
   const customerLines = formatAddressLines(order.shippingAddress);
   let page = pdf.addPage([pageWidth, pageHeight]);
@@ -540,7 +541,12 @@ export async function buildInvoicePdf(order: OrderWithItems): Promise<Uint8Array
   const totalsBoxWidth = 220;
   const totalsBoxX = pageWidth - margin - totalsBoxWidth;
   const totalsBoxTop = y;
-  const totalsBoxHeight = 92;
+  const totals = [
+    ["Subtotal", formatInvoiceMoney(order.subtotalCents)],
+    ["Shipping", formatInvoiceMoney(order.shippingCents)],
+    ...(showTaxLine ? ([["VAT", formatInvoiceMoney(order.taxCents)] ] as const) : []),
+  ] as const;
+  const totalsBoxHeight = 56 + totals.length * 18;
   page.drawRectangle({
     x: totalsBoxX,
     y: totalsBoxTop - totalsBoxHeight,
@@ -550,12 +556,6 @@ export async function buildInvoicePdf(order: OrderWithItems): Promise<Uint8Array
     borderColor: border,
     borderWidth: 1,
   });
-
-  const totals = [
-    ["Subtotal", formatInvoiceMoney(order.subtotalCents)],
-    ["Shipping", formatInvoiceMoney(order.shippingCents)],
-    ["Tax", formatInvoiceMoney(order.taxCents)],
-  ] as const;
 
   let totalsY = totalsBoxTop - 18;
   for (const [label, value] of totals) {
