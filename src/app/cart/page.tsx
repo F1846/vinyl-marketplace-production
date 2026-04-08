@@ -16,6 +16,10 @@ import {
 import { useCart } from "@/hooks/use-cart";
 import { formatEuroFromCents } from "@/lib/money";
 import { siteConfig } from "@/lib/site";
+import {
+  checkoutContactSchema,
+  type CheckoutContactInput,
+} from "@/validations/checkout";
 
 type ShippingCountry = {
   code: string;
@@ -32,7 +36,30 @@ type RefreshedCartItem = {
 };
 
 type CheckoutMode = "card" | "paypal" | "pickup";
+type ShippingFormState = Omit<CheckoutContactInput, "shippingCountry">;
+type ShippingFieldName = keyof ShippingFormState | "shippingCountry";
+
 const PAYPAL_ENABLED = process.env.NEXT_PUBLIC_PAYPAL_ENABLED === "true";
+const EMPTY_SHIPPING_FORM: ShippingFormState = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  confirmEmail: "",
+  street: "",
+  houseNumber: "",
+  postalCode: "",
+  city: "",
+  phoneNumber: "",
+  additionalInfo: "",
+};
+
+function getFirstFieldError(messages?: string[]) {
+  return messages?.[0] ?? "";
+}
+
+function fieldClassName(error?: string) {
+  return `input ${error ? "border-danger focus:border-danger" : ""}`;
+}
 
 export default function CartPage() {
   const router = useRouter();
@@ -55,6 +82,10 @@ export default function CartPage() {
   const [shippingLoading, setShippingLoading] = useState(false);
   const [shippingError, setShippingError] = useState<string | null>(null);
   const [checkoutMode, setCheckoutMode] = useState<CheckoutMode>("card");
+  const [shippingForm, setShippingForm] = useState<ShippingFormState>(EMPTY_SHIPPING_FORM);
+  const [shippingFieldErrors, setShippingFieldErrors] = useState<
+    Partial<Record<ShippingFieldName, string>>
+  >({});
   const [pickupName, setPickupName] = useState("");
   const [pickupEmail, setPickupEmail] = useState("");
   const [pickupNote, setPickupNote] = useState("");
@@ -85,6 +116,17 @@ export default function CartPage() {
       icon: MapPin,
     },
   ];
+
+  const checkoutPayload = useMemo(
+    () => ({
+      items: items.map((item) => ({
+        id: item.productId,
+        qty: item.quantity,
+        price: item.priceCents,
+      })),
+    }),
+    [items]
+  );
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -266,21 +308,60 @@ export default function CartPage() {
     };
   }, [isLoaded, isPickup, items, shippingCountry]);
 
-  const checkoutPayload = useMemo(
-    () => ({
-      items: items.map((item) => ({
-        id: item.productId,
-        qty: item.quantity,
-        price: item.priceCents,
-      })),
-    }),
-    [items]
-  );
+  function handleShippingFieldChange(field: keyof ShippingFormState, value: string) {
+    setShippingForm((current) => ({ ...current, [field]: value }));
+    setShippingFieldErrors((current) => {
+      const next = { ...current };
+      delete next[field];
+      if (field === "email" || field === "confirmEmail") {
+        delete next.email;
+        delete next.confirmEmail;
+      }
+      return next;
+    });
+    setError(null);
+  }
+
+  function handleShippingCountryChange(value: string) {
+    setShippingCountry(value);
+    setShippingFieldErrors((current) => {
+      const next = { ...current };
+      delete next.shippingCountry;
+      return next;
+    });
+    setError(null);
+  }
 
   async function handleCheckout() {
-    if (!isPickup && !shippingCountry) {
-      setError("Choose a shipping country before checkout.");
-      return;
+    let validatedShipping: CheckoutContactInput | null = null;
+
+    if (!isPickup) {
+      const parsedShipping = checkoutContactSchema.safeParse({
+        ...shippingForm,
+        shippingCountry,
+      });
+
+      if (!parsedShipping.success) {
+        const flattened = parsedShipping.error.flatten().fieldErrors;
+        setShippingFieldErrors({
+          firstName: getFirstFieldError(flattened.firstName),
+          lastName: getFirstFieldError(flattened.lastName),
+          email: getFirstFieldError(flattened.email),
+          confirmEmail: getFirstFieldError(flattened.confirmEmail),
+          shippingCountry: getFirstFieldError(flattened.shippingCountry),
+          street: getFirstFieldError(flattened.street),
+          houseNumber: getFirstFieldError(flattened.houseNumber),
+          postalCode: getFirstFieldError(flattened.postalCode),
+          city: getFirstFieldError(flattened.city),
+          phoneNumber: getFirstFieldError(flattened.phoneNumber),
+          additionalInfo: getFirstFieldError(flattened.additionalInfo),
+        });
+        setError("Please complete the required shipping details before payment.");
+        return;
+      }
+
+      validatedShipping = parsedShipping.data;
+      setShippingFieldErrors({});
     }
 
     if (isPickup && (!pickupName.trim() || !pickupEmail.trim())) {
@@ -309,7 +390,7 @@ export default function CartPage() {
             }
           : {
               ...checkoutPayload,
-              shippingCountry,
+              ...validatedShipping,
             };
 
       const res = await fetch(endpoint, {
@@ -325,7 +406,9 @@ export default function CartPage() {
       }
 
       if (json.orderNumber) {
-        router.push(`/order-confirmation?order_number=${encodeURIComponent(json.orderNumber)}&payment=pickup`);
+        router.push(
+          `/order-confirmation?order_number=${encodeURIComponent(json.orderNumber)}&payment=pickup`
+        );
         return;
       }
 
@@ -388,11 +471,16 @@ export default function CartPage() {
                 ) : null}
               </div>
               <div className="flex-1">
-                <Link href={`/products/${item.productId}`} className="font-serif text-2xl text-foreground hover:text-accent">
+                <Link
+                  href={`/products/${item.productId}`}
+                  className="font-serif text-2xl text-foreground hover:text-accent"
+                >
                   {item.title}
                 </Link>
                 {item.format && (
-                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-muted">{item.format}</p>
+                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-muted">
+                    {item.format}
+                  </p>
                 )}
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
@@ -445,7 +533,10 @@ export default function CartPage() {
               <button
                 key={option.mode}
                 type="button"
-                onClick={() => setCheckoutMode(option.mode)}
+                onClick={() => {
+                  setCheckoutMode(option.mode);
+                  setError(null);
+                }}
                 className={`rounded-[1.5rem] border p-4 text-left transition ${
                   checkoutMode === option.mode
                     ? "border-foreground bg-white shadow-soft"
@@ -466,14 +557,20 @@ export default function CartPage() {
           {!PAYPAL_ENABLED && (
             <p className="text-xs leading-6 text-muted">
               PayPal can be enabled later by adding PayPal credentials and setting
-              <span className="font-mono text-foreground"> NEXT_PUBLIC_PAYPAL_ENABLED=true</span>.
+              <span className="font-mono text-foreground">
+                {" "}
+                NEXT_PUBLIC_PAYPAL_ENABLED=true
+              </span>
+              .
             </p>
           )}
 
           {isPickup ? (
             <div className="space-y-3">
               <div>
-                <label htmlFor="pickup-name" className="label">Name</label>
+                <label htmlFor="pickup-name" className="label">
+                  Name
+                </label>
                 <input
                   id="pickup-name"
                   className="input"
@@ -483,7 +580,9 @@ export default function CartPage() {
                 />
               </div>
               <div>
-                <label htmlFor="pickup-email" className="label">Email</label>
+                <label htmlFor="pickup-email" className="label">
+                  Email
+                </label>
                 <input
                   id="pickup-email"
                   className="input"
@@ -494,7 +593,9 @@ export default function CartPage() {
                 />
               </div>
               <div>
-                <label htmlFor="pickup-note" className="label">Pickup note</label>
+                <label htmlFor="pickup-note" className="label">
+                  Pickup note
+                </label>
                 <textarea
                   id="pickup-note"
                   className="input min-h-28"
@@ -505,21 +606,223 @@ export default function CartPage() {
               </div>
             </div>
           ) : (
-            <div className="space-y-2">
-              <label htmlFor="shipping-country" className="label">Shipping country</label>
-              <select
-                id="shipping-country"
-                className="input"
-                value={shippingCountry}
-                onChange={(event) => setShippingCountry(event.target.value)}
-                disabled={shippingCountries.length === 0}
-              >
-                {shippingCountries.map((country) => (
-                  <option key={country.code} value={country.code}>
-                    {country.label} ({country.code})
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-4 rounded-[1.5rem] border border-border bg-background p-4">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Shipping details</p>
+                <p className="mt-1 text-xs leading-6 text-muted">
+                  These details are required before payment and will be used for your order,
+                  invoice, and PayPal shipping address.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="shipping-first-name" className="label">
+                    First name
+                  </label>
+                  <input
+                    id="shipping-first-name"
+                    className={fieldClassName(shippingFieldErrors.firstName)}
+                    value={shippingForm.firstName}
+                    onChange={(event) =>
+                      handleShippingFieldChange("firstName", event.target.value)
+                    }
+                    placeholder="Federico"
+                  />
+                  {shippingFieldErrors.firstName && (
+                    <p className="mt-1 text-xs text-danger">{shippingFieldErrors.firstName}</p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="shipping-last-name" className="label">
+                    Last name
+                  </label>
+                  <input
+                    id="shipping-last-name"
+                    className={fieldClassName(shippingFieldErrors.lastName)}
+                    value={shippingForm.lastName}
+                    onChange={(event) =>
+                      handleShippingFieldChange("lastName", event.target.value)
+                    }
+                    placeholder="Shopper"
+                  />
+                  {shippingFieldErrors.lastName && (
+                    <p className="mt-1 text-xs text-danger">{shippingFieldErrors.lastName}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="shipping-email" className="label">
+                    Email
+                  </label>
+                  <input
+                    id="shipping-email"
+                    className={fieldClassName(shippingFieldErrors.email)}
+                    value={shippingForm.email}
+                    onChange={(event) => handleShippingFieldChange("email", event.target.value)}
+                    placeholder="you@example.com"
+                    type="email"
+                  />
+                  {shippingFieldErrors.email && (
+                    <p className="mt-1 text-xs text-danger">{shippingFieldErrors.email}</p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="shipping-confirm-email" className="label">
+                    Confirm email
+                  </label>
+                  <input
+                    id="shipping-confirm-email"
+                    className={fieldClassName(shippingFieldErrors.confirmEmail)}
+                    value={shippingForm.confirmEmail}
+                    onChange={(event) =>
+                      handleShippingFieldChange("confirmEmail", event.target.value)
+                    }
+                    placeholder="Repeat your email"
+                    type="email"
+                  />
+                  {shippingFieldErrors.confirmEmail && (
+                    <p className="mt-1 text-xs text-danger">
+                      {shippingFieldErrors.confirmEmail}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="shipping-country" className="label">
+                  Country
+                </label>
+                <select
+                  id="shipping-country"
+                  className={fieldClassName(shippingFieldErrors.shippingCountry)}
+                  value={shippingCountry}
+                  onChange={(event) => handleShippingCountryChange(event.target.value)}
+                  disabled={shippingCountries.length === 0}
+                >
+                  {shippingCountries.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.label} ({country.code})
+                    </option>
+                  ))}
+                </select>
+                {shippingFieldErrors.shippingCountry && (
+                  <p className="mt-1 text-xs text-danger">{shippingFieldErrors.shippingCountry}</p>
+                )}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[1fr_160px]">
+                <div>
+                  <label htmlFor="shipping-street" className="label">
+                    Street
+                  </label>
+                  <input
+                    id="shipping-street"
+                    className={fieldClassName(shippingFieldErrors.street)}
+                    value={shippingForm.street}
+                    onChange={(event) =>
+                      handleShippingFieldChange("street", event.target.value)
+                    }
+                    placeholder="Street name"
+                  />
+                  {shippingFieldErrors.street && (
+                    <p className="mt-1 text-xs text-danger">{shippingFieldErrors.street}</p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="shipping-house-number" className="label">
+                    House number
+                  </label>
+                  <input
+                    id="shipping-house-number"
+                    className={fieldClassName(shippingFieldErrors.houseNumber)}
+                    value={shippingForm.houseNumber}
+                    onChange={(event) =>
+                      handleShippingFieldChange("houseNumber", event.target.value)
+                    }
+                    placeholder="12A"
+                  />
+                  {shippingFieldErrors.houseNumber && (
+                    <p className="mt-1 text-xs text-danger">{shippingFieldErrors.houseNumber}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
+                <div>
+                  <label htmlFor="shipping-postal-code" className="label">
+                    ZIP code
+                  </label>
+                  <input
+                    id="shipping-postal-code"
+                    className={fieldClassName(shippingFieldErrors.postalCode)}
+                    value={shippingForm.postalCode}
+                    onChange={(event) =>
+                      handleShippingFieldChange("postalCode", event.target.value)
+                    }
+                    placeholder="10115"
+                  />
+                  {shippingFieldErrors.postalCode && (
+                    <p className="mt-1 text-xs text-danger">{shippingFieldErrors.postalCode}</p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="shipping-city" className="label">
+                    City
+                  </label>
+                  <input
+                    id="shipping-city"
+                    className={fieldClassName(shippingFieldErrors.city)}
+                    value={shippingForm.city}
+                    onChange={(event) => handleShippingFieldChange("city", event.target.value)}
+                    placeholder="Berlin"
+                  />
+                  {shippingFieldErrors.city && (
+                    <p className="mt-1 text-xs text-danger">{shippingFieldErrors.city}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="shipping-phone" className="label">
+                  Phone number
+                </label>
+                <input
+                  id="shipping-phone"
+                  className={fieldClassName(shippingFieldErrors.phoneNumber)}
+                  value={shippingForm.phoneNumber}
+                  onChange={(event) =>
+                    handleShippingFieldChange("phoneNumber", event.target.value)
+                  }
+                  placeholder="+49 000 000000"
+                  type="tel"
+                />
+                {shippingFieldErrors.phoneNumber && (
+                  <p className="mt-1 text-xs text-danger">{shippingFieldErrors.phoneNumber}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="shipping-additional-info" className="label">
+                  Additional information
+                </label>
+                <textarea
+                  id="shipping-additional-info"
+                  className={fieldClassName(shippingFieldErrors.additionalInfo) + " min-h-24"}
+                  value={shippingForm.additionalInfo}
+                  onChange={(event) =>
+                    handleShippingFieldChange("additionalInfo", event.target.value)
+                  }
+                  placeholder="Apartment, company, delivery note, or other useful details"
+                />
+                {shippingFieldErrors.additionalInfo && (
+                  <p className="mt-1 text-xs text-danger">
+                    {shippingFieldErrors.additionalInfo}
+                  </p>
+                )}
+              </div>
             </div>
           )}
 

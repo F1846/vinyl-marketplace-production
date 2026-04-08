@@ -1,6 +1,10 @@
 import Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
-import { calculateOrderShipping, getCheckoutProducts } from "@/lib/checkout";
+import {
+  calculateOrderShipping,
+  createCheckoutMetadata,
+  getCheckoutProducts,
+} from "@/lib/checkout";
 import { stripe } from "@/lib/stripe";
 import { checkoutSchema } from "@/validations/checkout";
 
@@ -85,6 +89,7 @@ export async function POST(req: NextRequest) {
     const session = await stripe().checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
+      customer_email: parsed.data.email,
       success_url: `${siteUrl}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/cart`,
       shipping_address_collection: {
@@ -97,6 +102,7 @@ export async function POST(req: NextRequest) {
         shippingCountry,
         paymentMethod: "card",
         deliveryMethod: "shipping",
+        ...createCheckoutMetadata(parsed.data),
       },
     });
 

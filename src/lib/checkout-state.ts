@@ -1,11 +1,33 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { CheckoutCartItem } from "@/lib/checkout";
+import type { ShippingDetailsInput } from "@/validations/checkout";
 
 type CheckoutStatePayload = {
   items: CheckoutCartItem[];
-  shippingCountry: string;
+  shippingDetails: ShippingDetailsInput;
   createdAt: number;
 };
+
+function isShippingDetails(value: unknown): value is ShippingDetailsInput {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const requiredKeys = [
+    "firstName",
+    "lastName",
+    "email",
+    "shippingCountry",
+    "street",
+    "houseNumber",
+    "postalCode",
+    "city",
+    "phoneNumber",
+  ] as const;
+
+  return requiredKeys.every((key) => typeof candidate[key] === "string");
+}
 
 function getCheckoutStateSecret(): string {
   return (
@@ -23,12 +45,12 @@ function signPayload(payload: string): string {
 
 export function createCheckoutStateToken(input: {
   items: CheckoutCartItem[];
-  shippingCountry: string;
+  shippingDetails: ShippingDetailsInput;
 }): string {
   const payload = Buffer.from(
     JSON.stringify({
       items: input.items,
-      shippingCountry: input.shippingCountry,
+      shippingDetails: input.shippingDetails,
       createdAt: Date.now(),
     } satisfies CheckoutStatePayload)
   ).toString("base64url");
@@ -59,11 +81,7 @@ export function verifyCheckoutStateToken(token: string): CheckoutStatePayload | 
       Buffer.from(payload, "base64url").toString("utf8")
     ) as CheckoutStatePayload;
 
-    if (
-      !Array.isArray(parsed.items) ||
-      typeof parsed.shippingCountry !== "string" ||
-      typeof parsed.createdAt !== "number"
-    ) {
+    if (!Array.isArray(parsed.items) || !isShippingDetails(parsed.shippingDetails) || typeof parsed.createdAt !== "number") {
       return null;
     }
 

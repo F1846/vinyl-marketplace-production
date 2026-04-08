@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { calculateShippingQuote } from "@/lib/shipping";
-import { checkoutSchema } from "@/validations/checkout";
+import { shippingQuoteSchema } from "@/validations/checkout";
 
 export async function POST(req: NextRequest) {
   let body: unknown;
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: { code: "INVALID_JSON" } }, { status: 400 });
   }
 
-  const parsed = checkoutSchema.safeParse(body);
+  const parsed = shippingQuoteSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: { code: "VALIDATION_FAILED", details: parsed.error.flatten() } },

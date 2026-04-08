@@ -15,6 +15,13 @@ export interface ShippingAddress {
   postalCode: string;
   country: string;
   phone: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  street?: string | null;
+  houseNumber?: string | null;
+  phoneNumber?: string | null;
+  additionalInfo?: string | null;
   pickupLocation?: string | null;
   pickupNote?: string | null;
 }

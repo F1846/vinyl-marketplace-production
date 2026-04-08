@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { createPickupAddress, finalizeOrder } from "@/lib/checkout";
+import {
+  createPickupAddress,
+  createShippingAddressFromMetadata,
+  finalizeOrder,
+  mergeShippingAddress,
+} from "@/lib/checkout";
 import { stripe } from "@/lib/stripe";
 import type { ShippingAddress } from "@/types/order";
 
@@ -67,28 +72,47 @@ export async function POST(req: NextRequest) {
     const deliveryMethod =
       session.metadata?.deliveryMethod === "pickup" ? "pickup" : "shipping";
     const paymentMethod = "card";
+    const metadataAddress = createShippingAddressFromMetadata(session.metadata ?? {});
     const customerName =
+      metadataAddress?.name ??
       session.shipping_details?.name ??
       session.customer_details?.name ??
       "Customer";
-    const customerEmail = session.customer_details?.email ?? "";
+    const customerEmail =
+      session.metadata?.customerEmail ??
+      session.customer_details?.email ??
+      metadataAddress?.email ??
+      "";
 
     const shippingAddress: ShippingAddress =
       deliveryMethod === "pickup"
         ? createPickupAddress(customerName)
-        : {
-            name: session.shipping_details?.name ?? customerName,
-            line1: session.shipping_details?.address?.line1 ?? "",
-            line2: session.shipping_details?.address?.line2 ?? null,
-            city: session.shipping_details?.address?.city ?? "",
-            state: session.shipping_details?.address?.state ?? "",
-            postalCode: session.shipping_details?.address?.postal_code ?? "",
-            country:
-              session.shipping_details?.address?.country ??
-              session.metadata?.shippingCountry ??
-              "",
-            phone: null,
-          };
+        : metadataAddress
+          ? mergeShippingAddress(metadataAddress, {
+              name: session.shipping_details?.name ?? customerName,
+              line1: session.shipping_details?.address?.line1 ?? undefined,
+              line2: session.shipping_details?.address?.line2 ?? null,
+              city: session.shipping_details?.address?.city ?? undefined,
+              state: session.shipping_details?.address?.state ?? undefined,
+              postalCode: session.shipping_details?.address?.postal_code ?? undefined,
+              country:
+                session.shipping_details?.address?.country ??
+                session.metadata?.shippingCountry,
+            })
+          : {
+              name: session.shipping_details?.name ?? customerName,
+              line1: session.shipping_details?.address?.line1 ?? "",
+              line2: session.shipping_details?.address?.line2 ?? null,
+              city: session.shipping_details?.address?.city ?? "",
+              state: session.shipping_details?.address?.state ?? "",
+              postalCode: session.shipping_details?.address?.postal_code ?? "",
+              country:
+                session.shipping_details?.address?.country ??
+                session.metadata?.shippingCountry ??
+                "",
+              phone: null,
+              email: customerEmail || null,
+            };
 
     try {
       await finalizeOrder({

@@ -11,6 +11,7 @@ import type {
   ShippingAddress,
 } from "@/types/order";
 import type { ProductFormat } from "@/types/product";
+import type { ShippingDetailsInput } from "@/validations/checkout";
 
 export type CheckoutCartItem = {
   id: string;
@@ -33,6 +34,143 @@ type FinalizeOrderInput = {
   stripePaymentIntentId?: string | null;
   paypalOrderId?: string | null;
 };
+
+type CheckoutMetadata = Record<string, string>;
+
+function cleanCheckoutValue(value: string | null | undefined): string | null {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+function combineStreetAddress(street: string, houseNumber: string): string {
+  return [street.trim(), houseNumber.trim()].filter(Boolean).join(" ").trim();
+}
+
+export function getCheckoutCustomerName(input: ShippingDetailsInput): string {
+  return [input.firstName.trim(), input.lastName.trim()].filter(Boolean).join(" ").trim();
+}
+
+export function createShippingAddressFromCheckout(
+  input: ShippingDetailsInput
+): ShippingAddress {
+  const additionalInfo = cleanCheckoutValue(input.additionalInfo);
+  const phoneNumber = cleanCheckoutValue(input.phoneNumber);
+
+  return {
+    name: getCheckoutCustomerName(input),
+    line1: combineStreetAddress(input.street, input.houseNumber),
+    line2: additionalInfo,
+    city: input.city.trim(),
+    state: "",
+    postalCode: input.postalCode.trim(),
+    country: input.shippingCountry.trim().toUpperCase(),
+    phone: phoneNumber,
+    firstName: input.firstName.trim(),
+    lastName: input.lastName.trim(),
+    email: input.email.trim(),
+    street: input.street.trim(),
+    houseNumber: input.houseNumber.trim(),
+    phoneNumber,
+    additionalInfo,
+  };
+}
+
+export function createCheckoutMetadata(input: ShippingDetailsInput): CheckoutMetadata {
+  return {
+    customerFirstName: input.firstName.trim(),
+    customerLastName: input.lastName.trim(),
+    customerEmail: input.email.trim(),
+    shippingCountry: input.shippingCountry.trim().toUpperCase(),
+    shippingStreet: input.street.trim(),
+    shippingHouseNumber: input.houseNumber.trim(),
+    shippingPostalCode: input.postalCode.trim(),
+    shippingCity: input.city.trim(),
+    shippingPhone: input.phoneNumber.trim(),
+    shippingAdditionalInfo: input.additionalInfo?.trim() ?? "",
+  };
+}
+
+export function createShippingAddressFromMetadata(
+  metadata: Record<string, string | null | undefined>
+): ShippingAddress | null {
+  const firstName = cleanCheckoutValue(metadata.customerFirstName);
+  const lastName = cleanCheckoutValue(metadata.customerLastName);
+  const email = cleanCheckoutValue(metadata.customerEmail);
+  const country = cleanCheckoutValue(metadata.shippingCountry);
+  const street = cleanCheckoutValue(metadata.shippingStreet);
+  const houseNumber = cleanCheckoutValue(metadata.shippingHouseNumber);
+  const postalCode = cleanCheckoutValue(metadata.shippingPostalCode);
+  const city = cleanCheckoutValue(metadata.shippingCity);
+  const phoneNumber = cleanCheckoutValue(metadata.shippingPhone);
+  const additionalInfo = cleanCheckoutValue(metadata.shippingAdditionalInfo);
+
+  if (
+    !firstName ||
+    !lastName ||
+    !email ||
+    !country ||
+    !street ||
+    !houseNumber ||
+    !postalCode ||
+    !city ||
+    !phoneNumber
+  ) {
+    return null;
+  }
+
+  return createShippingAddressFromCheckout({
+    firstName,
+    lastName,
+    email,
+    shippingCountry: country,
+    street,
+    houseNumber,
+    postalCode,
+    city,
+    phoneNumber,
+    additionalInfo: additionalInfo ?? "",
+  });
+}
+
+export function mergeShippingAddress(
+  fallback: ShippingAddress,
+  override: Partial<ShippingAddress>
+): ShippingAddress {
+  return {
+    ...fallback,
+    ...override,
+    name: cleanCheckoutValue(override.name) ?? fallback.name,
+    line1: cleanCheckoutValue(override.line1) ?? fallback.line1,
+    line2:
+      cleanCheckoutValue(override.line2) ??
+      cleanCheckoutValue(override.additionalInfo) ??
+      fallback.line2,
+    city: cleanCheckoutValue(override.city) ?? fallback.city,
+    state: cleanCheckoutValue(override.state) ?? fallback.state,
+    postalCode: cleanCheckoutValue(override.postalCode) ?? fallback.postalCode,
+    country: cleanCheckoutValue(override.country) ?? fallback.country,
+    phone:
+      cleanCheckoutValue(override.phone) ??
+      cleanCheckoutValue(override.phoneNumber) ??
+      fallback.phone,
+    firstName: cleanCheckoutValue(override.firstName) ?? fallback.firstName,
+    lastName: cleanCheckoutValue(override.lastName) ?? fallback.lastName,
+    email: cleanCheckoutValue(override.email) ?? fallback.email,
+    street: cleanCheckoutValue(override.street) ?? fallback.street,
+    houseNumber: cleanCheckoutValue(override.houseNumber) ?? fallback.houseNumber,
+    phoneNumber:
+      cleanCheckoutValue(override.phoneNumber) ??
+      cleanCheckoutValue(override.phone) ??
+      fallback.phoneNumber,
+    additionalInfo:
+      cleanCheckoutValue(override.additionalInfo) ??
+      cleanCheckoutValue(override.line2) ??
+      fallback.additionalInfo,
+    pickupLocation:
+      cleanCheckoutValue(override.pickupLocation) ?? fallback.pickupLocation,
+    pickupNote: cleanCheckoutValue(override.pickupNote) ?? fallback.pickupNote,
+  };
+}
 
 export async function getCheckoutProducts(items: CheckoutCartItem[]): Promise<ProductRecord[]> {
   const productIds = [...new Set(items.map((item) => item.id))];
@@ -118,6 +256,7 @@ export function createPickupAddress(customerName: string, note?: string | null):
     postalCode: siteConfig.legal.postalCode,
     country: siteConfig.legal.country,
     phone: siteConfig.legal.phone,
+    phoneNumber: siteConfig.legal.phone,
     pickupLocation: siteConfig.pickupLabel,
     pickupNote: note?.trim() || siteConfig.pickupNote,
   };

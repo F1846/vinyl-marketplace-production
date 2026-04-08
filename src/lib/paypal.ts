@@ -9,6 +9,16 @@ type PayPalOrderItem = {
   quantity: number;
 };
 
+type PayPalShippingAddress = {
+  fullName: string;
+  line1: string;
+  line2?: string | null;
+  city: string;
+  state?: string | null;
+  postalCode: string;
+  countryCode: string;
+};
+
 type PayPalLink = {
   href: string;
   rel: string;
@@ -132,6 +142,7 @@ export async function createPayPalOrder(input: {
   returnUrl: string;
   cancelUrl: string;
   requestId: string;
+  shippingAddress: PayPalShippingAddress;
 }) {
   const response = await paypalFetch<PayPalCreateOrderResponse>("/v2/checkout/orders", {
     method: "POST",
@@ -156,6 +167,23 @@ export async function createPayPalOrder(input: {
               },
             },
           },
+          shipping: {
+            name: {
+              full_name: input.shippingAddress.fullName,
+            },
+            address: {
+              address_line_1: input.shippingAddress.line1,
+              ...(input.shippingAddress.line2
+                ? { address_line_2: input.shippingAddress.line2 }
+                : {}),
+              ...(input.shippingAddress.state
+                ? { admin_area_1: input.shippingAddress.state }
+                : {}),
+              admin_area_2: input.shippingAddress.city,
+              postal_code: input.shippingAddress.postalCode,
+              country_code: input.shippingAddress.countryCode,
+            },
+          },
           items: input.items.map((item) => ({
             name: item.name.slice(0, 127),
             description: item.description?.slice(0, 127),
@@ -172,6 +200,7 @@ export async function createPayPalOrder(input: {
         user_action: "PAY_NOW",
         return_url: input.returnUrl,
         cancel_url: input.cancelUrl,
+        shipping_preference: "SET_PROVIDED_ADDRESS",
       },
     }),
   });

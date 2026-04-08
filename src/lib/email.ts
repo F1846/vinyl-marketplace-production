@@ -121,11 +121,16 @@ function formatAddress(addr: ShippingAddress): string {
     return [addr.pickupLocation ?? addr.line1, addr.pickupNote].filter(Boolean).join("\n");
   }
 
+  const locality = [addr.postalCode, addr.city].filter(Boolean).join(" ");
+  const stateLine = addr.state?.trim() ? [locality, addr.state.trim()].filter(Boolean).join(", ") : locality;
+
   return [
     addr.name,
+    addr.email,
+    addr.phoneNumber ?? addr.phone,
     addr.line1,
-    addr.line2,
-    [addr.city, addr.state, addr.postalCode].filter(Boolean).join(" "),
+    addr.additionalInfo ?? addr.line2,
+    stateLine,
     addr.country,
   ]
     .filter(Boolean)

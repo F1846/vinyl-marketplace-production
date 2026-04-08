@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { verifyCheckoutStateToken } from "@/lib/checkout-state";
-import { finalizeOrder } from "@/lib/checkout";
+import {
+  createShippingAddressFromCheckout,
+  finalizeOrder,
+  getCheckoutCustomerName,
+  mergeShippingAddress,
+} from "@/lib/checkout";
 import { capturePayPalOrder } from "@/lib/paypal";
 import { paypalCaptureSchema } from "@/validations/checkout";
 import type { ShippingAddress } from "@/types/order";
@@ -48,33 +53,38 @@ export async function POST(req: NextRequest) {
 
   try {
     const captured = await capturePayPalOrder(parsed.data.token);
-    const customerName = [
-      captured.payer?.name?.given_name,
-      captured.payer?.name?.surname,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .trim() || captured.purchase_units?.[0]?.shipping?.name?.full_name || "PayPal customer";
-
-    const shippingAddress: ShippingAddress = {
-      name: captured.purchase_units?.[0]?.shipping?.name?.full_name ?? customerName,
-      line1: captured.purchase_units?.[0]?.shipping?.address?.address_line_1 ?? "",
+    const customerName = getCheckoutCustomerName(state.shippingDetails);
+    const fallbackShippingAddress = createShippingAddressFromCheckout(state.shippingDetails);
+    const capturedShippingAddress: Partial<ShippingAddress> = {
+      name:
+        captured.purchase_units?.[0]?.shipping?.name?.full_name ??
+        [
+          captured.payer?.name?.given_name,
+          captured.payer?.name?.surname,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .trim(),
+      line1: captured.purchase_units?.[0]?.shipping?.address?.address_line_1,
       line2: captured.purchase_units?.[0]?.shipping?.address?.address_line_2 ?? null,
-      city: captured.purchase_units?.[0]?.shipping?.address?.admin_area_2 ?? "",
-      state: captured.purchase_units?.[0]?.shipping?.address?.admin_area_1 ?? "",
-      postalCode: captured.purchase_units?.[0]?.shipping?.address?.postal_code ?? "",
+      city: captured.purchase_units?.[0]?.shipping?.address?.admin_area_2,
+      state: captured.purchase_units?.[0]?.shipping?.address?.admin_area_1,
+      postalCode: captured.purchase_units?.[0]?.shipping?.address?.postal_code,
       country:
         captured.purchase_units?.[0]?.shipping?.address?.country_code ??
-        state.shippingCountry,
-      phone: null,
+        state.shippingDetails.shippingCountry,
     };
+    const shippingAddress = mergeShippingAddress(
+      fallbackShippingAddress,
+      capturedShippingAddress
+    );
 
     const order = await finalizeOrder({
       items: state.items,
-      customerEmail: captured.payer?.email_address ?? "",
+      customerEmail: state.shippingDetails.email,
       customerName,
       shippingAddress,
-      shippingCountry: state.shippingCountry,
+      shippingCountry: state.shippingDetails.shippingCountry,
       paymentMethod: "paypal",
       deliveryMethod: "shipping",
       paypalOrderId: captured.id,

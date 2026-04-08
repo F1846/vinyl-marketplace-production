@@ -71,9 +71,13 @@ export default async function AdminOrderDetailPage({
           <pre className="text-sm text-muted whitespace-pre-wrap">
             {[
             shippingAddress.name,
+            shippingAddress.email,
+            shippingAddress.phoneNumber ?? shippingAddress.phone,
             shippingAddress.line1,
-            shippingAddress.line2,
-            [shippingAddress.city, shippingAddress.state, shippingAddress.postalCode].filter(Boolean).join(" "),
+            shippingAddress.additionalInfo ?? shippingAddress.line2,
+            [shippingAddress.postalCode, shippingAddress.city, shippingAddress.state]
+              .filter(Boolean)
+              .join(" "),
             shippingAddress.country,
             shippingAddress.pickupNote,
           ].filter(Boolean).join("\n")}
