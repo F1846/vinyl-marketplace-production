@@ -4,7 +4,11 @@ import { db } from "@/db";
 import { schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { requireAuthenticatedAdmin } from "@/lib/auth";
-import { fetchTrackingSummary, syncOrderTrackingById } from "@/lib/order-tracking";
+import {
+  fetchTrackingSummary,
+  isTrackingSyncConfigured,
+  syncOrderTrackingById,
+} from "@/lib/order-tracking";
 import { sendOrderUpdateEmailById } from "@/lib/order-notifications";
 import { allOrderStatuses, getOrderStatusRank, type OrderStatus } from "@/types/order";
 import { revalidatePath } from "next/cache";
@@ -89,10 +93,13 @@ export async function saveOrderTracking(orderId: string, formData: FormData): Pr
     trackingNumber &&
     order.deliveryMethod === "shipping" &&
     order.status !== "cancelled" &&
-    order.status !== "delivered" &&
-    getOrderStatusRank(nextStatus) < getOrderStatusRank("shipped")
+    order.status !== "delivered"
   ) {
-    nextStatus = "shipped";
+    const targetStatus = isTrackingSyncConfigured() ? "processing" : "shipped";
+
+    if (getOrderStatusRank(nextStatus) < getOrderStatusRank(targetStatus)) {
+      nextStatus = targetStatus;
+    }
   }
 
   await d
