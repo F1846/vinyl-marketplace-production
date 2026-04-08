@@ -74,9 +74,13 @@ export default async function AdminProductsPage({
                 <td className="px-4 py-3 text-foreground">{product.stockQuantity}</td>
                 <td className="px-4 py-3">{statusBadge(product.status)}</td>
                 <td className="px-4 py-3">
-                  <div className="flex justify-end gap-3">
-                    <Link href={`/admin/products/${product.id}/edit`} title="Edit" className="text-muted hover:text-accent transition-colors">
-                      <Pencil className="h-4 w-4" />
+                  <div className="flex justify-end flex-wrap gap-2">
+                    <Link
+                      href={`/admin/products/${product.id}/edit`}
+                      className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted transition-colors hover:border-accent hover:text-accent"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
                     </Link>
                     {product.status !== "active" && (
                       <form action={restoreProduct.bind(null, product.id)}>
@@ -84,20 +88,26 @@ export default async function AdminProductsPage({
                           type="submit"
                           title={
                             product.stockQuantity > 0
-                              ? "Relist"
-                              : "Set stock above 0 in Edit before relisting"
+                              ? "Show in catalog"
+                              : "Set stock above 0 in Edit before showing in catalog"
                           }
-                          className="text-muted hover:text-success transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                          className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted transition-colors hover:border-success hover:text-success disabled:cursor-not-allowed disabled:opacity-40"
                           disabled={product.stockQuantity < 1}
                         >
-                          <RotateCcw className="h-4 w-4" />
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          Show
                         </button>
                       </form>
                     )}
                     {product.status !== "archived" && (
                       <form action={archiveProduct.bind(null, product.id)}>
-                        <button type="submit" title="Archive" className="text-muted hover:text-danger transition-colors">
-                          <EyeOff className="h-4 w-4" />
+                        <button
+                          type="submit"
+                          title="Hide from catalog"
+                          className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted transition-colors hover:border-danger hover:text-danger"
+                        >
+                          <EyeOff className="h-3.5 w-3.5" />
+                          Hide
                         </button>
                       </form>
                     )}
