@@ -3,11 +3,28 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --site-scale: 1;
+  }
+
+  @media (min-width: 1024px) {
+    :root {
+      --site-scale: 0.9;
+    }
+  }
+
   html {
     background-color: #f4f3ef;
     color: #171717;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    zoom: var(--site-scale);
+  }
+
+  @supports not (zoom: 1) {
+    html {
+      font-size: calc(16px * var(--site-scale));
+    }
   }
 
   body {
