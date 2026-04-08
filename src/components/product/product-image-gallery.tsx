@@ -28,8 +28,8 @@ export function ProductImageGallery({
   );
 
   return (
-    <div className="space-y-2">
-      <div className="relative aspect-[0.82] overflow-hidden rounded-[1.1rem] border border-border bg-white shadow-soft">
+    <div className="space-y-2.5">
+      <div className="relative aspect-[0.86] overflow-hidden rounded-[1.25rem] border border-border bg-white shadow-soft">
         {selectedImage?.url ? (
           <Image
             src={selectedImage.url}
@@ -46,7 +46,7 @@ export function ProductImageGallery({
         )}
       </div>
       {images.length > 1 && (
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {images.map((image, index) => {
             const isSelected = image.id === selectedImage?.id;
 
@@ -55,7 +55,7 @@ export function ProductImageGallery({
                 key={image.id}
                 type="button"
                 onClick={() => setSelectedImageId(image.id)}
-                className={`relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-[0.8rem] border bg-white transition ${
+                className={`relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-[0.9rem] border bg-white transition ${
                   isSelected
                     ? "border-foreground shadow-soft"
                     : "border-border hover:border-foreground/25"

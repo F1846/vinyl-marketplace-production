@@ -42,7 +42,7 @@ const SORT_OPTIONS: Array<{ value: CatalogSort; label: string }> = [
 ];
 
 const filterButtonBaseClass =
-  "rounded-full border px-2.5 py-1 text-[0.78rem] font-medium transition-colors";
+  "rounded-full border px-3 py-1.5 text-[0.84rem] font-medium transition-colors";
 
 function getFilterButtonClass(isActive: boolean, extra = "") {
   return [
@@ -169,33 +169,33 @@ export function CatalogBrowser({
   }, [autoLoadEnabled, handleLoadMore, loading, loadingMore]);
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2.5">
+    <div className="space-y-5">
+      <div className="space-y-3">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Catalog</p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="font-sans text-[1.82rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[1.95rem]">
+            <h1 className="font-sans text-[2rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[2.15rem]">
               Shop the archive
             </h1>
-            <p className="mt-1.5 text-[0.92rem] leading-6 text-muted">
+            <p className="mt-2 text-sm leading-6 text-muted">
               Browse collector copies without leaving the page every time you filter.
             </p>
           </div>
-          <div className="rounded-full border border-border bg-white px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+          <div className="rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
             {activeLabel}
           </div>
         </div>
       </div>
 
-      <div className="grid gap-3.5 lg:grid-cols-[190px_1fr] xl:grid-cols-[200px_1fr]">
-        <aside className="space-y-3 lg:sticky lg:top-24 lg:self-start">
-          <div className="card space-y-3 p-3.5">
-            <div className="flex items-center gap-2 text-[0.92rem] font-semibold text-foreground">
+      <div className="grid gap-4 lg:grid-cols-[220px_1fr] xl:grid-cols-[230px_1fr]">
+        <aside className="space-y-4">
+          <div className="card space-y-4 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Filter className="h-4 w-4" /> Filters
             </div>
 
             <form
-              className="space-y-2.5"
+              className="space-y-3"
               onSubmit={(event) => {
                 event.preventDefault();
                 void applyQuery({ ...query, q: draftQuery.trim() });
@@ -208,7 +208,7 @@ export function CatalogBrowser({
                 <Search className="absolute left-4 top-3.5 h-4 w-4 text-muted" />
                 <input
                   id="catalog-search"
-                  className="input pl-9"
+                  className="input pl-10"
                   value={draftQuery}
                   onChange={(event) => setDraftQuery(event.target.value)}
                   placeholder="Artist, title, label"
@@ -219,8 +219,8 @@ export function CatalogBrowser({
               </button>
             </form>
 
-            <div className="space-y-2.5">
-              <p className="font-sans text-[1rem] font-bold tracking-[-0.03em] text-foreground">
+            <div className="space-y-3">
+              <p className="font-sans text-base font-bold tracking-[-0.03em] text-foreground">
                 Format
               </p>
               <div className="flex flex-wrap gap-2">
@@ -244,11 +244,11 @@ export function CatalogBrowser({
               </div>
             </div>
 
-            <div className="space-y-2.5">
-              <p className="font-sans text-[1rem] font-bold tracking-[-0.03em] text-foreground">
+            <div className="space-y-3">
+              <p className="font-sans text-base font-bold tracking-[-0.03em] text-foreground">
                 Genre
               </p>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => void applyQuery({ ...query, genre: "" })}
@@ -271,24 +271,24 @@ export function CatalogBrowser({
           </div>
         </aside>
 
-        <div className="space-y-5">
+        <div className="space-y-6">
           {loading ? (
             <div className="card flex min-h-48 items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-accent" />
             </div>
           ) : products.length > 0 ? (
             <>
-              <div className="flex flex-col gap-3 rounded-[1.1rem] border border-border bg-white p-3.5 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-[0.92rem] text-muted">
+              <div className="flex flex-col gap-4 rounded-[1.3rem] border border-border bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted">
                   Showing {products.length} of {totalCount} record{totalCount === 1 ? "" : "s"}
                 </p>
-                <div className="flex items-center gap-2.5 sm:justify-end">
-                  <label htmlFor="catalog-sort" className="text-[0.92rem] font-medium text-foreground">
+                <div className="flex items-center gap-3 sm:justify-end">
+                  <label htmlFor="catalog-sort" className="text-sm font-medium text-foreground">
                     Sort
                   </label>
                   <select
                     id="catalog-sort"
-                    className="input w-full min-w-[172px] sm:w-auto"
+                    className="input w-full min-w-[220px] sm:w-auto"
                     value={query.sort}
                     onChange={(event) =>
                       void applyQuery({
@@ -305,7 +305,7 @@ export function CatalogBrowser({
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} size="compact" />
                 ))}

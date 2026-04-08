@@ -11,7 +11,7 @@ export default function ImprintPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-muted">
           Legal
         </p>
-      <h1 className="font-sans text-[1.85rem] font-bold tracking-[-0.04em] text-foreground sm:text-[2.15rem]">
+        <h1 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground sm:text-4xl">
           Imprint
         </h1>
         <p className="max-w-2xl text-base leading-7 text-muted">

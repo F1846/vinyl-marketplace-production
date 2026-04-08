@@ -24,9 +24,9 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const inStock = product.stockQuantity > 0;
 
   return (
-    <div className="mx-auto max-w-[68rem]">
-      <div className="grid gap-4.5 lg:grid-cols-[0.8fr_1.02fr] lg:items-start">
-        <div className="lg:max-w-[22.5rem]">
+    <div className="mx-auto max-w-5xl">
+      <div className="grid gap-5 lg:grid-cols-[0.84fr_1.06fr] lg:items-start">
+        <div className="lg:max-w-[24.5rem]">
           <ProductImageGallery
             images={product.images}
             artist={product.artist}
@@ -34,7 +34,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           />
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           <div className="flex flex-wrap items-center gap-2">
             <span className={`badge badge-${product.format} capitalize`}>{product.format}</span>
             {product.conditionMedia && (
@@ -59,17 +59,17 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
               {product.artist}
             </p>
-            <h1 className="max-w-[15ch] font-sans text-[1.7rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[2rem]">
+            <h1 className="max-w-[15ch] font-sans text-[1.85rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[2.2rem]">
               {product.title}
             </h1>
           </div>
 
-          <div className="grid gap-3 rounded-[1.05rem] border border-border bg-white p-3 shadow-soft sm:grid-cols-2">
+          <div className="grid gap-3 rounded-[1.15rem] border border-border bg-white p-3.5 shadow-soft sm:grid-cols-2">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
                 Price
               </p>
-              <p className="mt-1 font-sans text-[1.4rem] font-bold leading-none tracking-[-0.04em] text-foreground">
+              <p className="mt-1 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
                 {formatEuroFromCents(product.priceCents)}
               </p>
             </div>
@@ -122,7 +122,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             )}
           </div>
 
-          <div className="rounded-[1.05rem] border border-border bg-white p-3 shadow-soft">
+          <div className="rounded-[1.15rem] border border-border bg-white p-3.5 shadow-soft">
             <div className="space-y-3">
               <p className="text-sm leading-6 text-muted">
                 Packed carefully for collectors. Shipping and pickup options are calculated
@@ -139,7 +139,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           </div>
 
           {product.description && (
-            <section className="rounded-[1.05rem] border border-border bg-white p-3 shadow-soft">
+            <section className="rounded-[1.1rem] border border-border bg-white p-3.5 shadow-soft">
               <h2 className="font-sans text-[1.15rem] font-bold tracking-[-0.04em] text-foreground">
                 Release notes
               </h2>
