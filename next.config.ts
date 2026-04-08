@@ -99,11 +99,11 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/track-order/:path*",
-        headers: [...securityHeaders, ...noIndexHeaders, ...noStoreHeaders],
+        headers: securityHeaders,
       },
       {
         source: "/track-order",
-        headers: [...securityHeaders, ...noIndexHeaders, ...noStoreHeaders],
+        headers: securityHeaders,
       },
       {
         source: "/order-confirmation",
