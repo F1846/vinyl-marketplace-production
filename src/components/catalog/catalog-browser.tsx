@@ -1,19 +1,21 @@
 "use client";
 
-import { startTransition, useMemo, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Filter, Loader2, Search } from "lucide-react";
 import { ProductCard } from "./product-card";
-import type { CatalogProduct } from "@/lib/catalog";
+import type { CatalogProduct, CatalogSort } from "@/lib/catalog";
 import type { ProductFormat } from "@/types/product";
 
 type CatalogBrowserProps = {
   initialProducts: CatalogProduct[];
   initialHasMore: boolean;
+  initialTotalCount: number;
   initialQuery: {
     q: string;
     format?: ProductFormat;
     genre: string;
+    sort: CatalogSort;
   };
   filters: {
     formats: ProductFormat[];
@@ -24,20 +26,35 @@ type CatalogBrowserProps = {
 type CatalogResponse = {
   products: CatalogProduct[];
   hasMore: boolean;
+  totalCount: number;
 };
+
+const PAGE_SIZE = 24;
+const SORT_OPTIONS: Array<{ value: CatalogSort; label: string }> = [
+  { value: "newest", label: "Newest" },
+  { value: "price-asc", label: "Price: low to high" },
+  { value: "price-desc", label: "Price: high to low" },
+  { value: "title-asc", label: "Title: A to Z" },
+  { value: "title-desc", label: "Title: Z to A" },
+  { value: "label-asc", label: "Label: A to Z" },
+  { value: "label-desc", label: "Label: Z to A" },
+];
 
 export function CatalogBrowser({
   initialProducts,
   initialHasMore,
+  initialTotalCount,
   initialQuery,
   filters,
 }: CatalogBrowserProps) {
   const [products, setProducts] = useState(initialProducts);
   const [hasMore, setHasMore] = useState(initialHasMore);
+  const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [query, setQuery] = useState(initialQuery);
   const [draftQuery, setDraftQuery] = useState(initialQuery.q);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const autoLoadRef = useRef<HTMLDivElement | null>(null);
 
   const activeLabel = useMemo(() => {
     if (query.q) {
@@ -52,13 +69,14 @@ export function CatalogBrowser({
     return "All catalog";
   }, [query]);
 
-  async function fetchCatalog(nextQuery: typeof query, offset = 0) {
+  const fetchCatalog = useCallback(async (nextQuery: typeof query, offset = 0) => {
     const params = new URLSearchParams();
     if (nextQuery.q) params.set("q", nextQuery.q);
     if (nextQuery.format) params.set("format", nextQuery.format);
     if (nextQuery.genre) params.set("genre", nextQuery.genre);
+    if (nextQuery.sort !== "newest") params.set("sort", nextQuery.sort);
     params.set("offset", String(offset));
-    params.set("limit", "20");
+    params.set("limit", String(PAGE_SIZE));
 
     const res = await fetch(`/api/catalog?${params.toString()}`);
     const json = (await res.json()) as CatalogResponse;
@@ -68,13 +86,14 @@ export function CatalogBrowser({
     }
 
     return json;
-  }
+  }, []);
 
   function syncUrl(nextQuery: typeof query) {
     const params = new URLSearchParams();
     if (nextQuery.q) params.set("q", nextQuery.q);
     if (nextQuery.format) params.set("format", nextQuery.format);
     if (nextQuery.genre) params.set("genre", nextQuery.genre);
+    if (nextQuery.sort !== "newest") params.set("sort", nextQuery.sort);
     const nextUrl = params.toString() ? `/catalog?${params.toString()}` : "/catalog";
     window.history.replaceState({}, "", nextUrl);
   }
@@ -86,6 +105,7 @@ export function CatalogBrowser({
       startTransition(() => {
         setProducts(next.products);
         setHasMore(next.hasMore);
+        setTotalCount(next.totalCount);
         setQuery(nextQuery);
       });
       syncUrl(nextQuery);
@@ -94,18 +114,38 @@ export function CatalogBrowser({
     }
   }
 
-  async function handleLoadMore() {
+  const handleLoadMore = useCallback(async () => {
     setLoadingMore(true);
     try {
       const next = await fetchCatalog(query, products.length);
       startTransition(() => {
         setProducts((current) => [...current, ...next.products]);
         setHasMore(next.hasMore);
+        setTotalCount(next.totalCount);
       });
     } finally {
       setLoadingMore(false);
     }
-  }
+  }, [fetchCatalog, products.length, query]);
+
+  useEffect(() => {
+    const node = autoLoadRef.current;
+    if (!node || !hasMore || loading || loadingMore) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void handleLoadMore();
+        }
+      },
+      { rootMargin: "800px 0px" }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [handleLoadMore, hasMore, loading, loadingMore]);
 
   return (
     <div className="space-y-6">
@@ -211,31 +251,49 @@ export function CatalogBrowser({
             </div>
           ) : products.length > 0 ? (
             <>
+              <div className="flex flex-col gap-4 rounded-[1.5rem] border border-border bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted">
+                  Showing {products.length} of {totalCount} record{totalCount === 1 ? "" : "s"}
+                </p>
+                <div className="flex items-center gap-3 sm:justify-end">
+                  <label htmlFor="catalog-sort" className="text-sm font-medium text-foreground">
+                    Sort
+                  </label>
+                  <select
+                    id="catalog-sort"
+                    className="input w-full min-w-[220px] sm:w-auto"
+                    value={query.sort}
+                    onChange={(event) =>
+                      void applyQuery({
+                        ...query,
+                        sort: event.target.value as CatalogSort,
+                      })
+                    }
+                  >
+                    {SORT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted">
-                  {products.length} result{products.length === 1 ? "" : "s"} loaded
-                </p>
-                {hasMore ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleLoadMore()}
-                    className="btn-secondary"
-                    disabled={loadingMore}
-                  >
-                    {loadingMore ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" /> Loading
-                      </>
-                    ) : (
-                      "Load more"
-                    )}
-                  </button>
-                ) : null}
+              <div ref={autoLoadRef} className="flex min-h-16 items-center justify-center">
+                {loadingMore ? (
+                  <p className="inline-flex items-center gap-2 text-sm text-muted">
+                    <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                    Loading more records...
+                  </p>
+                ) : hasMore ? (
+                  <p className="text-sm text-muted">Scroll to the bottom to load more.</p>
+                ) : (
+                  <p className="text-sm text-muted">All matching records are loaded.</p>
+                )}
               </div>
             </>
           ) : (

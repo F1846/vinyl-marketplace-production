@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getCatalogPage } from "@/lib/catalog";
+import { catalogSortValues, getCatalogPage } from "@/lib/catalog";
 
 const catalogQuerySchema = z.object({
   q: z.string().trim().optional(),
   format: z.enum(["vinyl", "cassette", "cd"]).optional(),
   genre: z.string().trim().optional(),
+  sort: z.enum(catalogSortValues).optional(),
   offset: z.coerce.number().int().min(0).optional(),
-  limit: z.coerce.number().int().min(1).max(40).optional(),
+  limit: z.coerce.number().int().min(1).max(60).optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -15,6 +16,7 @@ export async function GET(req: NextRequest) {
     q: req.nextUrl.searchParams.get("q") ?? undefined,
     format: req.nextUrl.searchParams.get("format") ?? undefined,
     genre: req.nextUrl.searchParams.get("genre") ?? undefined,
+    sort: req.nextUrl.searchParams.get("sort") ?? undefined,
     offset: req.nextUrl.searchParams.get("offset") ?? undefined,
     limit: req.nextUrl.searchParams.get("limit") ?? undefined,
   });

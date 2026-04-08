@@ -32,6 +32,7 @@ type RefreshedCartItem = {
 };
 
 type CheckoutMode = "card" | "paypal" | "pickup";
+const PAYPAL_ENABLED = process.env.NEXT_PUBLIC_PAYPAL_ENABLED === "true";
 
 export default function CartPage() {
   const router = useRouter();
@@ -60,6 +61,30 @@ export default function CartPage() {
 
   const isPickup = checkoutMode === "pickup";
   const total = totalPriceCents + (isPickup || items.length === 0 ? 0 : shippingCents);
+  const checkoutOptions = [
+    {
+      mode: "card" as const,
+      title: "Credit or debit card",
+      description: "Stripe-hosted secure card checkout",
+      icon: CreditCard,
+    },
+    ...(PAYPAL_ENABLED
+      ? [
+          {
+            mode: "paypal" as const,
+            title: "PayPal",
+            description: "Approve the order on PayPal and return here",
+            icon: Wallet,
+          },
+        ]
+      : []),
+    {
+      mode: "pickup" as const,
+      title: "Local pickup",
+      description: `Reserve now and collect from ${siteConfig.pickupLabel}`,
+      icon: MapPin,
+    },
+  ];
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -416,26 +441,7 @@ export default function CartPage() {
           </div>
 
           <div className="grid gap-3">
-            {[
-              {
-                mode: "card" as const,
-                title: "Credit or debit card",
-                description: "Stripe-hosted secure card checkout",
-                icon: CreditCard,
-              },
-              {
-                mode: "paypal" as const,
-                title: "PayPal",
-                description: "Approve the order on PayPal and return here",
-                icon: Wallet,
-              },
-              {
-                mode: "pickup" as const,
-                title: "Local pickup",
-                description: `Reserve now and collect from ${siteConfig.pickupLabel}`,
-                icon: MapPin,
-              },
-            ].map((option) => (
+            {checkoutOptions.map((option) => (
               <button
                 key={option.mode}
                 type="button"
@@ -456,6 +462,13 @@ export default function CartPage() {
               </button>
             ))}
           </div>
+
+          {!PAYPAL_ENABLED && (
+            <p className="text-xs leading-6 text-muted">
+              PayPal can be enabled later by adding PayPal credentials and setting
+              <span className="font-mono text-foreground"> NEXT_PUBLIC_PAYPAL_ENABLED=true</span>.
+            </p>
+          )}
 
           {isPickup ? (
             <div className="space-y-3">

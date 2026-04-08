@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "@/styles/globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <Header />
         <main className="container mx-auto flex-1 px-4 py-8 sm:px-6 lg:px-8">{children}</main>
         <Footer />
+        <SpeedInsights />
       </body>
     </html>
   );

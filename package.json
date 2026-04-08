@@ -19,6 +19,7 @@
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
     "@vercel/blob": "^0.27.0",
+    "@vercel/speed-insights": "^2.0.0",
     "autoprefixer": "^10.4.27",
     "bcryptjs": "^3.0.2",
     "drizzle-orm": "^0.39.0",

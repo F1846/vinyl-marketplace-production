@@ -1,6 +1,18 @@
-import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { MediaCondition, ProductFormat } from "@/types/product";
+
+export const catalogSortValues = [
+  "newest",
+  "price-asc",
+  "price-desc",
+  "title-asc",
+  "title-desc",
+  "label-asc",
+  "label-desc",
+] as const;
+
+export type CatalogSort = (typeof catalogSortValues)[number];
 
 export type CatalogProduct = {
   id: string;
@@ -22,6 +34,7 @@ export type CatalogQuery = {
   q?: string;
   format?: ProductFormat;
   genre?: string;
+  sort?: CatalogSort;
   offset?: number;
   limit?: number;
 };
@@ -30,8 +43,9 @@ export async function getCatalogPage({
   q = "",
   format,
   genre = "",
+  sort = "newest",
   offset = 0,
-  limit = 20,
+  limit = 24,
 }: CatalogQuery) {
   const d = db();
   const whereConditions = [eq(schema.products.status, "active")];
@@ -54,17 +68,39 @@ export async function getCatalogPage({
     );
   }
 
+  const where = and(...whereConditions);
+  const orderBy =
+    sort === "price-asc"
+      ? [asc(schema.products.priceCents), asc(schema.products.artist), asc(schema.products.title)]
+      : sort === "price-desc"
+        ? [desc(schema.products.priceCents), asc(schema.products.artist), asc(schema.products.title)]
+        : sort === "title-asc"
+          ? [asc(schema.products.title), asc(schema.products.artist)]
+          : sort === "title-desc"
+            ? [desc(schema.products.title), asc(schema.products.artist)]
+            : sort === "label-asc"
+              ? [asc(schema.products.pressingLabel), asc(schema.products.artist), asc(schema.products.title)]
+              : sort === "label-desc"
+                ? [desc(schema.products.pressingLabel), asc(schema.products.artist), asc(schema.products.title)]
+                : [desc(schema.products.createdAt)];
+
+  const [{ count }] = await d
+    .select({ count: sql<number>`count(*)` })
+    .from(schema.products)
+    .where(where);
+
   const products = await d.query.products.findMany({
-    where: and(...whereConditions),
+    where,
     with: { images: { orderBy: [schema.productImages.sortOrder] } },
     limit: limit + 1,
     offset,
-    orderBy: [desc(schema.products.createdAt)],
+    orderBy,
   });
 
   return {
     products: products.slice(0, limit) as CatalogProduct[],
     hasMore: products.length > limit,
+    totalCount: count ?? 0,
   };
 }
 
