@@ -1,5 +1,6 @@
 import { formatEuroFromCents } from "@/lib/money";
 import { siteConfig, siteUrl } from "@/lib/site";
+import type { OrderStatus, TrackingSummary } from "@/types/order";
 import { OrderWithItems, type ShippingAddress } from "@/types/order";
 
 type MailgunConfig = {
@@ -75,6 +76,40 @@ async function sendTransactionalEmail({
   }
 }
 
+function statusLabel(status: OrderStatus): string {
+  switch (status) {
+    case "pending":
+      return "Order received";
+    case "processing":
+      return "Order in progress";
+    case "shipped":
+      return "Order shipped";
+    case "delivered":
+      return "Order delivered";
+    case "cancelled":
+      return "Order cancelled";
+    default:
+      return "Order update";
+  }
+}
+
+function statusMessage(status: OrderStatus): string {
+  switch (status) {
+    case "pending":
+      return "We received your order and will review it shortly.";
+    case "processing":
+      return "Your order is being prepared now.";
+    case "shipped":
+      return "Your parcel is on the way.";
+    case "delivered":
+      return "Your parcel was marked as delivered.";
+    case "cancelled":
+      return "Your order was cancelled. If this was unexpected, reply to this email.";
+    default:
+      return "There is a new update on your order.";
+  }
+}
+
 export async function sendOrderConfirmation(order: OrderWithItems) {
   const lineItems = order.items
     .map(
@@ -109,7 +144,10 @@ export async function sendOrderConfirmation(order: OrderWithItems) {
   });
 }
 
-export async function sendShippingNotification(order: OrderWithItems) {
+export async function sendShippingNotification(
+  order: OrderWithItems,
+  trackingSummary?: TrackingSummary | null
+) {
   await sendTransactionalEmail({
     to: order.customerEmail,
     subject: `Order ${order.orderNumber} shipped - ${siteConfig.name}`,
@@ -117,14 +155,67 @@ export async function sendShippingNotification(order: OrderWithItems) {
       orderNumber: order.orderNumber,
       customerName: order.customerName,
       trackingNumber: order.trackingNumber,
-      trackingCarrier: order.trackingCarrier,
+      trackingCarrier:
+        trackingSummary?.carrierName ?? trackingSummary?.carrierSlug ?? order.trackingCarrier,
+      trackingUrl: trackingSummary?.trackingUrl ?? null,
     }),
     text: buildShippingEmailText({
       orderNumber: order.orderNumber,
       customerName: order.customerName,
       trackingNumber: order.trackingNumber,
-      trackingCarrier: order.trackingCarrier,
+      trackingCarrier:
+        trackingSummary?.carrierName ?? trackingSummary?.carrierSlug ?? order.trackingCarrier,
+      trackingUrl: trackingSummary?.trackingUrl ?? null,
     }),
+  });
+}
+
+export async function sendOrderStatusUpdate(
+  order: OrderWithItems,
+  options?: {
+    previousStatus?: OrderStatus | null;
+    trackingSummary?: TrackingSummary | null;
+  }
+) {
+  const trackingSummary = options?.trackingSummary ?? null;
+  const label = statusLabel(order.status);
+  const message = statusMessage(order.status);
+  const previousStatusLabel = options?.previousStatus ? statusLabel(options.previousStatus) : null;
+
+  await sendTransactionalEmail({
+    to: order.customerEmail,
+    subject: `${label} - ${order.orderNumber} - ${siteConfig.name}`,
+    html: buildStatusEmailHtml({
+      orderNumber: order.orderNumber,
+      customerName: order.customerName,
+      statusLabel: label,
+      message,
+      previousStatusLabel,
+      trackingCarrier:
+        trackingSummary?.carrierName ?? trackingSummary?.carrierSlug ?? order.trackingCarrier,
+      trackingNumber: order.trackingNumber,
+      trackingUrl: trackingSummary?.trackingUrl ?? null,
+    }),
+    text: buildStatusEmailText({
+      orderNumber: order.orderNumber,
+      customerName: order.customerName,
+      statusLabel: label,
+      message,
+      previousStatusLabel,
+      trackingCarrier:
+        trackingSummary?.carrierName ?? trackingSummary?.carrierSlug ?? order.trackingCarrier,
+      trackingNumber: order.trackingNumber,
+      trackingUrl: trackingSummary?.trackingUrl ?? null,
+    }),
+  });
+}
+
+export async function sendTestEmail(to: string) {
+  await sendTransactionalEmail({
+    to,
+    subject: `Mail test - ${siteConfig.name}`,
+    html: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f4f3ef;padding:24px"><div style="max-width:600px;margin:0 auto;background:#fff;border:1px solid #dbd8d0;border-radius:24px;padding:24px"><h1 style="margin-top:0">${siteConfig.name}</h1><p>This is a live transactional email test.</p><p>If you received this, Mailgun is working for ${siteConfig.name}.</p><p><a href="${siteConfig.baseUrl}">${siteConfig.baseUrl}</a></p></div></body></html>`,
+    text: `${siteConfig.name}\n\nThis is a live transactional email test.\nIf you received this, Mailgun is working for ${siteConfig.name}.\n\n${siteConfig.baseUrl}`,
   });
 }
 
@@ -204,6 +295,7 @@ function buildShippingEmailHtml({
   customerName,
   trackingNumber,
   trackingCarrier,
+  trackingUrl,
 }: Record<string, string | null>): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
 <div style="max-width:600px;margin:24px auto;padding:24px;background:#ffffff;border-radius:24px;border:1px solid #dbd8d0;font-family:'Helvetica Neue',Arial,sans-serif;color:#171717">
@@ -211,6 +303,7 @@ function buildShippingEmailHtml({
 <p>Thanks, ${customerName}.</p>
 <h2>Order ${orderNumber} has shipped</h2>
 <p><strong>${trackingCarrier}</strong>: <code>${trackingNumber}</code></p>
+${trackingUrl ? `<p><a href="${trackingUrl}">Open tracking page</a></p>` : ""}
 <div style="margin-top:20px;color:#6f6c66;font-size:12px"><p>Questions? Reply to this email.</p></div>
 </div></body></html>`;
 }
@@ -220,6 +313,7 @@ function buildShippingEmailText({
   customerName,
   trackingNumber,
   trackingCarrier,
+  trackingUrl,
 }: Record<string, string | null>): string {
   return [
     siteConfig.name,
@@ -227,9 +321,64 @@ function buildShippingEmailText({
     `Thanks, ${customerName}.`,
     `Order ${orderNumber} has shipped.`,
     `${trackingCarrier}: ${trackingNumber}`,
+    trackingUrl ? `Tracking page: ${trackingUrl}` : null,
     "",
     "Questions? Reply to this email.",
   ].join("\n");
+}
+
+function buildStatusEmailHtml({
+  orderNumber,
+  customerName,
+  statusLabel,
+  message,
+  previousStatusLabel,
+  trackingCarrier,
+  trackingNumber,
+  trackingUrl,
+}: Record<string, string | null>): string {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
+<div style="max-width:600px;margin:24px auto;padding:24px;background:#ffffff;border-radius:24px;border:1px solid #dbd8d0;font-family:'Helvetica Neue',Arial,sans-serif;color:#171717">
+<h1 style="font-family:Georgia,serif">${siteConfig.name}</h1>
+<p>Thanks, ${customerName}.</p>
+<h2>${statusLabel}</h2>
+<p>${message}</p>
+${previousStatusLabel ? `<p>Previous status: <strong>${previousStatusLabel}</strong></p>` : ""}
+<p>Order number: <strong>${orderNumber}</strong></p>
+${
+  trackingNumber
+    ? `<p>${trackingCarrier || "Tracking"}: <code>${trackingNumber}</code></p>`
+    : ""
+}
+${trackingUrl ? `<p><a href="${trackingUrl}">Open tracking page</a></p>` : ""}
+<div style="margin-top:20px;color:#6f6c66;font-size:12px"><p>Track your order: <a href="${siteUrl("/track-order")}">${siteUrl("/track-order")}</a></p></div>
+</div></body></html>`;
+}
+
+function buildStatusEmailText({
+  orderNumber,
+  customerName,
+  statusLabel,
+  message,
+  previousStatusLabel,
+  trackingCarrier,
+  trackingNumber,
+  trackingUrl,
+}: Record<string, string | null>): string {
+  return [
+    siteConfig.name,
+    "",
+    `Thanks, ${customerName}.`,
+    statusLabel,
+    message,
+    previousStatusLabel ? `Previous status: ${previousStatusLabel}` : null,
+    `Order number: ${orderNumber}`,
+    trackingNumber ? `${trackingCarrier || "Tracking"}: ${trackingNumber}` : null,
+    trackingUrl ? `Tracking page: ${trackingUrl}` : null,
+    `Track your order: ${siteUrl("/track-order")}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function formatAddress(addr: ShippingAddress): string {

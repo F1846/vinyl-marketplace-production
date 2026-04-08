@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isTrackingSyncConfigured, syncShippedOrders } from "@/lib/order-tracking";
+import { sendOrderUpdateEmailById } from "@/lib/order-notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,30 @@ export async function GET(request: NextRequest) {
 
   try {
     const results = await syncShippedOrders(50);
+    let emailed = 0;
+
+    for (const result of results) {
+      if (!result.statusChanged) {
+        continue;
+      }
+
+      try {
+        await sendOrderUpdateEmailById({
+          orderId: result.order.id,
+          previousStatus: result.previousStatus,
+          trackingSummary: result.trackingSummary,
+          kind: result.order.status === "shipped" ? "shipping" : "status",
+        });
+        emailed += 1;
+      } catch (error) {
+        console.error("Failed to send tracking sync email:", error);
+      }
+    }
 
     return NextResponse.json({
       synced: results.length,
       updated: results.filter((result) => result.updated).length,
+      emailed,
     });
   } catch (error) {
     return NextResponse.json(

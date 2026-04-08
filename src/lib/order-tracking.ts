@@ -11,6 +11,22 @@ import {
 
 const AFTERSHIP_BASE_URL = "https://api.aftership.com/tracking/2025-07";
 
+const CARRIER_TRACKING_URLS: Record<string, string> = {
+  dhl: "https://www.dhl.com/global-en/home/tracking/tracking-express.html?submit=1&tracking-id={trackingNumber}",
+  "deutsche-post": "https://www.deutschepost.de/sendung/simpleQuery.html?locale=en_GB&shipmentId={trackingNumber}",
+  dpd: "https://tracking.dpd.de/status/en_US/parcel/{trackingNumber}",
+  gls: "https://gls-group.com/DE/en/parcel-tracking?match={trackingNumber}",
+  ups: "https://www.ups.com/track?tracknum={trackingNumber}",
+  fedex: "https://www.fedex.com/fedextrack/?trknbr={trackingNumber}",
+  usps: "https://tools.usps.com/go/TrackConfirmAction?tLabels={trackingNumber}",
+  hermes: "https://www.myhermes.de/empfangen/sendungsverfolgung/sendungsinformation/?trackingnumber={trackingNumber}",
+  "royal-mail": "https://www.royalmail.com/track-your-item#/tracking-results/{trackingNumber}",
+  posteitaliane:
+    "https://www.poste.it/cerca/index.html#/risultati-spedizioni/{trackingNumber}",
+  colissimo: "https://www.laposte.fr/outils/suivre-vos-envois?code={trackingNumber}",
+  bpost: "https://track.bpost.cloud/track/items?itemIdentifier={trackingNumber}",
+};
+
 type OrderRecord = typeof schema.orders.$inferSelect;
 
 type AfterShipTracking = {
@@ -43,6 +59,98 @@ type AfterShipTracking = {
 function getAfterShipApiKey(): string | null {
   const key = process.env.AFTERSHIP_API_KEY?.trim();
   return key || null;
+}
+
+function normalizeCarrierSlug(value: string | null | undefined): string | null {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  if (/^https?:\/\//.test(normalized)) {
+    return normalized;
+  }
+
+  return normalized
+    .replace(/\s+/g, "-")
+    .replace(/_/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
+function humanizeCarrier(value: string | null | undefined): string | null {
+  const normalized = normalizeCarrierSlug(value);
+  if (!normalized) {
+    return null;
+  }
+
+  if (/^https?:\/\//.test(normalized)) {
+    return "Carrier tracking";
+  }
+
+  return normalized
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+export function buildTrackingUrl(
+  carrierInput: string | null | undefined,
+  trackingNumber: string | null | undefined
+): string | null {
+  const normalizedTrackingNumber = trackingNumber?.trim();
+  if (!normalizedTrackingNumber) {
+    return null;
+  }
+
+  const normalizedCarrier = normalizeCarrierSlug(carrierInput);
+  if (normalizedCarrier && /^https?:\/\//.test(normalizedCarrier)) {
+    if (normalizedCarrier.includes("{trackingNumber}")) {
+      return normalizedCarrier.replaceAll(
+        "{trackingNumber}",
+        encodeURIComponent(normalizedTrackingNumber)
+      );
+    }
+
+    return normalizedCarrier;
+  }
+
+  if (normalizedCarrier && CARRIER_TRACKING_URLS[normalizedCarrier]) {
+    return CARRIER_TRACKING_URLS[normalizedCarrier].replace(
+      "{trackingNumber}",
+      encodeURIComponent(normalizedTrackingNumber)
+    );
+  }
+
+  const searchTerms = [normalizedCarrier, normalizedTrackingNumber]
+    .filter(Boolean)
+    .join(" tracking ");
+
+  return `https://www.google.com/search?q=${encodeURIComponent(searchTerms || normalizedTrackingNumber)}`;
+}
+
+function buildDirectTrackingSummary(order: OrderRecord): TrackingSummary | null {
+  if (!order.trackingNumber) {
+    return null;
+  }
+
+  const carrierSlug = normalizeCarrierSlug(order.trackingCarrier);
+  const carrierName = humanizeCarrier(order.trackingCarrier);
+
+  return {
+    provider: "carrier",
+    trackingNumber: order.trackingNumber,
+    carrierSlug,
+    carrierName,
+    carrierStatus: null,
+    carrierStatusLabel: "Tracking link ready",
+    message: carrierSlug
+      ? `Open the carrier page to check the latest shipment scan for ${order.orderNumber}.`
+      : `Use the tracking number to check the latest shipment scan for ${order.orderNumber}.`,
+    trackingUrl: buildTrackingUrl(order.trackingCarrier, order.trackingNumber),
+    lastUpdatedAt: null,
+    checkpoints: [],
+  };
 }
 
 export function isTrackingSyncConfigured(): boolean {
@@ -138,7 +246,10 @@ function mapCheckpoint(checkpoint: AfterShipTracking["latest_checkpoint"]): Trac
   };
 }
 
-function normalizeTrackingSummary(tracking: AfterShipTracking): TrackingSummary {
+function normalizeTrackingSummary(
+  tracking: AfterShipTracking,
+  order?: Pick<OrderRecord, "trackingCarrier" | "trackingNumber" | "orderNumber">
+): TrackingSummary {
   const checkpoints = Array.isArray(tracking.checkpoints)
     ? tracking.checkpoints.map((checkpoint) => mapCheckpoint(checkpoint))
     : tracking.latest_checkpoint
@@ -152,7 +263,10 @@ function normalizeTrackingSummary(tracking: AfterShipTracking): TrackingSummary 
     provider: "aftership",
     trackingNumber: tracking.tracking_number?.trim() || "",
     carrierSlug: tracking.slug?.trim() || null,
-    carrierName: tracking.courier_name?.trim() || null,
+    carrierName:
+      tracking.courier_name?.trim() ||
+      humanizeCarrier(tracking.slug?.trim() || order?.trackingCarrier) ||
+      null,
     carrierStatus,
     carrierStatusLabel: getTrackingStatusLabel(carrierStatus),
     message:
@@ -160,7 +274,12 @@ function normalizeTrackingSummary(tracking: AfterShipTracking): TrackingSummary 
       latestCheckpoint?.message ||
       tracking.expected_delivery?.trim() ||
       null,
-    trackingUrl: tracking.shipment_delivery_url?.trim() || null,
+    trackingUrl:
+      tracking.shipment_delivery_url?.trim() ||
+      buildTrackingUrl(
+        tracking.slug?.trim() || order?.trackingCarrier,
+        tracking.tracking_number?.trim() || order?.trackingNumber
+      ),
     lastUpdatedAt: latestCheckpoint?.timestamp || null,
     checkpoints,
   };
@@ -211,30 +330,48 @@ function mapTrackingTagToOrderStatus(tag: string | null): OrderStatus | null {
 }
 
 export async function fetchTrackingSummary(order: OrderRecord): Promise<TrackingSummary | null> {
-  if (!isTrackingSyncConfigured() || !order.trackingNumber) {
+  if (!order.trackingNumber) {
     return null;
   }
 
-  let tracking = await findTracking(order.trackingNumber, order.trackingCarrier);
-  if (!tracking) {
-    tracking = await createTracking(order);
+  const directSummary = buildDirectTrackingSummary(order);
+
+  if (!isTrackingSyncConfigured()) {
+    return directSummary;
   }
 
-  if (!tracking) {
-    return null;
-  }
+  try {
+    let tracking = await findTracking(order.trackingNumber, order.trackingCarrier);
+    if (!tracking) {
+      tracking = await createTracking(order);
+    }
 
-  return normalizeTrackingSummary(tracking);
+    if (!tracking) {
+      return directSummary;
+    }
+
+    return normalizeTrackingSummary(tracking, order);
+  } catch {
+    return directSummary;
+  }
 }
 
 export async function syncOrderTracking(order: OrderRecord): Promise<{
   order: OrderRecord;
   trackingSummary: TrackingSummary | null;
   updated: boolean;
+  previousStatus: OrderStatus;
+  statusChanged: boolean;
 }> {
   const trackingSummary = await fetchTrackingSummary(order);
   if (!trackingSummary) {
-    return { order, trackingSummary: null, updated: false };
+    return {
+      order,
+      trackingSummary: null,
+      updated: false,
+      previousStatus: order.status as OrderStatus,
+      statusChanged: false,
+    };
   }
 
   const updates: Partial<OrderRecord> = {};
@@ -256,7 +393,13 @@ export async function syncOrderTracking(order: OrderRecord): Promise<{
   }
 
   if (Object.keys(updates).length === 0) {
-    return { order, trackingSummary, updated: false };
+    return {
+      order,
+      trackingSummary,
+      updated: false,
+      previousStatus: order.status as OrderStatus,
+      statusChanged: false,
+    };
   }
 
   const [updatedOrder] = await db()
@@ -272,6 +415,8 @@ export async function syncOrderTracking(order: OrderRecord): Promise<{
     order: updatedOrder ?? order,
     trackingSummary,
     updated: Boolean(updatedOrder),
+    previousStatus: order.status as OrderStatus,
+    statusChanged: Boolean(updatedOrder) && updatedOrder.status !== order.status,
   };
 }
 

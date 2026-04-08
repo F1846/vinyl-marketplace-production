@@ -4,7 +4,8 @@ import { db } from "@/db";
 import { schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { requireAuthenticatedAdmin } from "@/lib/auth";
-import { syncOrderTrackingById } from "@/lib/order-tracking";
+import { fetchTrackingSummary, syncOrderTrackingById } from "@/lib/order-tracking";
+import { sendOrderUpdateEmailById } from "@/lib/order-notifications";
 import { allOrderStatuses, getOrderStatusRank, type OrderStatus } from "@/types/order";
 import { revalidatePath } from "next/cache";
 
@@ -34,10 +35,29 @@ export async function updateOrderStatus(orderId: string, formData: FormData): Pr
     return;
   }
 
+  if (order.status === nextStatus) {
+    return;
+  }
+
   await d
     .update(schema.orders)
     .set({ status: nextStatus, updatedAt: new Date() })
     .where(eq(schema.orders.id, orderId));
+
+  try {
+    const trackingSummary =
+      nextStatus === "shipped" || nextStatus === "delivered"
+        ? await fetchTrackingSummary({ ...order, status: nextStatus })
+        : null;
+    await sendOrderUpdateEmailById({
+      orderId,
+      previousStatus: order.status as OrderStatus,
+      trackingSummary,
+      kind: nextStatus === "shipped" ? "shipping" : "status",
+    });
+  } catch (error) {
+    console.error("Failed to send order status email:", error);
+  }
 
   revalidateOrderPaths(orderId);
 }
@@ -60,6 +80,10 @@ export async function saveOrderTracking(orderId: string, formData: FormData): Pr
 
   if (!order) return;
 
+  const previousStatus = order.status as OrderStatus;
+  const previousTrackingNumber = order.trackingNumber;
+  const previousTrackingCarrier = order.trackingCarrier;
+
   let nextStatus = order.status as OrderStatus;
   if (
     trackingNumber &&
@@ -81,8 +105,31 @@ export async function saveOrderTracking(orderId: string, formData: FormData): Pr
     })
     .where(eq(schema.orders.id, orderId));
 
-  if (trackingNumber) {
-    await syncOrderTrackingById(orderId);
+  const syncResult = trackingNumber ? await syncOrderTrackingById(orderId) : null;
+
+  try {
+    const trackingChanged =
+      trackingNumber !== (previousTrackingNumber ?? "") ||
+      trackingCarrier !== (previousTrackingCarrier ?? "");
+    const effectiveStatus = syncResult?.order.status ?? nextStatus;
+
+    if (trackingNumber && trackingChanged) {
+      await sendOrderUpdateEmailById({
+        orderId,
+        previousStatus,
+        trackingSummary: syncResult?.trackingSummary ?? null,
+        kind: "shipping",
+      });
+    } else if (effectiveStatus !== previousStatus) {
+      await sendOrderUpdateEmailById({
+        orderId,
+        previousStatus,
+        trackingSummary: syncResult?.trackingSummary ?? null,
+        kind: "status",
+      });
+    }
+  } catch (error) {
+    console.error("Failed to send tracking update email:", error);
   }
 
   revalidateOrderPaths(orderId);
@@ -91,6 +138,20 @@ export async function saveOrderTracking(orderId: string, formData: FormData): Pr
 export async function syncOrderTrackingAction(orderId: string): Promise<void> {
   "use server";
   await requireAuthenticatedAdmin();
-  await syncOrderTrackingById(orderId);
+
+  try {
+    const result = await syncOrderTrackingById(orderId);
+    if (result?.statusChanged) {
+      await sendOrderUpdateEmailById({
+        orderId,
+        previousStatus: result.previousStatus,
+        trackingSummary: result.trackingSummary,
+        kind: result.order.status === "shipped" ? "shipping" : "status",
+      });
+    }
+  } catch (error) {
+    console.error("Failed to sync tracking or send update email:", error);
+  }
+
   revalidateOrderPaths(orderId);
 }

@@ -115,14 +115,14 @@ export default async function AdminOrderDetailPage({
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label htmlFor="trackingCarrier" className="label">
-                    Carrier slug
+                    Carrier slug or tracking URL
                   </label>
                   <input
                     id="trackingCarrier"
                     name="trackingCarrier"
                     className="input"
                     defaultValue={order.trackingCarrier ?? ""}
-                    placeholder="Optional: dhl, ups, gls"
+                    placeholder="Optional: dhl, ups, gls, or https://.../{trackingNumber}"
                   />
                 </div>
                 <div>
