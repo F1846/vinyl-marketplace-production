@@ -19,6 +19,7 @@ import {
   catalogGenreCollections,
   siteConfig,
 } from "@/lib/site";
+import { seoLandingPages } from "@/lib/seo-landing-pages";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -89,6 +90,7 @@ export default async function HomePage() {
       latestProducts.some((product) => product.genre.toLowerCase() === collection.genre.toLowerCase())
     )
     .slice(0, 6);
+  const visibleSeoLandingPages = seoLandingPages.slice(0, 6);
   const featuredHeroProduct = heroPreviewProducts[0] ?? latestProducts[0] ?? null;
   const formatSpotlight = heroPreviewProducts[1] ?? latestProducts[1] ?? null;
   const storefrontStructuredData = {
@@ -244,6 +246,37 @@ export default async function HomePage() {
               </Link>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-[1.2rem] border border-border bg-white p-4 shadow-card">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+              Search-friendly sections
+            </p>
+            <h2 className="mt-1 font-sans text-[1.7rem] font-bold tracking-[-0.04em] text-foreground">
+              Shop by sound and local buying path
+            </h2>
+          </div>
+          <Link href="/catalog" className="text-sm text-accent hover:underline">
+            Explore all sections
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {visibleSeoLandingPages.map((page) => (
+            <Link
+              key={page.slug}
+              href={`/${page.slug}`}
+              className="rounded-[1rem] border border-border bg-surface px-4 py-4 transition hover:border-foreground/20 hover:bg-surface-hover"
+            >
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted">{page.eyebrow}</p>
+              <h3 className="mt-2 font-sans text-[1.1rem] font-bold tracking-[-0.04em] text-foreground">
+                {page.title.replace(" | Federico Shop Berlin", "").replace(" | Federico Shop", "")}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-muted">{page.intro}</p>
+            </Link>
+          ))}
         </div>
       </section>
 

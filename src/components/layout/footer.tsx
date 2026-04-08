@@ -5,9 +5,9 @@ import { useDictionary } from "@/components/providers/locale-provider";
 import {
   buildCatalogPath,
   catalogFormatCollections,
-  catalogGenreCollections,
   siteConfig,
 } from "@/lib/site";
+import { seoLandingPages } from "@/lib/seo-landing-pages";
 
 export function Footer() {
   const dictionary = useDictionary();
@@ -75,13 +75,13 @@ export function Footer() {
                   {collection.label}
                 </Link>
               ))}
-              {catalogGenreCollections.slice(0, 4).map((collection) => (
+              {seoLandingPages.slice(0, 4).map((page) => (
                 <Link
-                  key={collection.genre}
-                  href={buildCatalogPath({ genre: collection.genre })}
+                  key={page.slug}
+                  href={`/${page.slug}`}
                   className="text-muted transition-colors hover:text-accent"
                 >
-                  {collection.label}
+                  {page.title.replace(" | Federico Shop Berlin", "").replace(" | Federico Shop", "")}
                 </Link>
               ))}
             </div>

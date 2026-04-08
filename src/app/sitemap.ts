@@ -7,6 +7,7 @@ import {
   catalogGenreCollections,
   siteUrl,
 } from "@/lib/site";
+import { seoLandingPages } from "@/lib/seo-landing-pages";
 
 export const revalidate = 3600;
 
@@ -54,6 +55,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.65,
     })),
   ];
+  const landingRoutes = seoLandingPages.map((page) => ({
+    url: siteUrl(`/${page.slug}`),
+    changeFrequency: "weekly" as const,
+    priority: 0.72,
+  }));
 
   const products = await getActiveProducts();
 
@@ -65,6 +71,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: route.priority,
     })),
     ...collectionRoutes.map((route) => ({
+      url: route.url,
+      lastModified: new Date(),
+      changeFrequency: route.changeFrequency,
+      priority: route.priority,
+    })),
+    ...landingRoutes.map((route) => ({
       url: route.url,
       lastModified: new Date(),
       changeFrequency: route.changeFrequency,
