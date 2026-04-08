@@ -7,7 +7,7 @@ import {
   Truck,
 } from "lucide-react";
 import { db, schema } from "@/db";
-import { desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { ProductCard } from "@/components/catalog/product-card";
 import { formatEuroFromCents } from "@/lib/money";
 import { siteConfig } from "@/lib/site";
@@ -22,16 +22,27 @@ export default async function HomePage() {
     limit: 8,
     with: { images: { orderBy: [schema.productImages.sortOrder] } },
   });
-  const [{ count }] = await d
-    .select({ count: sql<number>`count(*)` })
+  const heroPreviewProducts = await d.query.products.findMany({
+    where: eq(schema.products.status, "active"),
+    orderBy: [sql`random()`],
+    limit: 4,
+    with: { images: { orderBy: [schema.productImages.sortOrder] } },
+  });
+  const [{ count, minPrice }] = await d
+    .select({
+      count: sql<number>`count(*)`,
+      minPrice: sql<number | null>`min(${schema.products.priceCents})`,
+    })
     .from(schema.products)
     .where(eq(schema.products.status, "active"));
 
-  const cheapest = recentProducts.reduce<number | null>(
-    (current, product) =>
-      current === null ? product.priceCents : Math.min(current, product.priceCents),
-    null
-  );
+  const cheapestProduct = await d.query.products.findFirst({
+    where: eq(schema.products.status, "active"),
+    orderBy: [asc(schema.products.priceCents), asc(schema.products.artist), asc(schema.products.title)],
+    with: { images: { orderBy: [schema.productImages.sortOrder] } },
+  });
+  const featuredHeroProduct = heroPreviewProducts[0] ?? recentProducts[0] ?? null;
+  const formatSpotlight = heroPreviewProducts[1] ?? recentProducts[1] ?? null;
   const storefrontStructuredData = {
     "@context": "https://schema.org",
     "@type": "MusicStore",
@@ -73,24 +84,63 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-[1.2rem] border border-border bg-white p-4 shadow-card">
+            <Link
+              href={featuredHeroProduct ? `/products/${featuredHeroProduct.id}` : "/catalog"}
+              className="group rounded-[1.2rem] border border-border bg-white p-4 shadow-card transition hover:-translate-y-1 hover:border-foreground/15"
+            >
               <p className="text-xs uppercase tracking-[0.2em] text-muted">Available now</p>
               <p className="mt-2 font-serif text-4xl text-foreground">{count ?? 0}</p>
-            </div>
-            <div className="rounded-[1.2rem] border border-border bg-white p-4 shadow-card">
+              <p className="mt-3 line-clamp-2 text-sm leading-6 text-muted">
+                {featuredHeroProduct
+                  ? `${featuredHeroProduct.artist} - ${featuredHeroProduct.title}`
+                  : "Browse the current selection"}
+              </p>
+              <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-foreground">
+                Open a featured record
+              </p>
+            </Link>
+            <Link
+              href={cheapestProduct ? `/products/${cheapestProduct.id}` : "/catalog?sort=price-asc"}
+              className="group rounded-[1.2rem] border border-border bg-white p-4 shadow-card transition hover:-translate-y-1 hover:border-foreground/15"
+            >
               <p className="text-xs uppercase tracking-[0.2em] text-muted">From</p>
               <p className="mt-2 font-serif text-4xl text-foreground">
-                {cheapest === null ? "0 EUR" : formatEuroFromCents(cheapest)}
+                {minPrice === null ? "0 EUR" : formatEuroFromCents(minPrice)}
               </p>
-            </div>
-            <div className="rounded-[1.2rem] border border-border bg-white p-4 shadow-card">
+              <p className="mt-3 line-clamp-2 text-sm leading-6 text-muted">
+                {cheapestProduct
+                  ? `Start with ${cheapestProduct.artist} - ${cheapestProduct.title}`
+                  : "Low-price picks from the catalog"}
+              </p>
+              <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-foreground">
+                Shop entry points
+              </p>
+            </Link>
+            <Link
+              href={
+                formatSpotlight
+                  ? `/catalog?format=${encodeURIComponent(formatSpotlight.format)}`
+                  : "/catalog"
+              }
+              className="group rounded-[1.2rem] border border-border bg-white p-4 shadow-card transition hover:-translate-y-1 hover:border-foreground/15"
+            >
               <p className="text-xs uppercase tracking-[0.2em] text-muted">Format mix</p>
-              <p className="mt-2 font-serif text-3xl text-foreground">Vinyl / Tape / CD</p>
-            </div>
+              <p className="mt-2 font-serif text-3xl capitalize text-foreground">
+                {formatSpotlight?.format ?? "Vinyl / Tape / CD"}
+              </p>
+              <p className="mt-3 line-clamp-2 text-sm leading-6 text-muted">
+                {formatSpotlight
+                  ? `${formatSpotlight.artist} - ${formatSpotlight.title}`
+                  : "Jump between vinyl, tape, and CD finds"}
+              </p>
+              <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-foreground">
+                Browse this format
+              </p>
+            </Link>
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          {recentProducts.slice(0, 4).map((product) => (
+          {heroPreviewProducts.map((product) => (
             <ProductCard key={product.id} product={product} compact />
           ))}
         </div>

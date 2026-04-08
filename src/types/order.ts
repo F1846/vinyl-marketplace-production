@@ -1,6 +1,14 @@
 // ─── Enums ─────────────────────────────────────────
 
-export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+export const allOrderStatuses = [
+  "pending",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+] as const;
+
+export type OrderStatus = (typeof allOrderStatuses)[number];
 export type PaymentMethod = "card" | "paypal" | "pickup";
 export type DeliveryMethod = "shipping" | "pickup";
 
@@ -85,6 +93,26 @@ export interface OrderTimelineEvent {
   details?: string;
 }
 
+export interface TrackingCheckpoint {
+  message: string;
+  location: string | null;
+  status: string | null;
+  timestamp: string | null;
+}
+
+export interface TrackingSummary {
+  provider: "aftership";
+  trackingNumber: string;
+  carrierSlug: string | null;
+  carrierName: string | null;
+  carrierStatus: string | null;
+  carrierStatusLabel: string;
+  message: string | null;
+  trackingUrl: string | null;
+  lastUpdatedAt: string | null;
+  checkpoints: TrackingCheckpoint[];
+}
+
 // ─── State machine transition rules ───────────────
 
 const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
@@ -101,4 +129,8 @@ export function isValidTransition(from: OrderStatus, to: OrderStatus): boolean {
 
 export function getValidNextStates(status: OrderStatus): OrderStatus[] {
   return VALID_TRANSITIONS[status];
+}
+
+export function getOrderStatusRank(status: OrderStatus): number {
+  return allOrderStatuses.indexOf(status);
 }

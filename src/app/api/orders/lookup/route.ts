@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { schema } from "@/db";
 import { and, eq } from "drizzle-orm";
+import { syncOrderTracking } from "@/lib/order-tracking";
 import { z } from "zod";
 
 const lookupSchema = z.object({
@@ -47,16 +48,49 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ data: null }, { status: 200 });
   }
 
+  let effectiveOrder = {
+    status: order.status,
+    paymentMethod: order.paymentMethod,
+    deliveryMethod: order.deliveryMethod,
+    totalCents: order.totalCents,
+    createdAt: order.createdAt,
+    trackingNumber: order.trackingNumber,
+    trackingCarrier: order.trackingCarrier,
+    orderNumber: order.orderNumber,
+  };
+  let trackingSummary = null;
+
+  if (order.trackingNumber && order.deliveryMethod === "shipping") {
+    try {
+      const synced = await syncOrderTracking(order);
+      effectiveOrder = {
+        ...effectiveOrder,
+        status: synced.order.status,
+        paymentMethod: synced.order.paymentMethod,
+        deliveryMethod: synced.order.deliveryMethod,
+        totalCents: synced.order.totalCents,
+        createdAt: synced.order.createdAt,
+        trackingNumber: synced.order.trackingNumber,
+        trackingCarrier: synced.order.trackingCarrier,
+        orderNumber: synced.order.orderNumber,
+      };
+      trackingSummary = synced.trackingSummary;
+    } catch {
+      trackingSummary = null;
+    }
+  }
+
   return NextResponse.json({
     data: {
-      orderNumber: order.orderNumber,
-      status: order.status,
-      paymentMethod: order.paymentMethod,
-      deliveryMethod: order.deliveryMethod,
-      totalCents: order.totalCents,
-      createdAt: order.createdAt,
-      trackingNumber: order.trackingNumber,
-      trackingCarrier: order.trackingCarrier,
+      orderNumber: effectiveOrder.orderNumber,
+      status: effectiveOrder.status,
+      paymentMethod: effectiveOrder.paymentMethod,
+      deliveryMethod: effectiveOrder.deliveryMethod,
+      totalCents: effectiveOrder.totalCents,
+      createdAt: effectiveOrder.createdAt,
+      trackingNumber: effectiveOrder.trackingNumber,
+      trackingCarrier: effectiveOrder.trackingCarrier,
+      trackingSummary,
       items: order.items.map((item: any) => ({
         title: `${item.product.artist} - ${item.product.title}`,
         format: item.product.format,
