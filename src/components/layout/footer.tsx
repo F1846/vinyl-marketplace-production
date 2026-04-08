@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useDictionary } from "@/components/providers/locale-provider";
 import {
   buildCatalogPath,
+  catalogGenreCollections,
   catalogFormatCollections,
   siteConfig,
 } from "@/lib/site";
-import { seoLandingPages } from "@/lib/seo-landing-pages";
 
 export function Footer() {
   const dictionary = useDictionary();
@@ -75,13 +75,13 @@ export function Footer() {
                   {collection.label}
                 </Link>
               ))}
-              {seoLandingPages.slice(0, 4).map((page) => (
+              {catalogGenreCollections.slice(0, 4).map((collection) => (
                 <Link
-                  key={page.slug}
-                  href={`/${page.slug}`}
+                  key={collection.genre}
+                  href={buildCatalogPath({ genre: collection.genre })}
                   className="text-muted transition-colors hover:text-accent"
                 >
-                  {page.title.replace(" | Federico Shop Berlin", "").replace(" | Federico Shop", "")}
+                  {collection.label}
                 </Link>
               ))}
             </div>

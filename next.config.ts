@@ -63,6 +63,40 @@ const nextConfig: NextConfig = {
   },
   output: "standalone",
   experimental: {},
+  async redirects() {
+    return [
+      {
+        source: "/techno-vinyl",
+        destination: "/catalog?genre=Techno&format=vinyl",
+        permanent: true,
+      },
+      {
+        source: "/darkwave-records",
+        destination: "/catalog?genre=Darkwave",
+        permanent: true,
+      },
+      {
+        source: "/ebm-records",
+        destination: "/catalog?genre=EBM",
+        permanent: true,
+      },
+      {
+        source: "/electro-vinyl",
+        destination: "/catalog?genre=Electro&format=vinyl",
+        permanent: true,
+      },
+      {
+        source: "/ambient-records",
+        destination: "/catalog?genre=Ambient",
+        permanent: true,
+      },
+      {
+        source: "/berlin-local-pickup",
+        destination: "/shipping",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
