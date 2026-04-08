@@ -1,16 +1,6 @@
 import Link from "next/link";
 import { Disc as RecordIcon, ShoppingCart } from "lucide-react";
-import { Suspense } from "react";
-
-function CartCount() {
-  // Client-side cart count would use useCart hook
-  // For now, server-side we read cookie
-  return (
-    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold text-background">
-      0
-    </span>
-  );
-}
+import { CartCount } from "./cart-count";
 
 export function Header() {
   return (
@@ -30,27 +20,21 @@ export function Header() {
           <Link href="/track-order" className="text-sm font-medium text-foreground transition-colors hover:text-accent">
             Track Order
           </Link>
-          <Link href="/admin" className="text-sm font-medium text-muted transition-colors hover:text-accent">
-            Admin
-          </Link>
         </nav>
 
-        {/* Cart + Mobile search */}
         <div className="flex items-center gap-4">
-          <Link href="/cart" className="relative text-foreground transition-colors hover:text-accent">
+          <Link href="/cart" className="relative text-foreground transition-colors hover:text-accent" aria-label="View cart">
             <ShoppingCart className="h-6 w-6" />
-            <Suspense>
+            <div className="absolute -right-2 -top-2">
               <CartCount />
-            </Suspense>
+            </div>
           </Link>
         </div>
       </div>
 
-      {/* Mobile nav */}
       <div className="flex justify-center gap-6 border-t border-border px-4 py-2 text-sm md:hidden">
         <Link href="/catalog" className="text-muted hover:text-accent">Catalog</Link>
         <Link href="/track-order" className="text-muted hover:text-accent">Track Order</Link>
-        <Link href="/admin" className="text-muted hover:text-accent">Admin</Link>
       </div>
     </header>
   );

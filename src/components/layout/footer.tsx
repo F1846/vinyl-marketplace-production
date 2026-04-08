@@ -16,9 +16,6 @@ export function Footer() {
             <Link href="/track-order" className="text-muted hover:text-accent transition-colors">
               Track Order
             </Link>
-            <Link href="/admin" className="text-muted hover:text-accent transition-colors">
-              Admin
-            </Link>
           </div>
         </div>
         <div className="mt-6 border-t border-border pt-4 text-center text-xs text-muted">

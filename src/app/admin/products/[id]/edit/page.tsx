@@ -1,28 +1,21 @@
 import { db } from "@/db";
 import { eq } from "drizzle-orm";
 import { schema } from "@/db";
-import { notFound, redirect } from "next/navigation";
+import { requireAuthenticatedAdmin } from "@/lib/auth";
+import { updateProduct } from "@/actions/products";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import type { MediaCondition } from "@/types/product";
-
-const MEDIA_CONDITIONS = new Set<MediaCondition>(["M", "NM", "VG+", "VG", "G", "P"]);
 
 export const dynamic = "force-dynamic";
-
-function parseMediaCondition(value: string | File | null): MediaCondition | null {
-  if (typeof value !== "string" || !MEDIA_CONDITIONS.has(value as MediaCondition)) {
-    return null;
-  }
-  return value as MediaCondition;
-}
 
 export default async function EditProductPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  await requireAuthenticatedAdmin();
 
+  const { id } = await params;
   const d = db();
   const product = await d.query.products.findFirst({
     where: eq(schema.products.id, id),
@@ -30,49 +23,24 @@ export default async function EditProductPage({
   });
 
   if (!product) notFound();
-  const nextVersion = product.version + 1;
 
-  async function handleSubmit(formData: FormData) {
+  async function updateProductAction(formData: FormData) {
     "use server";
-
-    const priceCents = Number(formData.get("priceCents"));
-    const stockQuantity = Number(formData.get("stockQuantity"));
-    const pressingYear = formData.get("pressingYear") ? Number(formData.get("pressingYear")) : null;
-
-    await d
-      .update(schema.products)
-      .set({
-        artist: formData.get("artist") as string,
-        title: formData.get("title") as string,
-        format: formData.get("format") as "vinyl" | "cassette" | "cd",
-        genre: formData.get("genre") as string,
-        priceCents,
-        stockQuantity,
-        conditionMedia: parseMediaCondition(formData.get("conditionMedia")),
-        conditionSleeve: formData.get("format") === "vinyl" ? parseMediaCondition(formData.get("conditionSleeve")) : null,
-        pressingLabel: (formData.get("pressingLabel") as string) || null,
-        pressingYear,
-        pressingCatalogNumber: (formData.get("pressingCatalogNumber") as string) || null,
-        description: formData.get("description") as string,
-        version: nextVersion,
-      })
-      .where(eq(schema.products.id, id));
-
-    redirect("/admin/products");
+    await updateProduct(id, formData);
   }
 
   return (
     <div className="max-w-2xl">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">
-          Edit: <span className="text-accent">{product.artist} — {product.title}</span>
+          Edit: <span className="text-accent">{product.artist} - {product.title}</span>
         </h1>
         <Link href="/admin/products" className="text-sm text-accent hover:underline">
           Back to Products
         </Link>
       </div>
 
-      <form action={handleSubmit} className="card space-y-6">
+      <form action={updateProductAction} className="card space-y-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="artist" className="label">Artist</label>
@@ -115,8 +83,8 @@ export default async function EditProductPage({
             <label htmlFor="conditionMedia" className="label">Media Condition</label>
             <select id="conditionMedia" name="conditionMedia" className="input" defaultValue={product.conditionMedia ?? ""}>
               <option value="">Not graded</option>
-              {["M", "NM", "VG+", "VG", "G", "P"].map((g) => (
-                <option key={g} value={g}>{g}</option>
+              {["M", "NM", "VG+", "VG", "G", "P"].map((grade) => (
+                <option key={grade} value={grade}>{grade}</option>
               ))}
             </select>
           </div>
@@ -124,8 +92,8 @@ export default async function EditProductPage({
             <label htmlFor="conditionSleeve" className="label">Sleeve Condition</label>
             <select id="conditionSleeve" name="conditionSleeve" className="input" defaultValue={product.conditionSleeve ?? ""}>
               <option value="">Not graded</option>
-              {["M", "NM", "VG+", "VG", "G", "P"].map((g) => (
-                <option key={g} value={g}>{g}</option>
+              {["M", "NM", "VG+", "VG", "G", "P"].map((grade) => (
+                <option key={grade} value={grade}>{grade}</option>
               ))}
             </select>
           </div>

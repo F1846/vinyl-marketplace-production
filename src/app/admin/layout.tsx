@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import "./admin.css";
 import Link from "next/link";
 import { Package, ShoppingCart, LayoutDashboard, ArrowLeft, Truck } from "lucide-react";
+import { adminLogoutAction } from "@/actions/auth";
+import { isAuthenticatedAdmin } from "@/lib/auth";
+import "./admin.css";
 
 const navLinks = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -10,17 +13,36 @@ const navLinks = [
   { href: "/admin/shipping", label: "Shipping", icon: Truck },
 ];
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const isAuthed = await isAuthenticatedAdmin();
+
+  if (!isAuthed) {
+    return <div className="mx-auto w-full max-w-md">{children}</div>;
+  }
+
   return (
     <div className="flex gap-8">
-      {/* Sidebar */}
       <aside className="w-56 flex-shrink-0">
-        <Link
-          href="/"
-          className="mb-4 flex items-center gap-2 text-sm text-accent hover:underline"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to store
-        </Link>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-sm text-accent hover:underline"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to store
+          </Link>
+          <form action={adminLogoutAction}>
+            <button type="submit" className="text-sm text-muted transition-colors hover:text-accent">
+              Log Out
+            </button>
+          </form>
+        </div>
         <nav className="space-y-1">
           {navLinks.map((link) => (
             <Link

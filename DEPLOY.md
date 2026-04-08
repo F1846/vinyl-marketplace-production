@@ -31,6 +31,7 @@ vercel
 #   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 #   STRIPE_WEBHOOK_SECRET
 #   ADMIN_PASSWORD
+#   ADMIN_SESSION_SECRET
 #   RESEND_API_KEY
 #   EMAIL_FROM
 #   BLOB_READ_WRITE_TOKEN (if using Vercel Blob)
@@ -94,7 +95,7 @@ Generate a bcrypt hash locally:
 npm run admin:hash-password -- "your-strong-password"
 ```
 
-Set `ADMIN_PASSWORD` and `ADMIN_PASSWORD_HASH` in the Vercel dashboard to the same password pair.
+Set `ADMIN_PASSWORD`, `ADMIN_PASSWORD_HASH`, and optionally `ADMIN_SESSION_SECRET` in the Vercel dashboard.
 Navigate to `/admin/login` to access the admin panel.
 
 ## Local Development

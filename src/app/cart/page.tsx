@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Loader2, Trash2, ArrowLeft, ArrowRight } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { formatEuroFromCents } from "@/lib/money";
@@ -11,10 +12,20 @@ type ShippingCountry = {
   label: string;
 };
 
+type RefreshedCartItem = {
+  productId: string;
+  title: string;
+  priceCents: number;
+  maxQuantity: number;
+  imageUrl?: string;
+  format?: string;
+};
+
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, totalItems, totalPriceCents, isLoaded } = useCart();
+  const { items, replaceItems, removeItem, updateQuantity, totalItems, totalPriceCents, isLoaded } = useCart();
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cartNotice, setCartNotice] = useState<string | null>(null);
   const [shippingCountries, setShippingCountries] = useState<ShippingCountry[]>([]);
   const [shippingCountry, setShippingCountry] = useState("");
   const [shippingCents, setShippingCents] = useState(0);
@@ -56,6 +67,87 @@ export default function CartPage() {
       cancelled = true;
     };
   }, [isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded || items.length === 0) {
+      setCartNotice(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function refreshCartSnapshot() {
+      try {
+        const res = await fetch("/api/cart/refresh", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            productIds: items.map((item) => item.productId),
+          }),
+        });
+        const json = await res.json();
+        if (cancelled || !res.ok || !Array.isArray(json.items)) {
+          return;
+        }
+
+        const freshItems = new Map<string, RefreshedCartItem>(
+          (json.items as RefreshedCartItem[]).map((item) => [item.productId, item])
+        );
+
+        const removedTitles: string[] = [];
+        let wasAdjusted = false;
+        const nextItems = items.flatMap((item) => {
+          const freshItem = freshItems.get(item.productId);
+          if (!freshItem || freshItem.maxQuantity < 1) {
+            removedTitles.push(item.title);
+            wasAdjusted = true;
+            return [];
+          }
+
+          const nextQuantity = Math.min(item.quantity, freshItem.maxQuantity);
+          if (
+            nextQuantity !== item.quantity ||
+            freshItem.priceCents !== item.priceCents ||
+            freshItem.maxQuantity !== item.maxQuantity ||
+            freshItem.title !== item.title ||
+            freshItem.imageUrl !== item.imageUrl ||
+            freshItem.format !== item.format
+          ) {
+            wasAdjusted = true;
+          }
+
+          return [
+            {
+              ...item,
+              ...freshItem,
+              quantity: nextQuantity,
+            },
+          ];
+        });
+
+        if (wasAdjusted) {
+          replaceItems(nextItems);
+          if (removedTitles.length > 0) {
+            setCartNotice(`${removedTitles.join(", ")} ${removedTitles.length === 1 ? "was" : "were"} removed because it is no longer available.`);
+          } else {
+            setCartNotice("Your cart was updated to match the latest stock and prices.");
+          }
+        } else {
+          setCartNotice(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setCartNotice(null);
+        }
+      }
+    }
+
+    void refreshCartSnapshot();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, items, replaceItems]);
 
   useEffect(() => {
     if (!isLoaded || items.length === 0 || !shippingCountry) {
@@ -177,9 +269,24 @@ export default function CartPage() {
         <h1 className="text-2xl font-bold text-foreground">
           Your Cart ({totalItems} item{totalItems !== 1 ? "s" : ""})
         </h1>
+        {cartNotice && (
+          <div className="rounded-md border border-accent/30 bg-accent/10 p-3 text-sm text-foreground">
+            {cartNotice}
+          </div>
+        )}
         {items.map((item) => (
           <div key={item.productId} className="card flex gap-4">
-            <div className="h-24 w-24 flex-shrink-0 rounded bg-zinc-800" />
+            <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded bg-zinc-800">
+              {item.imageUrl ? (
+                <Image
+                  src={item.imageUrl}
+                  alt={item.title}
+                  fill
+                  className="object-cover"
+                  sizes="96px"
+                />
+              ) : null}
+            </div>
             <div className="flex-1">
               <Link
                 href={`/products/${item.productId}`}

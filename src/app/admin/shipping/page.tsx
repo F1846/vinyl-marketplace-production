@@ -2,18 +2,15 @@ import { asc } from "drizzle-orm";
 import { Trash2 } from "lucide-react";
 import { deleteShippingRate } from "@/actions/shipping";
 import { db, schema } from "@/db";
-import { isAuthenticatedAdmin } from "@/lib/auth";
+import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { formatEuroFromCents } from "@/lib/money";
 import { getCountryLabel } from "@/lib/shipping";
-import { redirect } from "next/navigation";
 import { ShippingRateForm } from "./shipping-rate-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminShippingPage() {
-  if (!(await isAuthenticatedAdmin())) {
-    redirect("/admin/login");
-  }
+  await requireAuthenticatedAdmin();
 
   const rates = await db()
     .select()

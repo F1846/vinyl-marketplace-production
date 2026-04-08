@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
-import { isAuthenticatedAdmin } from "@/lib/auth";
+import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { isIsoCountryCode, normalizeCountryCode } from "@/lib/shipping";
 import type { ShippingRateFormat } from "@/types/shipping";
 
@@ -22,10 +22,7 @@ export async function createShippingRateAction(
   _prevState: ShippingActionState,
   formData: FormData
 ): Promise<ShippingActionState> {
-  const isAuthed = await isAuthenticatedAdmin();
-  if (!isAuthed) {
-    return { error: "Please sign in again to manage shipping rates.", success: false };
-  }
+  await requireAuthenticatedAdmin();
 
   const countryCode = normalizeCountryCode(String(formData.get("countryCode") ?? ""));
   const formatScope = String(formData.get("formatScope") ?? "") as ShippingRateFormat;
@@ -65,10 +62,7 @@ export async function createShippingRateAction(
 }
 
 export async function deleteShippingRate(id: string): Promise<void> {
-  const isAuthed = await isAuthenticatedAdmin();
-  if (!isAuthed) {
-    return;
-  }
+  await requireAuthenticatedAdmin();
 
   await db().delete(schema.shippingRates).where(eq(schema.shippingRates.id, id));
   revalidatePath("/admin/shipping");

@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { eq } from "drizzle-orm";
 import { schema } from "@/db";
+import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { updateOrderStatus } from "@/actions/orders";
 import { getValidNextStates, type ShippingAddress } from "@/types/order";
@@ -13,6 +14,8 @@ export default async function AdminOrderDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAuthenticatedAdmin();
+
   const { id } = await params;
 
   const d = db();

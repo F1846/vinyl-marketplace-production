@@ -7,9 +7,10 @@ import { useCart } from "@/hooks/use-cart";
 
 interface AddToCartProps {
   product: Product;
+  imageUrl?: string;
 }
 
-export function AddToCart({ product }: AddToCartProps) {
+export function AddToCart({ product, imageUrl }: AddToCartProps) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
 
@@ -18,6 +19,7 @@ export function AddToCart({ product }: AddToCartProps) {
       productId: product.id,
       title: `${product.artist} - ${product.title}`,
       priceCents: product.priceCents,
+      imageUrl,
       format: product.format,
       maxQuantity: product.stockQuantity,
     });

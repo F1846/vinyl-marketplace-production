@@ -3,11 +3,13 @@
 import { db } from "@/db";
 import { schema } from "@/db";
 import { eq } from "drizzle-orm";
+import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { isValidTransition, type OrderStatus } from "@/types/order";
 import { revalidatePath } from "next/cache";
 
 export async function updateOrderStatus(orderId: string, formData: FormData): Promise<void> {
   "use server";
+  await requireAuthenticatedAdmin();
 
   const newStatus = formData.get("newStatus");
   if (typeof newStatus !== "string" || newStatus.length === 0) return;
@@ -27,7 +29,7 @@ export async function updateOrderStatus(orderId: string, formData: FormData): Pr
 
   await d
     .update(schema.orders)
-    .set({ status: nextStatus })
+    .set({ status: nextStatus, updatedAt: new Date() })
     .where(eq(schema.orders.id, orderId));
 
   revalidatePath("/admin/orders");

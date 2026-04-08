@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export interface CartItemType {
   productId: string;
@@ -13,72 +13,228 @@ export interface CartItemType {
 }
 
 const CART_KEY = "f1846_cart";
+const CART_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+
+let cartCache: CartItemType[] = [];
+const listeners = new Set<() => void>();
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+function normalizeCartItem(value: unknown): CartItemType | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const item = value as Partial<CartItemType>;
+  const priceCents = item.priceCents;
+  const quantity = item.quantity;
+  const maxQuantity = item.maxQuantity;
+  if (typeof item.productId !== "string" || item.productId.trim().length === 0) {
+    return null;
+  }
+  if (typeof item.title !== "string" || item.title.trim().length === 0) {
+    return null;
+  }
+  if (!isNonNegativeInteger(priceCents)) {
+    return null;
+  }
+  if (!isNonNegativeInteger(quantity) || quantity < 1) {
+    return null;
+  }
+  if (!isNonNegativeInteger(maxQuantity)) {
+    return null;
+  }
+  if (maxQuantity === 0) {
+    return null;
+  }
+
+  return {
+    productId: item.productId,
+    title: item.title.trim(),
+    priceCents,
+    quantity: Math.min(quantity, maxQuantity),
+    maxQuantity,
+    imageUrl: typeof item.imageUrl === "string" ? item.imageUrl : undefined,
+    format: typeof item.format === "string" ? item.format : undefined,
+  };
+}
+
+function readCartFromStorage(): CartItemType[] {
+  try {
+    const stored = localStorage.getItem(CART_KEY);
+    if (!stored) {
+      return [];
+    }
+
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .map(normalizeCartItem)
+      .filter((item): item is CartItemType => item !== null);
+  } catch {
+    return [];
+  }
+}
+
+function notifyListeners() {
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
+function persistCart(items: CartItemType[]) {
+  localStorage.setItem(CART_KEY, JSON.stringify(items));
+  const compactItems = items.map(({ productId, quantity }) => ({ productId, quantity }));
+  document.cookie = `${CART_KEY}=${encodeURIComponent(JSON.stringify(compactItems))}; path=/; max-age=${CART_COOKIE_MAX_AGE_SECONDS}; samesite=lax`;
+}
+
+function setCart(items: CartItemType[]) {
+  cartCache = items;
+  persistCart(cartCache);
+  notifyListeners();
+}
+
+function clearPersistedCart() {
+  cartCache = [];
+  localStorage.removeItem(CART_KEY);
+  document.cookie = `${CART_KEY}=; path=/; max-age=0; samesite=lax`;
+  notifyListeners();
+}
 
 export function useCart() {
-  const [items, setItems] = useState<CartItemType[]>([]);
+  const [items, setItems] = useState<CartItemType[]>(cartCache);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
-    try {
-      const stored = localStorage.getItem(CART_KEY);
-      if (stored) {
-        setItems(JSON.parse(stored));
+    cartCache = readCartFromStorage();
+    setItems(cartCache);
+
+    const syncFromCache = () => {
+      setItems([...cartCache]);
+    };
+
+    listeners.add(syncFromCache);
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === CART_KEY) {
+        cartCache = readCartFromStorage();
+        notifyListeners();
       }
-    } catch {
-      // ignore corrupted cart
-    }
+    };
+
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      listeners.delete(syncFromCache);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   const addItem = useCallback(
     (item: Omit<CartItemType, "quantity"> & { quantity?: number }) => {
-      setItems((prev) => {
-        const existing = prev.find((i) => i.productId === item.productId);
-        if (existing) {
-          return prev.map((i) =>
-            i.productId === item.productId
-              ? { ...i, quantity: Math.min(i.quantity + 1, i.maxQuantity) }
-              : i
-          );
-        }
-        return [...prev, { ...item, quantity: item.quantity ?? 1 }];
-      });
+      if (!isClient || item.maxQuantity < 1) {
+        return;
+      }
+
+      const requestedQuantity = Math.max(1, item.quantity ?? 1);
+      const existing = cartCache.find((cartItem) => cartItem.productId === item.productId);
+
+      if (existing) {
+        setCart(
+          cartCache.map((cartItem) =>
+            cartItem.productId === item.productId
+              ? {
+                  ...cartItem,
+                  ...item,
+                  quantity: Math.min(cartItem.quantity + requestedQuantity, item.maxQuantity),
+                }
+              : cartItem
+          )
+        );
+        return;
+      }
+
+      setCart([
+        ...cartCache,
+        {
+          ...item,
+          quantity: Math.min(requestedQuantity, item.maxQuantity),
+        },
+      ]);
     },
-    []
+    [isClient]
   );
 
-  // Force re-save after state update
-  useEffect(() => {
-    if (isClient) {
-      localStorage.setItem(CART_KEY, JSON.stringify(items));
-    }
-  }, [items, isClient]);
+  const replaceItems = useCallback(
+    (nextItems: CartItemType[]) => {
+      if (!isClient) {
+        return;
+      }
 
-  const removeItem = useCallback((productId: string) => {
-    setItems((prev) => prev.filter((i) => i.productId !== productId));
-  }, []);
+      setCart(
+        nextItems
+          .map(normalizeCartItem)
+          .filter((item): item is CartItemType => item !== null)
+      );
+    },
+    [isClient]
+  );
 
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
-    setItems((prev) =>
-      prev.map((i) =>
-        i.productId === productId
-          ? { ...i, quantity: Math.max(1, Math.min(quantity, i.maxQuantity)) }
-          : i
-      ).filter((i) => i.quantity > 0)
-    );
-  }, []);
+  const removeItem = useCallback(
+    (productId: string) => {
+      if (!isClient) {
+        return;
+      }
+
+      setCart(cartCache.filter((item) => item.productId !== productId));
+    },
+    [isClient]
+  );
+
+  const updateQuantity = useCallback(
+    (productId: string, quantity: number) => {
+      if (!isClient) {
+        return;
+      }
+
+      setCart(
+        cartCache.flatMap((item) => {
+          if (item.productId !== productId) {
+            return [item];
+          }
+
+          if (item.maxQuantity < 1 || quantity < 1) {
+            return [];
+          }
+
+          return [{ ...item, quantity: Math.min(quantity, item.maxQuantity) }];
+        })
+      );
+    },
+    [isClient]
+  );
 
   const clearCart = useCallback(() => {
-    setItems([]);
-    localStorage.removeItem(CART_KEY);
-  }, []);
+    if (!isClient) {
+      return;
+    }
 
-  const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
-  const totalPriceCents = items.reduce((sum, i) => sum + i.priceCents * i.quantity, 0);
+    clearPersistedCart();
+  }, [isClient]);
+
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPriceCents = items.reduce((sum, item) => sum + item.priceCents * item.quantity, 0);
 
   return {
     items,
     addItem,
+    replaceItems,
     removeItem,
     updateQuantity,
     clearCart,

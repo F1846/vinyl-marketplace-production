@@ -1,11 +1,11 @@
 "use server";
 
-import { verifyAdminPassword, createAdminSession } from "@/lib/auth";
+import { clearAdminSession, createAdminSession, verifyAdminPassword } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export async function adminLoginAction(
-  prevState: { error: string | null; success: boolean },
+  _prevState: { error: string | null; success: boolean },
   formData: FormData
 ): Promise<{ error: string | null; success: boolean }> {
   const password = formData.get("password") as string;
@@ -24,4 +24,10 @@ export async function adminLoginAction(
   revalidatePath("/admin");
   redirect("/admin");
   return { error: null, success: true };
+}
+
+export async function adminLogoutAction(): Promise<void> {
+  await clearAdminSession();
+  revalidatePath("/admin");
+  redirect("/admin/login");
 }

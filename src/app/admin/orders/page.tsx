@@ -2,11 +2,14 @@ import { db } from "@/db";
 import { desc } from "drizzle-orm";
 import { schema } from "@/db";
 import Link from "next/link";
+import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { formatEuroFromCents } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminOrdersPage() {
+  await requireAuthenticatedAdmin();
+
   const d = db();
   const orders = await d.query.orders.findMany({
     orderBy: [desc(schema.orders.createdAt)],

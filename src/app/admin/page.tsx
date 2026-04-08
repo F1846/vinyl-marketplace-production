@@ -1,4 +1,4 @@
-import { isAuthenticatedAdmin } from "@/lib/auth";
+import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { db } from "@/db";
 import { eq, sql } from "drizzle-orm";
 import { schema } from "@/db";
@@ -7,8 +7,7 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  await isAuthenticatedAdmin();
-  // In dev, always allow. In prod, check the session cookie.
+  await requireAuthenticatedAdmin();
 
   const d = db();
 

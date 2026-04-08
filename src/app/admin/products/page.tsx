@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { desc } from "drizzle-orm";
 import { schema } from "@/db";
+import { requireAuthenticatedAdmin } from "@/lib/auth";
 import Link from "next/link";
 import { Plus, Pencil, EyeOff } from "lucide-react";
 import { archiveProduct } from "@/actions/products";
@@ -10,6 +11,8 @@ import { formatEuroFromCents } from "@/lib/money";
 export const dynamic = "force-dynamic";
 
 export default async function AdminProductsPage() {
+  await requireAuthenticatedAdmin();
+
   const d = db();
   const products = await d.query.products.findMany({
     orderBy: [desc(schema.products.createdAt)],

@@ -127,7 +127,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           {inStock ? (
             <>
               <p className="mb-2 text-sm text-success">{product.stockQuantity} in stock</p>
-              <AddToCart product={product} />
+              <AddToCart product={product} imageUrl={product.images[0]?.url ?? undefined} />
             </>
           ) : (
             <button className="btn-secondary w-full" disabled>

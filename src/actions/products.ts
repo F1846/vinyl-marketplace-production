@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { requireAuthenticatedAdmin } from "@/lib/auth";
 import type { MediaCondition } from "@/types/product";
 
 const MEDIA_CONDITIONS = new Set<MediaCondition>(["M", "NM", "VG+", "VG", "G", "P"]);
@@ -18,9 +19,11 @@ function parseMediaCondition(value: string | File | null): MediaCondition | null
 // ─── Add Product (Server Action from FormData) ───
 
 export async function addProductFormAction(
-  prevState: { error: string | null; success: boolean },
+  _prevState: { error: string | null; success: boolean },
   formData: FormData
 ): Promise<{ error: string | null; success: boolean }> {
+  await requireAuthenticatedAdmin();
+
   const d = db();
 
   const imageUrlsRaw = (formData.get("imageUrls") as string) ?? "";
@@ -37,6 +40,7 @@ export async function addProductFormAction(
   if (priceCents < 0) return { error: "Price must be 0 or more", success: false };
   if (stockQuantity < 0) return { error: "Stock must be 0 or more", success: false };
   if (pressingYear && (pressingYear < 1900 || pressingYear > 2030)) return { error: "Invalid pressing year", success: false };
+  if (imageUrls.length > 10) return { error: "Use at most 10 images per product", success: false };
 
   const productId = crypto.randomUUID();
 
@@ -69,13 +73,15 @@ export async function addProductFormAction(
       version: 1,
     });
 
-    for (let i = 0; i < imageUrls.length; i++) {
-      await d.insert(schema.productImages).values({
-        id: crypto.randomUUID(),
-        productId,
-        url: imageUrls[i],
-        sortOrder: i,
-      });
+    if (imageUrls.length > 0) {
+      await d.insert(schema.productImages).values(
+        imageUrls.map((url, sortOrder) => ({
+          id: crypto.randomUUID(),
+          productId,
+          url,
+          sortOrder,
+        }))
+      );
     }
 
     revalidatePath("/catalog");
@@ -93,6 +99,8 @@ export async function addProductFormAction(
 
 export async function updateProduct(id: string, formData: FormData) {
   "use server";
+  await requireAuthenticatedAdmin();
+
   const d = db();
 
   const product = await d.query.products.findFirst({
@@ -122,6 +130,7 @@ export async function updateProduct(id: string, formData: FormData) {
       pressingYear,
       pressingCatalogNumber: (formData.get("pressingCatalogNumber") as string) || null,
       description: String(formData.get("description")),
+      updatedAt: new Date(),
       version: product.version + 1,
     })
     .where(eq(schema.products.id, id));
@@ -136,11 +145,13 @@ export async function updateProduct(id: string, formData: FormData) {
 
 export async function archiveProduct(id: string) {
   "use server";
+  await requireAuthenticatedAdmin();
+
   const d = db();
 
   await d
     .update(schema.products)
-    .set({ status: "sold_out" })
+    .set({ status: "sold_out", updatedAt: new Date() })
     .where(eq(schema.products.id, id));
 
   revalidatePath("/catalog");
@@ -151,11 +162,13 @@ export async function archiveProduct(id: string) {
 
 export async function restoreProduct(id: string) {
   "use server";
+  await requireAuthenticatedAdmin();
+
   const d = db();
 
   await d
     .update(schema.products)
-    .set({ status: "active" })
+    .set({ status: "active", updatedAt: new Date() })
     .where(eq(schema.products.id, id));
 
   revalidatePath("/catalog");
