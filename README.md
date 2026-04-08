@@ -20,7 +20,7 @@ Production codebase for Federico Shop, an editorial storefront for electronic mu
 - Transactional order emails via Mailgun
 - Live tracking support with Ship24, plus 17TRACK or AfterShip fallback
 - Admin order tools for status updates, tracking numbers, VAT, invoice download, and pickup handling
-- Admin product tools for edit, archive, hide/show, and sold-out relist
+- Admin product tools for edit, hide, soft-delete removal, archive, and sold-out relist
 - Discogs CSV import workflow with Discogs image lookup
 - SEO support with sitemap, robots, structured data, and Google verification tag support
 - GitHub Actions CI and Vercel production deploy
@@ -142,13 +142,14 @@ The admin area is designed for a single-shop workflow.
 
 - Dashboard with product and order totals
 - Product list with sort controls for price, stock, and status
-- Product actions for edit, archive, hide/show, and relist
+- Product actions for edit, hide, relist, and soft-delete removal from admin/storefront
 - Shipping rules editor
 - Order detail page with:
   - status updates
   - tracking number and carrier or tracking URL
   - VAT override
   - PDF invoice download
+  - manual customer email send from `support@federicoshop.de` or `orders@federicoshop.de`
   - pickup details
 - Absolute session expiry after login for admin security
 
@@ -158,6 +159,7 @@ The admin area is designed for a single-shop workflow.
 - Card payments create orders through Stripe webhooks
 - PayPal orders use a signed return flow
 - Local pickup orders show fixed pickup details
+- Pickup emails include the Berlin pickup address plus WhatsApp/message contact details
 - Customers can track orders at `/track-order`
 - Customers can download invoice PDFs from order emails and order lookup
 - Order emails share a consistent Federico Shop layout and subject style
@@ -185,6 +187,7 @@ Mixed-format carts are calculated once per whole cart, not added separately by m
 - Use a verified Mailgun domain for production sending
 - Set `EMAIL_FROM` to a verified sender such as `Federico Shop DE <orders@federicoshop.de>`
 - Incoming support and order mailbox forwarding can be handled separately at the DNS or provider level
+- Admin order detail includes a manual customer-message composer that reuses the same house email design
 
 ### Tracking
 
@@ -201,6 +204,14 @@ Mixed-format carts are calculated once per whole cart, not added separately by m
 2. Connect the repository to Vercel
 3. Add production environment variables
 4. Redeploy production
+
+### Database
+
+- The app uses a single PostgreSQL `DATABASE_URL` at runtime
+- Neon is supported directly through Drizzle + Neon HTTP
+- You can clone the live shop database into another Neon or PostgreSQL database for backup
+- If you switch databases, update `DATABASE_URL` locally and in Vercel, then redeploy
+- Dual-writing to two databases is not enabled by default; use one primary database and clone backups instead
 
 ### Stripe Webhook
 
