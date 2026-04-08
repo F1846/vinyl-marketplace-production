@@ -30,6 +30,7 @@ type CatalogResponse = {
 };
 
 const PAGE_SIZE = 24;
+const AUTO_LOAD_BURST_LIMIT = 4;
 const SORT_OPTIONS: Array<{ value: CatalogSort; label: string }> = [
   { value: "newest", label: "Newest" },
   { value: "price-asc", label: "Price: low to high" },
@@ -68,7 +69,9 @@ export function CatalogBrowser({
   const [draftQuery, setDraftQuery] = useState(initialQuery.q);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [autoLoadBurstCount, setAutoLoadBurstCount] = useState(0);
   const autoLoadRef = useRef<HTMLDivElement | null>(null);
+  const autoLoadEnabled = hasMore && autoLoadBurstCount < AUTO_LOAD_BURST_LIMIT;
 
   const activeLabel = useMemo(() => {
     if (query.q) {
@@ -121,6 +124,7 @@ export function CatalogBrowser({
         setHasMore(next.hasMore);
         setTotalCount(next.totalCount);
         setQuery(nextQuery);
+        setAutoLoadBurstCount(0);
       });
       syncUrl(nextQuery);
     } finally {
@@ -128,7 +132,7 @@ export function CatalogBrowser({
     }
   }
 
-  const handleLoadMore = useCallback(async () => {
+  const handleLoadMore = useCallback(async (mode: "auto" | "manual" = "manual") => {
     setLoadingMore(true);
     try {
       const next = await fetchCatalog(query, products.length);
@@ -136,6 +140,9 @@ export function CatalogBrowser({
         setProducts((current) => [...current, ...next.products]);
         setHasMore(next.hasMore);
         setTotalCount(next.totalCount);
+        setAutoLoadBurstCount((current) =>
+          mode === "auto" ? current + 1 : 0
+        );
       });
     } finally {
       setLoadingMore(false);
@@ -144,22 +151,22 @@ export function CatalogBrowser({
 
   useEffect(() => {
     const node = autoLoadRef.current;
-    if (!node || !hasMore || loading || loadingMore) {
+    if (!node || !autoLoadEnabled || loading || loadingMore) {
       return;
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
-          void handleLoadMore();
+          void handleLoadMore("auto");
         }
       },
-      { rootMargin: "800px 0px" }
+      { rootMargin: "240px 0px" }
     );
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [handleLoadMore, hasMore, loading, loadingMore]);
+  }, [autoLoadEnabled, handleLoadMore, loading, loadingMore]);
 
   return (
     <div className="space-y-5">
@@ -303,8 +310,21 @@ export function CatalogBrowser({
                     <Loader2 className="h-4 w-4 animate-spin text-accent" />
                     Loading more records...
                   </p>
-                ) : hasMore ? (
+                ) : autoLoadEnabled ? (
                   <p className="text-sm text-muted">Scroll to the bottom to load more.</p>
+                ) : hasMore ? (
+                  <div className="rounded-[1rem] border border-border bg-white px-4 py-4 text-center shadow-card">
+                    <p className="text-sm text-muted">
+                      Auto-loading pauses here so the footer stays reachable.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void handleLoadMore("manual")}
+                      className="btn-secondary mt-3"
+                    >
+                      Load 24 more records
+                    </button>
+                  </div>
                 ) : (
                   <p className="text-sm text-muted">All matching records are loaded.</p>
                 )}
