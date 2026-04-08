@@ -75,9 +75,12 @@ export default function TrackOrderPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-foreground">Track your order</h1>
-        <p className="mt-2 text-muted">
+      <div className="space-y-3 text-center">
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+          Order status
+        </p>
+        <h1 className="font-serif text-4xl text-foreground">Track your order</h1>
+        <p className="mx-auto max-w-xl text-muted">
           Enter your order number and the email you used at checkout.
         </p>
       </div>
@@ -135,13 +138,13 @@ function OrderResult({ order }: { order: OrderData }) {
         <div className="flex items-center gap-3">
           <StatusIcon className={`h-8 w-8 ${status.color}`} />
           <div>
-            <h2 className="text-lg font-bold text-foreground">{order.orderNumber}</h2>
+            <h2 className="font-serif text-2xl text-foreground">{order.orderNumber}</h2>
             <p className={`text-sm font-medium ${status.color}`}>{status.label}</p>
           </div>
         </div>
 
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-muted">Items</h3>
+          <h3 className="mb-2 font-serif text-xl text-foreground">Items</h3>
           <div className="space-y-2">
             {order.items.map((item, index) => (
               <div key={index} className="flex justify-between gap-4 text-sm">
@@ -177,7 +180,7 @@ function OrderResult({ order }: { order: OrderData }) {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
                 Shipment tracking
               </p>
-              <h3 className="mt-1 text-lg font-semibold text-foreground">
+              <h3 className="mt-1 font-serif text-2xl text-foreground">
                 {order.trackingSummary?.carrierStatusLabel ?? "Tracking active"}
               </h3>
             </div>

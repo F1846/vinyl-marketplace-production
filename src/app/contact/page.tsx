@@ -29,7 +29,7 @@ export default function ContactPage() {
         </div>
 
         <div className="border-t border-border pt-4">
-          <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+          <h3 className="font-serif text-xl text-foreground">
             Store address
           </h3>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-muted">
