@@ -8,11 +8,6 @@ type CheckoutStatePayload = {
   createdAt: number;
 };
 
-function clean(value: string | undefined | null): string | null {
-  const normalized = value?.trim();
-  return normalized ? normalized : null;
-}
-
 function isShippingDetails(value: unknown): value is ShippingDetailsInput {
   if (!value || typeof value !== "object") {
     return false;
@@ -34,32 +29,30 @@ function isShippingDetails(value: unknown): value is ShippingDetailsInput {
   return requiredKeys.every((key) => typeof candidate[key] === "string");
 }
 
-export function isCheckoutStateConfigured(): boolean {
+export function isCheckoutStateSigningConfigured(): boolean {
   return Boolean(
-    clean(process.env.CHECKOUT_STATE_SECRET) ||
-      clean(process.env.ADMIN_SESSION_SECRET) ||
-      process.env.NODE_ENV !== "production"
+    process.env.CHECKOUT_STATE_SECRET?.trim() ||
+      process.env.ADMIN_SESSION_SECRET?.trim() ||
+      process.env.STRIPE_SECRET_KEY?.trim() ||
+      process.env.PAYPAL_CLIENT_SECRET?.trim()
   );
 }
 
 function getCheckoutStateSecret(): string {
-  const dedicatedSecret = clean(process.env.CHECKOUT_STATE_SECRET);
-  if (dedicatedSecret) {
-    return dedicatedSecret;
+  const secret = isCheckoutStateSigningConfigured()
+    ? process.env.CHECKOUT_STATE_SECRET?.trim() ||
+      process.env.ADMIN_SESSION_SECRET?.trim() ||
+      process.env.STRIPE_SECRET_KEY?.trim() ||
+      process.env.PAYPAL_CLIENT_SECRET?.trim()
+    : null;
+
+  if (!secret) {
+    throw new Error(
+      "Checkout state signing secret is not configured. Set CHECKOUT_STATE_SECRET before enabling PayPal checkout."
+    );
   }
 
-  const adminSessionSecret = clean(process.env.ADMIN_SESSION_SECRET);
-  if (adminSessionSecret) {
-    return adminSessionSecret;
-  }
-
-  if (process.env.NODE_ENV !== "production") {
-    return "federico-shop-dev-checkout-state-secret";
-  }
-
-  throw new Error(
-    "CHECKOUT_STATE_SECRET or ADMIN_SESSION_SECRET must be configured in production."
-  );
+  return secret;
 }
 
 function signPayload(payload: string): string {
