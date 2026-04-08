@@ -3,15 +3,20 @@ import { desc } from "drizzle-orm";
 import { schema } from "@/db";
 import { requireAuthenticatedAdmin } from "@/lib/auth";
 import Link from "next/link";
-import { Plus, Pencil, EyeOff } from "lucide-react";
-import { archiveProduct } from "@/actions/products";
+import { Plus, Pencil, EyeOff, RotateCcw } from "lucide-react";
+import { archiveProduct, restoreProduct } from "@/actions/products";
 import type { ProductStatus } from "@/types/product";
 import { formatEuroFromCents } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminProductsPage() {
+export default async function AdminProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ updated?: string }>;
+}) {
   await requireAuthenticatedAdmin();
+  const params = await searchParams;
 
   const d = db();
   const products = await d.query.products.findMany({
@@ -30,6 +35,12 @@ export default async function AdminProductsPage() {
 
   return (
     <div className="space-y-6">
+      {params.updated === "1" && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-success">
+          Product updated successfully.
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Products ({products.length})</h1>
         <div className="flex gap-2">
@@ -63,10 +74,26 @@ export default async function AdminProductsPage() {
                 <td className="px-4 py-3 text-foreground">{product.stockQuantity}</td>
                 <td className="px-4 py-3">{statusBadge(product.status)}</td>
                 <td className="px-4 py-3">
-                  <div className="flex justify-end gap-2">
+                  <div className="flex justify-end gap-3">
                     <Link href={`/admin/products/${product.id}/edit`} title="Edit" className="text-muted hover:text-accent transition-colors">
                       <Pencil className="h-4 w-4" />
                     </Link>
+                    {product.status !== "active" && (
+                      <form action={restoreProduct.bind(null, product.id)}>
+                        <button
+                          type="submit"
+                          title={
+                            product.stockQuantity > 0
+                              ? "Relist"
+                              : "Set stock above 0 in Edit before relisting"
+                          }
+                          className="text-muted hover:text-success transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                          disabled={product.stockQuantity < 1}
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </button>
+                      </form>
+                    )}
                     {product.status !== "archived" && (
                       <form action={archiveProduct.bind(null, product.id)}>
                         <button type="submit" title="Archive" className="text-muted hover:text-danger transition-colors">

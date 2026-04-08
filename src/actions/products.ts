@@ -5,7 +5,8 @@ import { schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireAuthenticatedAdmin } from "@/lib/auth";
-import type { MediaCondition } from "@/types/product";
+import { redirect } from "next/navigation";
+import type { MediaCondition, ProductStatus } from "@/types/product";
 
 const MEDIA_CONDITIONS = new Set<MediaCondition>(["M", "NM", "VG+", "VG", "G", "P"]);
 
@@ -14,6 +15,21 @@ function parseMediaCondition(value: string | File | null): MediaCondition | null
     return null;
   }
   return value as MediaCondition;
+}
+
+function statusFromStock(stockQuantity: number): ProductStatus {
+  return stockQuantity > 0 ? "active" : "sold_out";
+}
+
+function revalidateProductPaths(productId?: string) {
+  revalidatePath("/");
+  revalidatePath("/catalog");
+  revalidatePath("/admin");
+  revalidatePath("/admin/products");
+
+  if (productId) {
+    revalidatePath(`/products/${productId}`);
+  }
 }
 
 // ─── Add Product (Server Action from FormData) ───
@@ -39,6 +55,9 @@ export async function addProductFormAction(
 
   if (priceCents < 0) return { error: "Price must be 0 or more", success: false };
   if (stockQuantity < 0) return { error: "Stock must be 0 or more", success: false };
+  if (!Number.isInteger(priceCents) || !Number.isInteger(stockQuantity)) {
+    return { error: "Price and stock must be whole numbers", success: false };
+  }
   if (pressingYear && (pressingYear < 1900 || pressingYear > 2030)) return { error: "Invalid pressing year", success: false };
   if (imageUrls.length > 10) return { error: "Use at most 10 images per product", success: false };
 
@@ -69,7 +88,7 @@ export async function addProductFormAction(
       pressingYear,
       pressingCatalogNumber,
       description,
-      status: "active" as const,
+      status: statusFromStock(stockQuantity),
       version: 1,
     });
 
@@ -84,8 +103,7 @@ export async function addProductFormAction(
       );
     }
 
-    revalidatePath("/catalog");
-    revalidatePath("/admin/products");
+    revalidateProductPaths(productId);
     return { error: null, success: true };
   } catch (err: unknown) {
     return {
@@ -97,7 +115,7 @@ export async function addProductFormAction(
 
 // ─── Update Product ───
 
-export async function updateProduct(id: string, formData: FormData) {
+export async function updateProduct(id: string, formData: FormData): Promise<void> {
   "use server";
   await requireAuthenticatedAdmin();
 
@@ -107,13 +125,29 @@ export async function updateProduct(id: string, formData: FormData) {
     where: eq(schema.products.id, id),
   });
 
-  if (!product) return { error: "Product not found" };
+  if (!product) {
+    redirect("/admin/products");
+  }
 
   const priceCents = Number(formData.get("priceCents"));
   const stockQuantity = Number(formData.get("stockQuantity"));
   const pressingYear = formData.get("pressingYear") ? Number(formData.get("pressingYear")) : null;
   const updateFormat = formData.get("format") as "vinyl" | "cassette" | "cd";
   const updateConditionSleeve = updateFormat === "vinyl" ? parseMediaCondition(formData.get("conditionSleeve")) : null;
+  const nextStatus =
+    product.status === "archived" ? "archived" : statusFromStock(stockQuantity);
+
+  if (priceCents < 0 || stockQuantity < 0) {
+    redirect(`/admin/products/${id}/edit?error=invalid-numbers`);
+  }
+
+  if (!Number.isInteger(priceCents) || !Number.isInteger(stockQuantity)) {
+    redirect(`/admin/products/${id}/edit?error=invalid-numbers`);
+  }
+
+  if (pressingYear && (pressingYear < 1900 || pressingYear > 2030)) {
+    redirect(`/admin/products/${id}/edit?error=invalid-year`);
+  }
 
   await d
     .update(schema.products)
@@ -130,15 +164,14 @@ export async function updateProduct(id: string, formData: FormData) {
       pressingYear,
       pressingCatalogNumber: (formData.get("pressingCatalogNumber") as string) || null,
       description: String(formData.get("description")),
+      status: nextStatus,
       updatedAt: new Date(),
       version: product.version + 1,
     })
     .where(eq(schema.products.id, id));
 
-  revalidatePath("/catalog");
-  revalidatePath("/admin/products");
-  revalidatePath(`/products/${id}`);
-  return { success: true };
+  revalidateProductPaths(id);
+  redirect("/admin/products?updated=1");
 }
 
 // ─── Archive Product ───
@@ -151,11 +184,10 @@ export async function archiveProduct(id: string) {
 
   await d
     .update(schema.products)
-    .set({ status: "sold_out", updatedAt: new Date() })
+    .set({ status: "archived", updatedAt: new Date() })
     .where(eq(schema.products.id, id));
 
-  revalidatePath("/catalog");
-  revalidatePath("/admin/products");
+  revalidateProductPaths(id);
 }
 
 // ─── Restore Product (from sold_out to active) ───
@@ -165,12 +197,18 @@ export async function restoreProduct(id: string) {
   await requireAuthenticatedAdmin();
 
   const d = db();
+  const product = await d.query.products.findFirst({
+    where: eq(schema.products.id, id),
+  });
+
+  if (!product) {
+    return;
+  }
 
   await d
     .update(schema.products)
-    .set({ status: "active", updatedAt: new Date() })
+    .set({ status: statusFromStock(product.stockQuantity), updatedAt: new Date() })
     .where(eq(schema.products.id, id));
 
-  revalidatePath("/catalog");
-  revalidatePath("/admin/products");
+  revalidateProductPaths(id);
 }

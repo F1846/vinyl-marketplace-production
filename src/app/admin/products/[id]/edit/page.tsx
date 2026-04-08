@@ -10,12 +10,15 @@ export const dynamic = "force-dynamic";
 
 export default async function EditProductPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   await requireAuthenticatedAdmin();
 
   const { id } = await params;
+  const query = await searchParams;
   const d = db();
   const product = await d.query.products.findFirst({
     where: eq(schema.products.id, id),
@@ -23,11 +26,12 @@ export default async function EditProductPage({
   });
 
   if (!product) notFound();
-
-  async function updateProductAction(formData: FormData) {
-    "use server";
-    await updateProduct(id, formData);
-  }
+  const errorMessage =
+    query.error === "invalid-numbers"
+      ? "Price and stock must be valid whole numbers."
+      : query.error === "invalid-year"
+        ? "Year must be between 1900 and 2030."
+        : null;
 
   return (
     <div className="max-w-2xl">
@@ -40,7 +44,12 @@ export default async function EditProductPage({
         </Link>
       </div>
 
-      <form action={updateProductAction} className="card space-y-6">
+      <form action={updateProduct.bind(null, id)} className="card space-y-6">
+        {errorMessage && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-danger">
+            {errorMessage}
+          </div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="artist" className="label">Artist</label>
