@@ -36,10 +36,74 @@ type RefreshedCartItem = {
 };
 
 type CheckoutMode = "card" | "paypal" | "pickup";
-type ShippingFormState = Omit<CheckoutContactInput, "shippingCountry">;
-type ShippingFieldName = keyof ShippingFormState | "shippingCountry";
+type ShippingFormState = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  confirmEmail: string;
+  street: string;
+  houseNumber: string;
+  postalCode: string;
+  city: string;
+  phoneCountryCode: string;
+  phoneLocalNumber: string;
+  additionalInfo: string;
+};
+type ShippingFieldName =
+  | "firstName"
+  | "lastName"
+  | "email"
+  | "confirmEmail"
+  | "shippingCountry"
+  | "street"
+  | "houseNumber"
+  | "postalCode"
+  | "city"
+  | "phoneNumber"
+  | "additionalInfo";
+
+type PhoneCodeOption = {
+  countryCode: string;
+  dialCode: string;
+  label: string;
+};
 
 const PAYPAL_ENABLED = process.env.NEXT_PUBLIC_PAYPAL_ENABLED === "true";
+const PHONE_DIAL_CODES: Record<string, string> = {
+  AT: "+43",
+  AU: "+61",
+  BE: "+32",
+  BG: "+359",
+  CA: "+1",
+  CH: "+41",
+  CY: "+357",
+  CZ: "+420",
+  DE: "+49",
+  DK: "+45",
+  EE: "+372",
+  ES: "+34",
+  FI: "+358",
+  FR: "+33",
+  GB: "+44",
+  GR: "+30",
+  HR: "+385",
+  HU: "+36",
+  IE: "+353",
+  IT: "+39",
+  LT: "+370",
+  LU: "+352",
+  LV: "+371",
+  MT: "+356",
+  NL: "+31",
+  NO: "+47",
+  PL: "+48",
+  PT: "+351",
+  RO: "+40",
+  SE: "+46",
+  SI: "+386",
+  SK: "+421",
+  US: "+1",
+};
 const EMPTY_SHIPPING_FORM: ShippingFormState = {
   firstName: "",
   lastName: "",
@@ -49,12 +113,58 @@ const EMPTY_SHIPPING_FORM: ShippingFormState = {
   houseNumber: "",
   postalCode: "",
   city: "",
-  phoneNumber: "",
+  phoneCountryCode: "",
+  phoneLocalNumber: "",
   additionalInfo: "",
 };
 
-function getFirstFieldError(messages?: string[]) {
-  return messages?.[0] ?? "";
+function getPhoneCodeForCountry(countryCode: string) {
+  return PHONE_DIAL_CODES[countryCode] ?? "";
+}
+
+function getPhoneCodeOptions(countries: ShippingCountry[]): PhoneCodeOption[] {
+  const fallbackCountries: ShippingCountry[] = [
+    { code: "DE", label: "Germany" },
+    { code: "IT", label: "Italy" },
+    { code: "FR", label: "France" },
+    { code: "NL", label: "Netherlands" },
+    { code: "GB", label: "United Kingdom" },
+    { code: "US", label: "United States" },
+  ];
+
+  const source = countries.length > 0 ? countries : fallbackCountries;
+
+  return source.map((country) => ({
+    countryCode: country.code,
+    dialCode: getPhoneCodeForCountry(country.code) || `+${country.code}`,
+    label: `${country.label} (${getPhoneCodeForCountry(country.code) || country.code})`,
+  }));
+}
+
+function getFriendlyFieldError(
+  field: ShippingFieldName,
+  messages?: string[]
+) {
+  const firstMessage = messages?.[0] ?? "";
+
+  if (!firstMessage) {
+    return "";
+  }
+
+  switch (field) {
+    case "email":
+      return "Enter a valid email address.";
+    case "confirmEmail":
+      return firstMessage.includes("match") ? "Emails do not match." : "Enter the same email again.";
+    case "shippingCountry":
+      return "Choose a country.";
+    case "phoneNumber":
+      return "Fill in this field.";
+    case "additionalInfo":
+      return "Keep this a bit shorter.";
+    default:
+      return "Fill in this field.";
+  }
 }
 
 function fieldClassName(error?: string) {
@@ -92,6 +202,10 @@ export default function CartPage() {
 
   const isPickup = checkoutMode === "pickup";
   const total = totalPriceCents + (isPickup || items.length === 0 ? 0 : shippingCents);
+  const phoneCodeOptions = useMemo(
+    () => getPhoneCodeOptions(shippingCountries),
+    [shippingCountries]
+  );
   const checkoutOptions = [
     {
       mode: "card" as const,
@@ -308,14 +422,33 @@ export default function CartPage() {
     };
   }, [isLoaded, isPickup, items, shippingCountry]);
 
+  useEffect(() => {
+    if (!shippingCountry || shippingForm.phoneCountryCode) {
+      return;
+    }
+
+    const dialCode = getPhoneCodeForCountry(shippingCountry);
+    if (!dialCode) {
+      return;
+    }
+
+    setShippingForm((current) => ({
+      ...current,
+      phoneCountryCode: dialCode,
+    }));
+  }, [shippingCountry, shippingForm.phoneCountryCode]);
+
   function handleShippingFieldChange(field: keyof ShippingFormState, value: string) {
     setShippingForm((current) => ({ ...current, [field]: value }));
     setShippingFieldErrors((current) => {
       const next = { ...current };
-      delete next[field];
       if (field === "email" || field === "confirmEmail") {
         delete next.email;
         delete next.confirmEmail;
+      } else if (field === "phoneCountryCode" || field === "phoneLocalNumber") {
+        delete next.phoneNumber;
+      } else {
+        delete next[field as ShippingFieldName];
       }
       return next;
     });
@@ -336,27 +469,39 @@ export default function CartPage() {
     let validatedShipping: CheckoutContactInput | null = null;
 
     if (!isPickup) {
-      const parsedShipping = checkoutContactSchema.safeParse({
-        ...shippingForm,
+      const shippingInput = {
+        firstName: shippingForm.firstName,
+        lastName: shippingForm.lastName,
+        email: shippingForm.email,
+        confirmEmail: shippingForm.confirmEmail,
         shippingCountry,
+        street: shippingForm.street,
+        houseNumber: shippingForm.houseNumber,
+        postalCode: shippingForm.postalCode,
+        city: shippingForm.city,
+        phoneNumber: `${shippingForm.phoneCountryCode} ${shippingForm.phoneLocalNumber}`.trim(),
+        additionalInfo: shippingForm.additionalInfo,
+      };
+      const parsedShipping = checkoutContactSchema.safeParse({
+        ...shippingInput,
       });
 
       if (!parsedShipping.success) {
         const flattened = parsedShipping.error.flatten().fieldErrors;
         setShippingFieldErrors({
-          firstName: getFirstFieldError(flattened.firstName),
-          lastName: getFirstFieldError(flattened.lastName),
-          email: getFirstFieldError(flattened.email),
-          confirmEmail: getFirstFieldError(flattened.confirmEmail),
-          shippingCountry: getFirstFieldError(flattened.shippingCountry),
-          street: getFirstFieldError(flattened.street),
-          houseNumber: getFirstFieldError(flattened.houseNumber),
-          postalCode: getFirstFieldError(flattened.postalCode),
-          city: getFirstFieldError(flattened.city),
-          phoneNumber: getFirstFieldError(flattened.phoneNumber),
-          additionalInfo: getFirstFieldError(flattened.additionalInfo),
+          firstName: getFriendlyFieldError("firstName", flattened.firstName),
+          lastName: getFriendlyFieldError("lastName", flattened.lastName),
+          email: getFriendlyFieldError("email", flattened.email),
+          confirmEmail: getFriendlyFieldError("confirmEmail", flattened.confirmEmail),
+          shippingCountry: getFriendlyFieldError("shippingCountry", flattened.shippingCountry),
+          street: getFriendlyFieldError("street", flattened.street),
+          houseNumber: getFriendlyFieldError("houseNumber", flattened.houseNumber),
+          postalCode: getFriendlyFieldError("postalCode", flattened.postalCode),
+          city: getFriendlyFieldError("city", flattened.city),
+          phoneNumber: getFriendlyFieldError("phoneNumber", flattened.phoneNumber),
+          additionalInfo: getFriendlyFieldError("additionalInfo", flattened.additionalInfo),
         });
-        setError("Please complete the required shipping details before payment.");
+        setError("Please fill the form before payment.");
         return;
       }
 
@@ -789,16 +934,33 @@ export default function CartPage() {
                 <label htmlFor="shipping-phone" className="label">
                   Phone number
                 </label>
-                <input
-                  id="shipping-phone"
-                  className={fieldClassName(shippingFieldErrors.phoneNumber)}
-                  value={shippingForm.phoneNumber}
-                  onChange={(event) =>
-                    handleShippingFieldChange("phoneNumber", event.target.value)
-                  }
-                  placeholder="+49 000 000000"
-                  type="tel"
-                />
+                <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
+                  <select
+                    id="shipping-phone-country-code"
+                    className={fieldClassName(shippingFieldErrors.phoneNumber)}
+                    value={shippingForm.phoneCountryCode}
+                    onChange={(event) =>
+                      handleShippingFieldChange("phoneCountryCode", event.target.value)
+                    }
+                  >
+                    <option value="">Code</option>
+                    {phoneCodeOptions.map((option) => (
+                      <option key={option.countryCode} value={option.dialCode}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    id="shipping-phone"
+                    className={fieldClassName(shippingFieldErrors.phoneNumber)}
+                    value={shippingForm.phoneLocalNumber}
+                    onChange={(event) =>
+                      handleShippingFieldChange("phoneLocalNumber", event.target.value)
+                    }
+                    placeholder="Phone number"
+                    type="tel"
+                  />
+                </div>
                 {shippingFieldErrors.phoneNumber && (
                   <p className="mt-1 text-xs text-danger">{shippingFieldErrors.phoneNumber}</p>
                 )}
