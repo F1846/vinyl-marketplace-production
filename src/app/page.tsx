@@ -132,6 +132,23 @@ export default async function HomePage() {
       name: `${product.artist} - ${product.title}`,
     })),
   };
+  const homeFeatures = [
+    {
+      icon: Check,
+      title: dictionary.home.featureGradingTitle,
+      desc: dictionary.home.featureGradingBody,
+    },
+    {
+      icon: ShieldCheck,
+      title: dictionary.home.featureCheckoutTitle,
+      desc: dictionary.home.featureCheckoutBody,
+    },
+    {
+      icon: Truck,
+      title: dictionary.home.featureShippingTitle,
+      desc: dictionary.home.featureShippingBody,
+    },
+  ];
 
   return (
     <div className="space-y-10">
@@ -201,7 +218,7 @@ export default async function HomePage() {
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.formatMix}</p>
               <p className="mt-1.5 font-sans text-[1.22rem] font-bold capitalize tracking-[-0.04em] text-foreground">
-                Vinyl / Tape / CD
+                {dictionary.home.formatMixValue}
               </p>
               <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
                 {formatSpotlight
@@ -313,23 +330,7 @@ export default async function HomePage() {
       )}
 
       <section className="grid gap-4 sm:grid-cols-3">
-        {[
-          {
-            icon: Check,
-            title: "Collector-minded grading",
-            desc: "Detailed condition notes, format labels, and shelf-ready listings.",
-          },
-          {
-            icon: ShieldCheck,
-            title: "Flexible checkout",
-            desc: "Use card checkout, PayPal, or reserve for local pickup.",
-          },
-          {
-            icon: Truck,
-            title: "Shipping by format",
-            desc: "Rates adjust by country, quantity, and media format instead of one flat fee.",
-          },
-        ].map((feature) => (
+        {homeFeatures.map((feature) => (
           <div key={feature.title} className="rounded-[1.2rem] border border-border/90 bg-surface p-4 shadow-card">
             <feature.icon className="h-5 w-5 text-foreground" />
             <h3 className="mt-3 font-sans text-[1.45rem] font-bold tracking-[-0.04em] text-foreground">

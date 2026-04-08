@@ -39,8 +39,16 @@ const english = {
     catalogEmpty: "Catalog is empty. Check back soon.",
     currentFallback: "Current records, tapes, and CDs ready to open and play.",
     exploreMore: "Explore more",
+    featureCheckoutBody: "Use card checkout, PayPal, or reserve for local pickup.",
+    featureCheckoutTitle: "Flexible checkout",
+    featureGradingBody: "Detailed condition notes, format labels, and shelf-ready listings.",
+    featureGradingTitle: "Collector-minded grading",
+    featureShippingBody:
+      "Rates adjust by country, quantity, and media format instead of one flat fee.",
+    featureShippingTitle: "Shipping by format",
     formatFallback: "Browse by format and jump straight into the shelf you want.",
     formatMix: "Format mix",
+    formatMixValue: "Vinyl / Tape / CD",
     freshIn: "Fresh in",
     from: "From",
     independentRecordStore: "Independent record store",
@@ -320,7 +328,17 @@ const german: typeof english = {
     browseCatalog: "Zum Katalog",
     catalogEmpty: "Der Katalog ist leer. Schau bald wieder vorbei.",
     exploreMore: "Mehr entdecken",
+    featureCheckoutBody:
+      "Nutze Kartenzahlung, PayPal oder reserviere fur die lokale Abholung.",
+    featureCheckoutTitle: "Flexibler Checkout",
+    featureGradingBody:
+      "Detaillierte Zustandsangaben, Formatlabels und regalfertige Listings.",
+    featureGradingTitle: "Sammlergerechtes Grading",
+    featureShippingBody:
+      "Die Versandkosten richten sich nach Land, Menge und Medium statt nach einer Pauschale.",
+    featureShippingTitle: "Versand nach Format",
     formatMix: "Formatmix",
+    formatMixValue: "Vinyl / Kassette / CD",
     freshIn: "Frisch rein",
     from: "Ab",
     independentRecordStore: "Unabhangiger Plattenladen",
@@ -330,9 +348,9 @@ const german: typeof english = {
     shippingAndPickup: "Versand und Abholung",
     shopByFormat: "Nach Format shoppen",
     startWith: "Starte mit {product}",
-    worthHaving: "Records, die ins Regal gehoren.",
+    worthHaving: "Platten fuers Regal.",
     worthHavingBody:
-      "Federico Shop ist ein Shop fur elektronische Musik mit gegradeten Vinyls, Kassetten und CDs, fairen Euro Preisen und sammlerfreundlichem Versand.",
+      "Federico Shop ist ein Laden fur elektronische Musik mit gegradeten Vinyl-, Kassetten- und CD-Funden, fairen Euro-Preisen und sammlerfreundlichem Versand.",
   },
   productCard: {
     ...english.productCard,
@@ -538,7 +556,17 @@ const italian: typeof english = {
     browseCatalog: "Sfoglia il catalogo",
     catalogEmpty: "Il catalogo e vuoto. Torna presto.",
     exploreMore: "Scopri di piu",
+    featureCheckoutBody:
+      "Usa carta, PayPal oppure prenota per il ritiro locale.",
+    featureCheckoutTitle: "Checkout flessibile",
+    featureGradingBody:
+      "Note dettagliate sulle condizioni, etichette del formato e inserzioni pronte da scaffale.",
+    featureGradingTitle: "Grading per collezionisti",
+    featureShippingBody:
+      "Le tariffe cambiano in base al paese, alla quantita e al formato invece di usare un costo fisso.",
+    featureShippingTitle: "Spedizione per formato",
     formatMix: "Mix di formati",
+    formatMixValue: "Vinili / Cassette / CD",
     freshIn: "Appena arrivati",
     from: "Da",
     independentRecordStore: "Negozio di dischi indipendente",
@@ -548,9 +576,9 @@ const italian: typeof english = {
     shippingAndPickup: "Spedizione e ritiro",
     shopByFormat: "Acquista per formato",
     startWith: "Inizia con {product}",
-    worthHaving: "Records che vale la pena tenere sullo scaffale.",
+    worthHaving: "Vinili da scaffale.",
     worthHavingBody:
-      "Federico Shop e un negozio di musica elettronica con vinili, cassette e CD gradati, prezzi equi in euro e spedizione adatta ai collezionisti.",
+      "Federico Shop e un negozio di musica elettronica con vinili, cassette e CD selezionati e gradati, prezzi equi in euro e spedizioni pensate per i collezionisti.",
   },
   productCard: {
     ...english.productCard,
