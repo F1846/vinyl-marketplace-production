@@ -38,6 +38,11 @@ export default async function ImprintPage() {
               <span className="font-medium text-foreground">{dictionary.imprint.email}:</span>{" "}
               {siteConfig.legal.contactEmail}
             </p>
+            <p>
+              <span className="font-medium text-foreground">Emergency temporary:</span>{" "}
+              {siteConfig.emergencyEmail}
+            </p>
+            <p className="text-xs leading-6 text-muted">{siteConfig.emergencyEmailNote}</p>
             {siteConfig.legal.phone && (
               <p>
                 <span className="font-medium text-foreground">{dictionary.imprint.phone}:</span>{" "}

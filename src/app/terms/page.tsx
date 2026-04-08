@@ -28,6 +28,10 @@ export default async function TermsPage() {
           {dictionary.terms.productCondition}
         </h2>
         <p>{dictionary.terms.productConditionBody}</p>
+        <p>
+          Listing images can come from the Discogs API for release and condition reference.
+          If you need custom photos of the exact item, please contact us before ordering.
+        </p>
       </section>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
@@ -49,6 +53,10 @@ export default async function TermsPage() {
           {dictionary.terms.support}
         </h2>
         <p>{formatMessage(dictionary.terms.supportBody, { email: siteConfig.legal.contactEmail })}</p>
+        <p>
+          Emergency temporary: <span className="font-medium text-foreground">{siteConfig.emergencyEmail}</span>
+        </p>
+        <p className="text-xs leading-6 text-muted">{siteConfig.emergencyEmailNote}</p>
       </section>
     </div>
   );

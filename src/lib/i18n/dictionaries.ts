@@ -108,7 +108,7 @@ const english = {
   },
   about: {
     body:
-      "Federico Shop is a focused shop for graded vinyl, cassette, and CD copies, with an emphasis on electronic music, fair euro pricing, and collector-friendly packing.",
+      "Federico Shop is a focused shop for graded vinyl, cassette, and CD copies, with an emphasis on electronic music, fair pricing, and collector-friendly packing.",
     orders:
       "Orders can be placed with card checkout, PayPal when configured, or local pickup from {pickupLabel}.",
     title: "About Federico Shop",
@@ -197,7 +197,7 @@ const english = {
       "Approved refunds are returned to the original payment method whenever possible. For local pickup reservations, any pre-arranged payment handling will be confirmed directly by email.",
     damaged: "Damaged or incorrect items",
     damagedBody:
-      "Please reach out within 14 days of delivery. Include photos of the packaging and the item so we can review the issue quickly.",
+      "Please reach out within 7 working days of delivery. Include photos of the packaging and the item so we can review the issue quickly.",
     intro:
       "If an order arrives damaged or materially different from its listing, contact {email} and include your order number.",
     title: "Refund policy",
@@ -376,7 +376,7 @@ const german: typeof english = {
   about: {
     ...english.about,
     body:
-      "Federico Shop ist ein fokussierter Shop fur gegradete Vinyls, Kassetten und CDs mit Schwerpunkt auf elektronischer Musik, fairen Euro Preisen und sammlerfreundlicher Verpackung.",
+      "Federico Shop ist ein fokussierter Shop fur gegradete Vinyls, Kassetten und CDs mit Schwerpunkt auf elektronischer Musik, fairer Preisgestaltung und sammlerfreundlicher Verpackung.",
     orders:
       "Bestellungen konnen per Karte, PayPal oder lokaler Abholung aus {pickupLabel} aufgegeben werden.",
     title: "Uber Federico Shop",
@@ -588,7 +588,7 @@ const italian: typeof english = {
   about: {
     ...english.about,
     body:
-      "Federico Shop e un negozio focalizzato su vinili, cassette e CD gradati, con attenzione alla musica elettronica, prezzi equi in euro e imballaggio adatto ai collezionisti.",
+      "Federico Shop e un negozio focalizzato su vinili, cassette e CD gradati, con attenzione alla musica elettronica, prezzi equi e imballaggio adatto ai collezionisti.",
     orders:
       "Gli ordini possono essere effettuati con carta, PayPal o ritiro locale da {pickupLabel}.",
     title: "Su Federico Shop",

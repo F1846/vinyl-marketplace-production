@@ -31,6 +31,10 @@ export default async function ContactPage() {
             {dictionary.contact.email}: <span className="font-medium text-foreground">{siteConfig.supportEmail}</span>
           </p>
           <p className="text-sm leading-7 text-muted">
+            Emergency temporary: <span className="font-medium text-foreground">{siteConfig.emergencyEmail}</span>
+          </p>
+          <p className="text-xs leading-6 text-muted">{siteConfig.emergencyEmailNote}</p>
+          <p className="text-sm leading-7 text-muted">
             {dictionary.contact.pickup}: <span className="font-medium text-foreground">{siteConfig.pickupLabel}</span>
           </p>
         </div>

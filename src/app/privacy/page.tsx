@@ -60,6 +60,10 @@ export default async function PrivacyPage() {
             email: siteConfig.legal.contactEmail,
           })}
         </p>
+        <p>
+          Emergency temporary: <span className="font-medium text-foreground">{siteConfig.emergencyEmail}</span>
+        </p>
+        <p className="text-xs leading-6 text-muted">{siteConfig.emergencyEmailNote}</p>
       </section>
     </div>
   );

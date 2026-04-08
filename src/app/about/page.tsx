@@ -28,9 +28,6 @@ export default async function AboutPage() {
           {dictionary.about.whatFocuses}
         </h2>
         <p>
-          {dictionary.about.whatFocusesBody}
-        </p>
-        <p>
           {formatMessage(dictionary.about.orders, { pickupLabel: siteConfig.pickupLabel })}
         </p>
       </section>
