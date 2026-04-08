@@ -57,8 +57,11 @@ export default async function PrivacyPage() {
         </h2>
         <p>
           {formatMessage(dictionary.privacyPage.contactBody, {
-            email: siteConfig.legal.contactEmail,
+            email: siteConfig.supportEmail,
           })}
+        </p>
+        <p>
+          Orders: <span className="font-medium text-foreground">{siteConfig.orderEmail}</span>
         </p>
         <p>
           Emergency temporary: <span className="font-medium text-foreground">{siteConfig.emergencyEmail}</span>

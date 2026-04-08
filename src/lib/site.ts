@@ -3,10 +3,14 @@ function clean(value: string | undefined | null): string | null {
   return normalized ? normalized : null;
 }
 
-const fallbackSupportEmail = "orders@federicoshop.de";
-const configuredContactEmail =
-  clean(process.env.STORE_CONTACT_EMAIL) ??
-  clean(process.env.STORE_SUPPORT_EMAIL);
+const fallbackOrderEmail = "orders@federicoshop.de";
+const fallbackSupportEmail = "support@federicoshop.de";
+const configuredOrderEmail =
+  clean(process.env.STORE_ORDER_EMAIL) ??
+  clean(process.env.STORE_CONTACT_EMAIL);
+const configuredSupportEmail =
+  clean(process.env.STORE_SUPPORT_EMAIL) ??
+  clean(process.env.STORE_SUPPORT_CONTACT_EMAIL);
 
 export const siteConfig = {
   name: "Federico Shop",
@@ -14,12 +18,13 @@ export const siteConfig = {
   description:
     "Berlin electronic music record shop for techno, EBM, darkwave, post-punk, vinyl, cassette, and CD. Buy graded used records online from Federico Shop.",
   tagline: "Electronic music record shop",
-  supportEmail: configuredContactEmail ?? fallbackSupportEmail,
+  orderEmail: configuredOrderEmail ?? fallbackOrderEmail,
+  supportEmail: configuredSupportEmail ?? fallbackSupportEmail,
   emergencyEmail:
     clean(process.env.STORE_EMERGENCY_EMAIL) ?? "sandrodoglio40@gmail.com",
   emergencyEmailNote:
     clean(process.env.STORE_EMERGENCY_EMAIL_NOTE) ??
-    "Emergency temporary contact while the domain mailbox setup is being finalized.",
+    "Fallback contact if you do not receive a reply from the domain inbox.",
   baseUrl:
     clean(process.env.NEXT_PUBLIC_SITE_URL) ?? "https://www.federicoshop.de",
   pickupLabel:
@@ -53,7 +58,7 @@ export const siteConfig = {
     city: clean(process.env.STORE_CITY) ?? "Neukolln Berlin",
     country: clean(process.env.STORE_COUNTRY) ?? "Germany",
     vatId: clean(process.env.STORE_VAT_ID),
-    contactEmail: configuredContactEmail ?? fallbackSupportEmail,
+    contactEmail: configuredSupportEmail ?? fallbackSupportEmail,
     phone: clean(process.env.STORE_PHONE),
   },
 };

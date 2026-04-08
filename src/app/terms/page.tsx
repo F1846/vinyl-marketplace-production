@@ -52,7 +52,10 @@ export default async function TermsPage() {
         <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
           {dictionary.terms.support}
         </h2>
-        <p>{formatMessage(dictionary.terms.supportBody, { email: siteConfig.legal.contactEmail })}</p>
+        <p>{formatMessage(dictionary.terms.supportBody, { email: siteConfig.supportEmail })}</p>
+        <p>
+          Orders: <span className="font-medium text-foreground">{siteConfig.orderEmail}</span>
+        </p>
         <p>
           Emergency temporary: <span className="font-medium text-foreground">{siteConfig.emergencyEmail}</span>
         </p>

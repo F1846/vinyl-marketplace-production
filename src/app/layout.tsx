@@ -117,6 +117,13 @@ const websiteStructuredData = [
         areaServed: ["DE", "EU"],
         availableLanguage: ["en", "de", "it"],
       },
+      {
+        "@type": "ContactPoint",
+        email: siteConfig.orderEmail,
+        contactType: "sales",
+        areaServed: ["DE", "EU"],
+        availableLanguage: ["en", "de", "it"],
+      },
     ],
   },
   {

@@ -22,6 +22,18 @@ export default async function ContactPage() {
       "@type": "MusicStore",
       name: siteConfig.name,
       email: siteConfig.supportEmail,
+      contactPoint: [
+        {
+          "@type": "ContactPoint",
+          email: siteConfig.supportEmail,
+          contactType: "customer support",
+        },
+        {
+          "@type": "ContactPoint",
+          email: siteConfig.orderEmail,
+          contactType: "sales",
+        },
+      ],
       address: {
         "@type": "PostalAddress",
         streetAddress: [siteConfig.legal.street, siteConfig.legal.street2]
@@ -58,7 +70,13 @@ export default async function ContactPage() {
             {dictionary.contact.support}
           </h2>
           <p className="mt-3 text-sm leading-7 text-muted">
-            {dictionary.contact.email}: <span className="font-medium text-foreground">{siteConfig.supportEmail}</span>
+            Support: <span className="font-medium text-foreground">{siteConfig.supportEmail}</span>
+          </p>
+          <p className="text-sm leading-7 text-muted">
+            Orders: <span className="font-medium text-foreground">{siteConfig.orderEmail}</span>
+          </p>
+          <p className="text-sm leading-7 text-muted">
+            Both addresses are monitored and forwarded to our main inbox.
           </p>
           <p className="text-sm leading-7 text-muted">
             Emergency temporary: <span className="font-medium text-foreground">{siteConfig.emergencyEmail}</span>

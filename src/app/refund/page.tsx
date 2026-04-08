@@ -19,7 +19,10 @@ export default async function RefundPage() {
           {dictionary.refund.title}
         </h1>
         <p className="text-base leading-7 text-muted">
-          {formatMessage(dictionary.refund.intro, { email: siteConfig.legal.contactEmail })}
+          {formatMessage(dictionary.refund.intro, { email: siteConfig.supportEmail })}
+        </p>
+        <p className="text-sm leading-7 text-muted">
+          Orders: <span className="font-medium text-foreground">{siteConfig.orderEmail}</span>
         </p>
       </div>
 

@@ -35,8 +35,12 @@ export default async function ImprintPage() {
           </div>
           <div className="space-y-3 text-sm text-muted">
             <p>
-              <span className="font-medium text-foreground">{dictionary.imprint.email}:</span>{" "}
-              {siteConfig.legal.contactEmail}
+              <span className="font-medium text-foreground">Support email:</span>{" "}
+              {siteConfig.supportEmail}
+            </p>
+            <p>
+              <span className="font-medium text-foreground">Orders email:</span>{" "}
+              {siteConfig.orderEmail}
             </p>
             <p>
               <span className="font-medium text-foreground">Emergency temporary:</span>{" "}
