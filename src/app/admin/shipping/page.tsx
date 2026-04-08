@@ -34,13 +34,13 @@ export default async function AdminShippingPage() {
 
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
-          <thead className="border-b border-border bg-zinc-900">
+          <thead className="border-b border-border bg-surface-hover">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted">Country</th>
-              <th className="px-4 py-3 text-left font-medium text-muted">Format</th>
-              <th className="px-4 py-3 text-left font-medium text-muted">Quantity</th>
-              <th className="px-4 py-3 text-left font-medium text-muted">Rate</th>
-              <th className="px-4 py-3 text-right font-medium text-muted">Actions</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Country</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Format</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Quantity</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Rate</th>
+              <th className="px-4 py-3 text-right font-medium text-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>

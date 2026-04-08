@@ -1,6 +1,8 @@
 // ─── Enums ─────────────────────────────────────────
 
 export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+export type PaymentMethod = "card" | "paypal" | "pickup";
+export type DeliveryMethod = "shipping" | "pickup";
 
 // ─── Shipping Address ─────────────────────────────
 
@@ -13,6 +15,8 @@ export interface ShippingAddress {
   postalCode: string;
   country: string;
   phone: string | null;
+  pickupLocation?: string | null;
+  pickupNote?: string | null;
 }
 
 // ─── Order ────────────────────────────────────────
@@ -28,10 +32,13 @@ export interface Order {
   taxCents: number;
   totalCents: number;
   status: OrderStatus;
+  paymentMethod: PaymentMethod;
+  deliveryMethod: DeliveryMethod;
   trackingNumber: string | null;
   trackingCarrier: string | null;
   stripeSessionId: string | null;
   stripePaymentIntentId: string | null;
+  paypalOrderId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

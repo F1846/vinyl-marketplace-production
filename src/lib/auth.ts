@@ -3,7 +3,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-const ADMIN_COOKIE_NAME = "f1846_admin_session";
+const ADMIN_COOKIE_NAME = "federico_shop_admin_session";
 const ADMIN_SESSION_TTL_SECONDS = 60 * 60 * 24;
 
 type AdminSessionPayload = {

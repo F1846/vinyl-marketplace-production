@@ -51,6 +51,8 @@ export async function POST(req: NextRequest) {
     data: {
       orderNumber: order.orderNumber,
       status: order.status,
+      paymentMethod: order.paymentMethod,
+      deliveryMethod: order.deliveryMethod,
       totalCents: order.totalCents,
       createdAt: order.createdAt,
       trackingNumber: order.trackingNumber,

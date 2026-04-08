@@ -12,7 +12,7 @@ export interface CartItemType {
   format?: string;
 }
 
-const CART_KEY = "f1846_cart";
+const CART_KEY = "federico_shop_cart";
 const CART_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 let cartCache: CartItemType[] = [];

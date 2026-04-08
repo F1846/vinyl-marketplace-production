@@ -51,7 +51,7 @@ interface DiscogsRelease {
 
 const DISCOGS_API_BASE = "https://api.discogs.com";
 const DEFAULT_USER_AGENT =
-  "vinyl-marketplace-production/1.0 +https://github.com/F1846/vinyl-marketplace-production";
+  "federico-shop/1.0 +https://www.federicoshop.de";
 
 function usage(): string {
   return [

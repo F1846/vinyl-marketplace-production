@@ -16,11 +16,11 @@ export default async function AdminOrdersPage() {
   });
 
   const statusColors: Record<string, string> = {
-    pending: "text-yellow-400",
-    processing: "text-blue-400",
-    shipped: "text-purple-400",
-    delivered: "text-green-400",
-    cancelled: "text-red-400",
+    pending: "text-amber-700",
+    processing: "text-sky-700",
+    shipped: "text-violet-700",
+    delivered: "text-emerald-700",
+    cancelled: "text-rose-700",
   };
 
   return (
@@ -29,14 +29,15 @@ export default async function AdminOrdersPage() {
 
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
-          <thead className="border-b border-border bg-zinc-900">
+          <thead className="border-b border-border bg-surface-hover">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted">Order #</th>
-              <th className="px-4 py-3 text-left font-medium text-muted">Customer</th>
-              <th className="px-4 py-3 text-left font-medium text-muted">Total</th>
-              <th className="px-4 py-3 text-left font-medium text-muted">Status</th>
-              <th className="px-4 py-3 text-left font-medium text-muted">Date</th>
-              <th className="px-4 py-3 text-right font-medium text-muted">Actions</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Order #</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Customer</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Method</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Total</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Status</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Date</th>
+              <th className="px-4 py-3 text-right font-medium text-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -44,6 +45,9 @@ export default async function AdminOrdersPage() {
               <tr key={order.id} className="border-b border-border last:border-0 hover:bg-surface-hover">
                 <td className="px-4 py-3 font-mono text-accent">{order.orderNumber}</td>
                 <td className="px-4 py-3 text-foreground">{order.customerEmail}</td>
+                <td className="px-4 py-3 text-muted capitalize">
+                  {order.paymentMethod} / {order.deliveryMethod}
+                </td>
                 <td className="px-4 py-3 text-foreground">{formatEuroFromCents(order.totalCents)}</td>
                 <td className={`px-4 py-3 font-medium capitalize ${statusColors[order.status] ?? "text-foreground"}`}>
                   {order.status}

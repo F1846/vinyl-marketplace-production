@@ -12,3 +12,15 @@ export const checkoutSchema = z.object({
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
+
+export const pickupCheckoutSchema = z.object({
+  items: z.array(checkoutItemSchema).min(1),
+  customerName: z.string().trim().min(2).max(255),
+  customerEmail: z.string().trim().email(),
+  note: z.string().trim().max(500).optional(),
+});
+
+export const paypalCaptureSchema = z.object({
+  token: z.string().trim().min(1),
+  state: z.string().trim().min(1),
+});

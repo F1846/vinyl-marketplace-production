@@ -6,21 +6,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Discogs-inspired dark theme
-        background: "#1a1a1a",
-        surface: "#2d2d2d",
-        "surface-hover": "#3a3a3a",
-        border: "#404040",
-        foreground: "#e0e0e0",
-        muted: "#999",
-        accent: "#d4a843", // warm vinyl gold
-        "accent-hover": "#c49830",
-        "accent-dark": "#b07820",
-        danger: "#dc3545",
-        success: "#28a745",
+        background: "#f4f3ef",
+        surface: "#ffffff",
+        "surface-hover": "#f1f0ec",
+        border: "#dbd8d0",
+        foreground: "#171717",
+        muted: "#6f6c66",
+        accent: "#1f1f1f",
+        "accent-hover": "#353535",
+        "accent-dark": "#0f0f0f",
+        danger: "#b42318",
+        success: "#157347",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        sans: ["'Helvetica Neue'", "'Avenir Next'", "sans-serif"],
+        serif: ["Iowan Old Style", "Palatino Linotype", "Book Antiqua", "Georgia", "serif"],
         mono: ["JetBrains Mono", "Fira Code", "monospace"],
       },
       fontSize: {
@@ -32,6 +32,9 @@ export default {
         "2xl": ["1.5rem", { lineHeight: "2rem" }],
         "3xl": ["1.875rem", { lineHeight: "2.25rem" }],
         "4xl": ["2.25rem", { lineHeight: "2.5rem" }],
+      },
+      boxShadow: {
+        soft: "0 18px 50px rgba(15, 15, 15, 0.08)",
       },
     },
   },

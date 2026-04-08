@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Package, ShoppingCart, LayoutDashboard, ArrowLeft, Truck } from "lucide-react";
+import { Package, ShoppingCart, LayoutDashboard, ArrowLeft, Truck, Upload } from "lucide-react";
 import { adminLogoutAction } from "@/actions/auth";
 import { isAuthenticatedAdmin } from "@/lib/auth";
 import "./admin.css";
@@ -9,6 +9,7 @@ import "./admin.css";
 const navLinks = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/products", label: "Products", icon: Package },
+  { href: "/admin/import", label: "Import", icon: Upload },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/shipping", label: "Shipping", icon: Truck },
 ];

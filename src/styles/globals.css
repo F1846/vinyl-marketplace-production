@@ -4,29 +4,36 @@
 
 @layer base {
   html {
-    background-color: #1a1a1a;
-    color: #e0e0e0;
+    background-color: #f4f3ef;
+    color: #171717;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 35%),
+      linear-gradient(180deg, #faf9f6 0%, #f4f3ef 40%, #efede8 100%);
+  }
+
   ::selection {
-    background-color: #d4a843;
-    color: #1a1a1a;
+    background-color: #d8d4ca;
+    color: #171717;
   }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-primary {
-    @apply btn bg-accent text-background hover:bg-accent-hover;
+    @apply btn bg-accent text-white hover:bg-accent-hover;
   }
 
   .btn-secondary {
-    @apply btn border border-border bg-surface text-foreground hover:bg-surface-hover;
+    @apply btn border border-border bg-surface text-foreground hover:border-foreground/20 hover:bg-surface-hover;
   }
 
   .btn-danger {
@@ -34,7 +41,7 @@
   }
 
   .input {
-    @apply w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
+    @apply w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
   }
 
   .label {
@@ -42,35 +49,35 @@
   }
 
   .card {
-    @apply rounded-lg border border-border bg-surface p-4;
+    @apply rounded-[1.75rem] border border-border bg-surface p-5 shadow-soft;
   }
 
   .badge {
-    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em];
   }
 
   .badge-vinyl {
-    @apply badge bg-purple-900/50 text-purple-200;
+    @apply badge bg-zinc-900 text-white;
   }
 
   .badge-cassette {
-    @apply badge bg-blue-900/50 text-blue-200;
+    @apply badge bg-zinc-200 text-zinc-900;
   }
 
   .badge-cd {
-    @apply badge bg-emerald-900/50 text-emerald-200;
+    @apply badge bg-zinc-100 text-zinc-700;
   }
 
   .badge-active {
-    @apply badge bg-green-900/50 text-green-300;
+    @apply badge bg-emerald-100 text-emerald-800;
   }
 
   .badge-sold {
-    @apply badge bg-red-900/50 text-red-300;
+    @apply badge bg-red-100 text-red-700;
   }
 
   .badge-archived {
-    @apply badge bg-gray-800 text-gray-400;
+    @apply badge bg-zinc-100 text-zinc-500;
   }
 }
 

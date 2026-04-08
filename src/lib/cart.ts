@@ -8,7 +8,7 @@ export interface CartItem {
   quantity: number;
 }
 
-const COOKIE_NAME = "f1846_cart";
+const COOKIE_NAME = "federico_shop_cart";
 
 export async function getCartFromCookie(): Promise<CartItem[]> {
   const cookieStore = await cookies();

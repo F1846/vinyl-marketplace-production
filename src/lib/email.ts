@@ -1,18 +1,9 @@
 import { Resend } from "resend";
 import { OrderWithItems, type ShippingAddress } from "@/types/order";
 import { formatEuroFromCents } from "@/lib/money";
+import { siteConfig, siteUrl } from "@/lib/site";
 
 let _resend: Resend | null = null;
-
-function siteUrl(): string {
-  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (configuredUrl) return configuredUrl;
-
-  const vercelUrl = process.env.VERCEL_URL?.trim();
-  if (vercelUrl) return `https://${vercelUrl}`;
-
-  return "https://f1846vinyl.com";
-}
 
 function resend() {
   if (!_resend) {
@@ -22,8 +13,6 @@ function resend() {
   }
   return _resend;
 }
-
-// ─── Order Confirmation Email ──────────────────────
 
 export async function sendOrderConfirmation(order: OrderWithItems) {
   const from = process.env.EMAIL_FROM ?? "orders@yourdomain.com";
@@ -35,29 +24,24 @@ export async function sendOrderConfirmation(order: OrderWithItems) {
     )
     .join("\n");
 
-  const total = formatEuroFromCents(order.totalCents);
-  const shipping = formatEuroFromCents(order.shippingCents);
-  const subtotal = formatEuroFromCents(order.subtotalCents);
-
   const html = buildEmailHtml({
     orderNumber: order.orderNumber,
     customerName: order.customerName,
     lineItems,
-    subtotal,
-    shipping,
-    total,
+    subtotal: formatEuroFromCents(order.subtotalCents),
+    shipping: formatEuroFromCents(order.shippingCents),
+    total: formatEuroFromCents(order.totalCents),
     address: formatAddress(order.shippingAddress),
+    deliveryMethod: order.deliveryMethod,
   });
 
   await resend().emails.send({
     from,
     to: order.customerEmail,
-    subject: `Order ${order.orderNumber} Confirmed - F1846 Vinyl`,
+    subject: `Order ${order.orderNumber} confirmed - ${siteConfig.name}`,
     html,
   });
 }
-
-// ─── Shipping Notification (post-MVP) ──────────────
 
 export async function sendShippingNotification(order: OrderWithItems) {
   const from = process.env.EMAIL_FROM ?? "orders@yourdomain.com";
@@ -72,12 +56,10 @@ export async function sendShippingNotification(order: OrderWithItems) {
   await resend().emails.send({
     from,
     to: order.customerEmail,
-    subject: `Order ${order.orderNumber} Shipped - F1846 Vinyl`,
+    subject: `Order ${order.orderNumber} shipped - ${siteConfig.name}`,
     html,
   });
 }
-
-// ─── Email Templates (React -> HTML) ───────────────
 
 function buildEmailHtml({
   orderNumber,
@@ -87,29 +69,35 @@ function buildEmailHtml({
   shipping,
   total,
   address,
+  deliveryMethod,
 }: Record<string, string>): string {
+  const deliveryLabel =
+    deliveryMethod === "pickup" ? "Pickup details" : "Shipping address";
+
   return `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#1a1a1a;color:#e0e0e0;margin:0;padding:0}
-.container{max-width:600px;margin:24px auto;padding:24px;background:#2d2d2d;border-radius:8px}
-h1{color:#d4a843;font-size:20px;margin:0 0 8px}h2{font-size:16px;color:#e0e0e0;margin:16px 0 8px}
-.line-item{padding:8px 0;border-bottom:1px solid #404040}
-.totals{padding:8px 0;text-align:right;font-size:18px;font-weight:bold}
-.footer{margin-top:24px;font-size:12px;color:#999;text-align:center;border-top:1px solid #404040;padding-top:16px}
-a{color:#d4a843}</style>
+<style>
+body{font-family:'Helvetica Neue',Arial,sans-serif;background:#f4f3ef;color:#171717;margin:0;padding:0}
+.container{max-width:620px;margin:24px auto;padding:28px;background:#ffffff;border-radius:24px;border:1px solid #dbd8d0}
+h1{color:#171717;font-size:28px;font-family:Georgia,serif;margin:0 0 8px}
+h2{font-size:16px;color:#171717;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.18em}
+.line-item{padding:12px 0;border-bottom:1px solid #ece8e0}
+.totals{padding:12px 0;text-align:right;font-size:18px;font-weight:700}
+.footer{margin-top:24px;font-size:12px;color:#6f6c66;text-align:center;border-top:1px solid #ece8e0;padding-top:16px}
+a{color:#171717}
+</style>
 </head><body><div class="container">
-  <h1>F1846 Vinyl</h1>
-  <p>Thanks, ${customerName}!</p>
+  <h1>${siteConfig.name}</h1>
+  <p>Thanks, ${customerName}.</p>
   <h2>Order ${orderNumber}</h2>
   <div class="line-item"><pre style="white-space:pre-wrap;font-size:14px">${lineItems}</pre></div>
   <div class="totals">Subtotal: ${subtotal}<br>Shipping: ${shipping}<br><strong>Total: ${total}</strong></div>
-  <h2>Shipping To</h2>
+  <h2>${deliveryLabel}</h2>
   <pre style="white-space:pre-wrap;font-size:14px">${address}</pre>
-  <div class="footer">Expected delivery: 5-7 business days. Track your order: <a href="<NEXT_PUBLIC_SITE_URL>/track-order"><NEXT_PUBLIC_SITE_URL>/track-order</a></div>
-</div></body></html>`
-    .replace(/<NEXT_PUBLIC_SITE_URL>/g, siteUrl());
+  <div class="footer">Track your order: <a href="${siteUrl("/track-order")}">${siteUrl("/track-order")}</a></div>
+</div></body></html>`;
 }
 
 function buildShippingEmail({
@@ -119,16 +107,20 @@ function buildShippingEmail({
   trackingCarrier,
 }: Record<string, string | null>): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
-<div style="max-width:600px;margin:24px auto;padding:24px;background:#2d2d2d;border-radius:8px;font-family:Inter,system-ui,sans-serif;color:#e0e0e0">
-<h1 style="color:#d4a843">F1846 Vinyl</h1>
-<p>Thanks, ${customerName}!</p>
-<h2>Order ${orderNumber} has shipped!</h2>
+<div style="max-width:600px;margin:24px auto;padding:24px;background:#ffffff;border-radius:24px;border:1px solid #dbd8d0;font-family:'Helvetica Neue',Arial,sans-serif;color:#171717">
+<h1 style="font-family:Georgia,serif">${siteConfig.name}</h1>
+<p>Thanks, ${customerName}.</p>
+<h2>Order ${orderNumber} has shipped</h2>
 <p><strong>${trackingCarrier}</strong>: <code>${trackingNumber}</code></p>
-<div class="footer"><p>Questions? Just reply to this email.</div>
+<div style="margin-top:20px;color:#6f6c66;font-size:12px"><p>Questions? Reply to this email.</p></div>
 </div></body></html>`;
 }
 
 function formatAddress(addr: ShippingAddress): string {
+  if (addr.country === "PICKUP") {
+    return [addr.pickupLocation ?? addr.line1, addr.pickupNote].filter(Boolean).join("\n");
+  }
+
   return [
     addr.name,
     addr.line1,

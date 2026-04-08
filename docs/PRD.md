@@ -421,7 +421,7 @@ RICE scores are calculated as **(Reach x Impact x Confidence) / Effort** where E
 |---|---|---|
 | `products` | Product catalog | `id` (uuid v7), `artist`, `title`, `format` (enum: vinyl/cassette/cd), `genre`, `price_cents` (integer), `stock_quantity`, `condition_media` (enum), `condition_sleeve` (enum, nullable for non-vinyl), `pressing_label`, `pressing_year`, `pressing_catalog_number`, `description`, `status` (enum: active/sold_out/archived), `created_at`, `updated_at` |
 | `product_images` | Product images | `id` (uuid v7), `product_id` (FK), `url`, `sort_order`, `created_at` |
-| `orders` | Order records | `id` (uuid v7), `order_number` (human-readable, e.g., VM-20260407-0001), `customer_email`, `customer_name`, `shipping_address` (jsonb), `subtotal_cents`, `shipping_cents`, `tax_cents`, `total_cents`, `status` (enum: pending/processing/shipped/delivered/cancelled), `tracking_number`, `tracking_carrier`, `stripe_session_id`, `stripe_payment_intent_id`, `created_at`, `updated_at` |
+| `orders` | Order records | `id` (uuid v7), `order_number` (human-readable, e.g., FS-20260408-A7K2), `customer_email`, `customer_name`, `shipping_address` (jsonb), `subtotal_cents`, `shipping_cents`, `tax_cents`, `total_cents`, `status` (enum: pending/processing/shipped/delivered/cancelled), `tracking_number`, `tracking_carrier`, `stripe_session_id`, `stripe_payment_intent_id`, `created_at`, `updated_at` |
 | `order_items` | Order line items | `id` (uuid v7), `order_id` (FK), `product_id` (FK), `quantity`, `price_at_purchase_cents`, `created_at` |
 
 **Indexes:**

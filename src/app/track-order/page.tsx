@@ -7,6 +7,8 @@ import { formatEuroFromCents } from "@/lib/money";
 interface OrderData {
   orderNumber: string;
   status: string;
+  paymentMethod: string;
+  deliveryMethod: string;
   totalCents: number;
   createdAt: string;
   trackingNumber: string | null;
@@ -78,7 +80,7 @@ export default function TrackOrderPage() {
             id="orderNumber"
             name="orderNumber"
             className="input"
-            placeholder="e.g. VM-20260407-0001"
+            placeholder="e.g. FS-20260408-A7K2"
             required
           />
         </div>
@@ -145,13 +147,16 @@ function OrderResult({ order }: { order: OrderData }) {
       </div>
 
       {/* Total */}
-      <div className="border-t border-border pt-3">
-        <div className="flex justify-between text-lg font-bold text-foreground">
-          <span>Total Paid</span>
+        <div className="border-t border-border pt-3">
+          <div className="flex justify-between text-lg font-bold text-foreground">
+          <span>Order Total</span>
           <span>{formatEuroFromCents(order.totalCents)}</span>
         </div>
         <p className="text-xs text-muted mt-1">
           Ordered: {new Date(order.createdAt).toLocaleDateString()}
+        </p>
+        <p className="text-xs text-muted">
+          Payment: {order.paymentMethod} / Delivery: {order.deliveryMethod}
         </p>
       </div>
 

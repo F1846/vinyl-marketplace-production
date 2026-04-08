@@ -32,21 +32,26 @@ export default async function AdminProductsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Products ({products.length})</h1>
-        <Link href="/admin/products/new" className="btn-primary text-sm">
-          <Plus className="h-4 w-4" /> Add Product
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/admin/import" className="btn-secondary text-sm">
+            Import CSV
+          </Link>
+          <Link href="/admin/products/new" className="btn-primary text-sm">
+            <Plus className="h-4 w-4" /> Add Product
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
-          <thead className="border-b border-border bg-zinc-900">
+          <thead className="border-b border-border bg-surface-hover">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted">Product</th>
-              <th className="px-4 py-3 text-left font-medium text-muted">Format</th>
-              <th className="px-4 py-3 text-left font-medium text-muted">Price</th>
-              <th className="px-4 py-3 text-left font-medium text-muted">Stock</th>
-              <th className="px-4 py-3 text-left font-medium text-muted">Status</th>
-              <th className="px-4 py-3 text-right font-medium text-muted">Actions</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Product</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Format</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Price</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Stock</th>
+              <th className="px-4 py-3 text-left font-medium text-foreground">Status</th>
+              <th className="px-4 py-3 text-right font-medium text-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>

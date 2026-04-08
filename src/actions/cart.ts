@@ -8,7 +8,7 @@ const cartItemSchema = z.object({
   quantity: z.number().int().min(1).max(10),
 });
 
-const COOKIE_NAME = "f1846_cart";
+const COOKIE_NAME = "federico_shop_cart";
 
 export async function getCart(): Promise<z.infer<typeof cartItemSchema>[]> {
   const cookieStore = await cookies();

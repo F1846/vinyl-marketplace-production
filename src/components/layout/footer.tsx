@@ -1,25 +1,57 @@
 import Link from "next/link";
+import { siteConfig } from "@/lib/site";
 
 export function Footer() {
   return (
-    <footer className="border-t border-border bg-surface">
+    <footer className="border-t border-border bg-[rgba(255,255,255,0.76)]">
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+        <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr_1fr]">
           <div>
-            <span className="text-lg font-bold text-accent">F1846 Vinyl</span>
-            <p className="mt-1 text-sm text-muted">Electronic music on physical media</p>
+            <span className="font-serif text-3xl text-foreground">{siteConfig.name}</span>
+            <p className="mt-3 max-w-md text-sm leading-7 text-muted">
+              {siteConfig.description}
+            </p>
           </div>
-          <div className="flex gap-6 text-sm">
-            <Link href="/catalog" className="text-muted hover:text-accent transition-colors">
-              Catalog
-            </Link>
-            <Link href="/track-order" className="text-muted hover:text-accent transition-colors">
-              Track Order
-            </Link>
+          <div className="space-y-3 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Shop</p>
+            <div className="flex flex-col gap-3">
+              <Link href="/catalog" className="text-muted transition-colors hover:text-accent">
+                Catalog
+              </Link>
+              <Link href="/shipping" className="text-muted transition-colors hover:text-accent">
+                Shipping and pickup
+              </Link>
+              <Link href="/track-order" className="text-muted transition-colors hover:text-accent">
+                Track Order
+              </Link>
+            </div>
+          </div>
+          <div className="space-y-3 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Info</p>
+            <div className="flex flex-col gap-3">
+              <Link href="/about" className="text-muted transition-colors hover:text-accent">
+                About
+              </Link>
+              <Link href="/contact" className="text-muted transition-colors hover:text-accent">
+                Contact
+              </Link>
+              <Link href="/imprint" className="text-muted transition-colors hover:text-accent">
+                Imprint
+              </Link>
+              <Link href="/privacy" className="text-muted transition-colors hover:text-accent">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="text-muted transition-colors hover:text-accent">
+                Terms
+              </Link>
+              <Link href="/refund" className="text-muted transition-colors hover:text-accent">
+                Refunds
+              </Link>
+            </div>
           </div>
         </div>
-        <div className="mt-6 border-t border-border pt-4 text-center text-xs text-muted">
-          &copy; {new Date().getFullYear()} F1846 Vinyl. All rights reserved.
+        <div className="mt-8 border-t border-border pt-4 text-center text-xs text-muted">
+          &copy; {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
         </div>
       </div>
     </footer>

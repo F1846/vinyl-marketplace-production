@@ -58,11 +58,16 @@ export default async function AdminOrderDetailPage({
         <h2 className="text-lg font-semibold text-foreground">Customer</h2>
         <p className="text-sm text-foreground">{order.customerName}</p>
         <p className="text-sm text-muted">{order.customerEmail}</p>
+        <p className="text-sm capitalize text-muted">
+          Payment: {order.paymentMethod} / Delivery: {order.deliveryMethod}
+        </p>
       </div>
 
       {/* Shipping address */}
       <div className="card space-y-3">
-          <h2 className="text-lg font-semibold text-foreground">Shipping Address</h2>
+          <h2 className="text-lg font-semibold text-foreground">
+            {order.deliveryMethod === "pickup" ? "Pickup details" : "Shipping Address"}
+          </h2>
           <pre className="text-sm text-muted whitespace-pre-wrap">
             {[
             shippingAddress.name,
@@ -70,6 +75,7 @@ export default async function AdminOrderDetailPage({
             shippingAddress.line2,
             [shippingAddress.city, shippingAddress.state, shippingAddress.postalCode].filter(Boolean).join(" "),
             shippingAddress.country,
+            shippingAddress.pickupNote,
           ].filter(Boolean).join("\n")}
         </pre>
       </div>

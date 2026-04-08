@@ -30,6 +30,10 @@ export const orderStatusEnum = pgEnum("order_status", [
   "cancelled",
 ]);
 
+export const paymentMethodEnum = pgEnum("payment_method", ["card", "paypal", "pickup"]);
+
+export const deliveryMethodEnum = pgEnum("delivery_method", ["shipping", "pickup"]);
+
 // ──────────────────────────────────────────────
 // Products
 // ──────────────────────────────────────────────
@@ -97,10 +101,13 @@ export const orders = pgTable("orders", {
   taxCents: integer("tax_cents").notNull().default(0),
   totalCents: integer("total_cents").notNull(),
   status: orderStatusEnum("status").notNull().default("pending"),
+  paymentMethod: paymentMethodEnum("payment_method").notNull().default("card"),
+  deliveryMethod: deliveryMethodEnum("delivery_method").notNull().default("shipping"),
   trackingNumber: varchar("tracking_number", { length: 100 }),
   trackingCarrier: varchar("tracking_carrier", { length: 100 }),
   stripeSessionId: varchar("stripe_session_id", { length: 255 }).unique(),
   stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }).unique(),
+  paypalOrderId: varchar("paypal_order_id", { length: 255 }).unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

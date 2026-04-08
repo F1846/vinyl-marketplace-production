@@ -1,15 +1,15 @@
-# F1846 Vinyl
+# Federico Shop
 
-Electronic music marketplace for vinyl records, cassette tapes, and CDs. Inspired by Discogs. Single-vendor MVP with Stripe checkout.
+Electronic music marketplace for vinyl records, cassette tapes, and CDs. Inspired by Discogs. Single-vendor MVP with card checkout, PayPal, and local pickup support.
 
 ## Tech Stack
 
 - **Framework**: Next.js 15 (App Router, Server Components)
 - **Database**: PostgreSQL via Drizzle ORM (Neon/Vercel Postgres)
-- **Payments**: Stripe Checkout (hosted)
+- **Payments**: Stripe Checkout, PayPal redirect checkout, local pickup reservations
 - **Email**: Resend (transactional)
 - **Images**: Vercel Blob
-- **Styling**: Tailwind CSS (Discogs-inspired dark theme)
+- **Styling**: Tailwind CSS (light editorial storefront)
 - **Deploy**: Vercel
 - **CI/CD**: GitHub Actions (lint, typecheck, build, deploy)
 

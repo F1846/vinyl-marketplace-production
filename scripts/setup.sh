@@ -1,9 +1,9 @@
 #!/bin/bash
-# Setup script for F1846 Vinyl
+# Setup script for Federico Shop
 # Installs deps, sets up DB, seeds data, and starts the dev server
 set -e
 
-echo "F1846 Vinyl - Setup Script"
+echo "Federico Shop - Setup Script"
 echo "=========================="
 
 # Check Node.js

@@ -1,4 +1,4 @@
-# Deploy F1846 Vinyl
+# Deploy Federico Shop
 
 ## Step 1: Create GitHub Repository
 
