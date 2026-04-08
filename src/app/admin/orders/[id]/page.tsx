@@ -16,6 +16,7 @@ import {
   type TrackingSummary,
 } from "@/types/order";
 import { formatEuroFromCents } from "@/lib/money";
+import { pickupAddressLines } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,20 @@ export default async function AdminOrderDetailPage({
     order.taxCents > 0 && order.subtotalCents + order.shippingCents > 0
       ? (order.taxCents / (order.subtotalCents + order.shippingCents)) * 100
       : 0;
+  const addressLines =
+    order.deliveryMethod === "pickup"
+      ? pickupAddressLines()
+      : [
+          shippingAddress.name,
+          shippingAddress.email,
+          shippingAddress.phoneNumber ?? shippingAddress.phone,
+          shippingAddress.line1,
+          shippingAddress.additionalInfo ?? shippingAddress.line2,
+          [shippingAddress.postalCode, shippingAddress.city, shippingAddress.state]
+            .filter(Boolean)
+            .join(" "),
+          shippingAddress.country,
+        ].filter(Boolean);
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -237,20 +252,7 @@ export default async function AdminOrderDetailPage({
               {order.deliveryMethod === "pickup" ? "Pickup details" : "Shipping address"}
             </h2>
             <pre className="whitespace-pre-wrap text-sm text-muted">
-              {[
-                shippingAddress.name,
-                shippingAddress.email,
-                shippingAddress.phoneNumber ?? shippingAddress.phone,
-                shippingAddress.line1,
-                shippingAddress.additionalInfo ?? shippingAddress.line2,
-                [shippingAddress.postalCode, shippingAddress.city, shippingAddress.state]
-                  .filter(Boolean)
-                  .join(" "),
-                shippingAddress.country,
-                shippingAddress.pickupNote,
-              ]
-                .filter(Boolean)
-                .join("\n")}
+              {addressLines.join("\n")}
             </pre>
           </div>
         </div>

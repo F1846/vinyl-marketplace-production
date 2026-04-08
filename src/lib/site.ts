@@ -27,6 +27,24 @@ export const siteConfig = {
   pickupNote:
     clean(process.env.STORE_PICKUP_NOTE) ??
     "Pickup is arranged by email after your order is placed.",
+  pickupContactName:
+    clean(process.env.STORE_PICKUP_CONTACT_NAME) ?? "Federico Doglio",
+  pickupStreet:
+    clean(process.env.STORE_PICKUP_ADDRESS_LINE1) ??
+    clean(process.env.STORE_ADDRESS_LINE1) ??
+    "Okerstr 43",
+  pickupPostalCode:
+    clean(process.env.STORE_PICKUP_POSTAL_CODE) ??
+    clean(process.env.STORE_POSTAL_CODE) ??
+    "12049",
+  pickupCity:
+    clean(process.env.STORE_PICKUP_CITY) ??
+    clean(process.env.STORE_CITY) ??
+    "Neukolln Berlin",
+  pickupCountry:
+    clean(process.env.STORE_PICKUP_COUNTRY) ??
+    clean(process.env.STORE_COUNTRY) ??
+    "Germany",
   legal: {
     owner: clean(process.env.STORE_OWNER) ?? "Federico Shop",
     street: clean(process.env.STORE_ADDRESS_LINE1) ?? "Okerstr",
@@ -51,5 +69,14 @@ export function legalAddressLines(): string[] {
     siteConfig.legal.street2,
     [siteConfig.legal.postalCode, siteConfig.legal.city].filter(Boolean).join(" "),
     siteConfig.legal.country,
+  ].filter((value): value is string => Boolean(value));
+}
+
+export function pickupAddressLines(): string[] {
+  return [
+    siteConfig.pickupContactName,
+    siteConfig.pickupStreet,
+    [siteConfig.pickupPostalCode, siteConfig.pickupCity].filter(Boolean).join(" "),
+    siteConfig.pickupCountry,
   ].filter((value): value is string => Boolean(value));
 }

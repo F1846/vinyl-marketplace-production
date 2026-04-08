@@ -9,7 +9,7 @@ import {
 } from "pdf-lib";
 import { db, schema } from "@/db";
 import { formatEuroFromCents } from "@/lib/money";
-import { legalAddressLines, siteConfig } from "@/lib/site";
+import { legalAddressLines, pickupAddressLines, siteConfig } from "@/lib/site";
 import type { OrderWithItems, ShippingAddress } from "@/types/order";
 
 const DEFAULT_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
@@ -70,13 +70,7 @@ function formatInvoiceDate(value: Date): string {
 
 function formatAddressLines(address: ShippingAddress): string[] {
   if (address.country === "PICKUP") {
-    return [
-      address.name,
-      address.email ?? "",
-      address.phoneNumber ?? address.phone ?? "",
-      address.pickupLocation ?? address.line1,
-      address.pickupNote ?? "",
-    ].filter(Boolean);
+    return pickupAddressLines();
   }
 
   const locality = [address.postalCode, address.city].filter(Boolean).join(" ");

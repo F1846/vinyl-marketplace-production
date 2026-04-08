@@ -246,19 +246,19 @@ async function releaseReservedStock(items: Array<{ productId: string; quantity: 
   }
 }
 
-export function createPickupAddress(customerName: string, note?: string | null): ShippingAddress {
+export function createPickupAddress(_customerName: string, note?: string | null): ShippingAddress {
   return {
-    name: customerName,
-    line1: siteConfig.legal.street,
-    line2: siteConfig.legal.street2,
-    city: siteConfig.legal.city,
+    name: siteConfig.pickupContactName,
+    line1: siteConfig.pickupStreet,
+    line2: null,
+    city: siteConfig.pickupCity,
     state: "",
-    postalCode: siteConfig.legal.postalCode,
-    country: siteConfig.legal.country,
-    phone: siteConfig.legal.phone,
-    phoneNumber: siteConfig.legal.phone,
+    postalCode: siteConfig.pickupPostalCode,
+    country: siteConfig.pickupCountry,
+    phone: null,
+    phoneNumber: null,
     pickupLocation: siteConfig.pickupLabel,
-    pickupNote: note?.trim() || siteConfig.pickupNote,
+    pickupNote: note?.trim() || null,
   };
 }
 

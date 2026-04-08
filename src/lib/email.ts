@@ -1,6 +1,6 @@
 import { formatEuroFromCents } from "@/lib/money";
 import { createInvoiceToken } from "@/lib/invoice";
-import { siteConfig, siteUrl } from "@/lib/site";
+import { pickupAddressLines, siteConfig, siteUrl } from "@/lib/site";
 import type { OrderStatus, TrackingSummary } from "@/types/order";
 import { OrderWithItems, type ShippingAddress } from "@/types/order";
 
@@ -396,7 +396,7 @@ function buildStatusEmailText({
 
 function formatAddress(addr: ShippingAddress): string {
   if (addr.country === "PICKUP") {
-    return [addr.pickupLocation ?? addr.line1, addr.pickupNote].filter(Boolean).join("\n");
+    return pickupAddressLines().join("\n");
   }
 
   const locality = [addr.postalCode, addr.city].filter(Boolean).join(" ");
