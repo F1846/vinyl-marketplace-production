@@ -48,6 +48,18 @@ function createSessionToken(secret: string): string {
   return `${payload}.${signPayload(payload, secret)}`;
 }
 
+type AdminSessionCookie = {
+  name: string;
+  value: string;
+  options: {
+    httpOnly: boolean;
+    secure: boolean;
+    sameSite: "strict";
+    expires: Date;
+    path: string;
+  };
+};
+
 function verifySessionToken(token: string, secret: string): boolean {
   const [payload, signature] = token.split(".");
   if (!payload || !signature) {
@@ -87,7 +99,7 @@ export async function verifyAdminPassword(password: string): Promise<boolean> {
   return envPassword ? password === envPassword : false;
 }
 
-export async function createAdminSession(): Promise<string> {
+export function createAdminSessionCookie(): AdminSessionCookie {
   const secret = getAdminSessionSecret();
   if (!secret) {
     throw new Error("Admin session secret is not configured");
@@ -95,17 +107,27 @@ export async function createAdminSession(): Promise<string> {
 
   const sessionId = createSessionToken(secret);
   const expiresAt = new Date(Date.now() + ADMIN_SESSION_TTL_SECONDS * 1000);
+
+  return {
+    name: ADMIN_COOKIE_NAME,
+    value: sessionId,
+    options: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      expires: expiresAt,
+      path: "/",
+    },
+  };
+}
+
+export async function createAdminSession(): Promise<string> {
+  const session = createAdminSessionCookie();
   const cookieStore = await cookies();
 
-  cookieStore.set(ADMIN_COOKIE_NAME, sessionId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    expires: expiresAt,
-    path: "/",
-  });
+  cookieStore.set(session.name, session.value, session.options);
 
-  return sessionId;
+  return session.value;
 }
 
 export async function isAuthenticatedAdmin(): Promise<boolean> {

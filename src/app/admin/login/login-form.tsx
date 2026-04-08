@@ -1,15 +1,6 @@
-"use client";
-
-import { useActionState } from "react";
 import { Lock } from "lucide-react";
-import { adminLoginAction } from "@/actions/auth";
 
-export function AdminLoginForm() {
-  const [state, formAction] = useActionState(adminLoginAction, {
-    error: null,
-    success: false,
-  });
-
+export function AdminLoginForm({ error }: { error?: string | null }) {
   return (
     <div className="mx-auto mt-20 max-w-md">
       <div className="card space-y-6">
@@ -19,7 +10,7 @@ export function AdminLoginForm() {
           </div>
         </div>
         <h1 className="text-center text-xl font-bold text-foreground">Admin Login</h1>
-        <form action={formAction} className="space-y-4">
+        <form action="/api/admin/login" method="post" className="space-y-4">
           <div>
             <label htmlFor="password" className="label">Password</label>
             <input
@@ -32,7 +23,7 @@ export function AdminLoginForm() {
               required
             />
           </div>
-          {state.error && <p className="text-sm text-danger">{state.error}</p>}
+          {error && <p className="text-sm text-danger">{error}</p>}
           <button type="submit" className="btn-primary w-full">
             Sign In
           </button>

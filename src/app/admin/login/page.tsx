@@ -4,10 +4,24 @@ import { AdminLoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminLoginPage() {
+export default async function AdminLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   if (await isAuthenticatedAdmin()) {
     redirect("/admin");
   }
 
-  return <AdminLoginForm />;
+  const params = await searchParams;
+  const error =
+    params.error === "invalid-password"
+      ? "Invalid password"
+      : params.error === "missing-password"
+        ? "Password is required"
+        : params.error === "auth-not-configured"
+          ? "Admin login is not configured"
+          : null;
+
+  return <AdminLoginForm error={error} />;
 }
