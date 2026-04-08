@@ -11,7 +11,9 @@ export default function PrivacyPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-muted">
           Privacy
         </p>
-        <h1 className="font-serif text-4xl text-foreground">Privacy Policy</h1>
+        <h1 className="font-sans text-4xl font-bold tracking-[-0.04em] text-foreground">
+          Privacy Policy
+        </h1>
         <p className="text-base leading-7 text-muted">
           {siteConfig.name} only processes the data needed to run the shop,
           fulfill orders, and provide support.
@@ -19,7 +21,9 @@ export default function PrivacyPage() {
       </div>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
-        <h2 className="font-serif text-2xl text-foreground">What We Collect</h2>
+        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
+          What We Collect
+        </h2>
         <p>
           When you place an order, we may process your name, email address,
           shipping details, the items you purchase, and payment-related
@@ -33,7 +37,9 @@ export default function PrivacyPage() {
       </section>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
-        <h2 className="font-serif text-2xl text-foreground">How Data Is Used</h2>
+        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
+          How Data Is Used
+        </h2>
         <p>We use order data to:</p>
         <ul className="space-y-2">
           <li>process and confirm orders</li>
@@ -44,17 +50,21 @@ export default function PrivacyPage() {
       </section>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
-        <h2 className="font-serif text-2xl text-foreground">Third-Party Services</h2>
+        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
+          Third-Party Services
+        </h2>
         <p>
           Payments are processed by Stripe and, when configured, PayPal. Order
-          emails are sent through Resend. Product and storefront data are hosted
+          emails are sent through Mailgun. Product and storefront data are hosted
           through Vercel and PostgreSQL infrastructure selected by the store
           operator.
         </p>
       </section>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
-        <h2 className="font-serif text-2xl text-foreground">Contact</h2>
+        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
+          Contact
+        </h2>
         <p>
           For privacy questions or deletion requests, contact{" "}
           <span className="font-medium text-foreground">

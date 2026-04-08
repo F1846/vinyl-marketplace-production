@@ -174,7 +174,7 @@ export function CatalogBrowser({
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Catalog</p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="font-serif text-[2rem] leading-[0.98] text-foreground sm:text-[2.15rem]">
+            <h1 className="font-sans text-[2rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[2.15rem]">
               Shop the archive
             </h1>
             <p className="mt-2 text-sm leading-6 text-muted">
@@ -220,7 +220,9 @@ export function CatalogBrowser({
             </form>
 
             <div className="space-y-3">
-              <p className="font-serif text-base text-foreground">Format</p>
+              <p className="font-sans text-base font-bold tracking-[-0.03em] text-foreground">
+                Format
+              </p>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -243,7 +245,9 @@ export function CatalogBrowser({
             </div>
 
             <div className="space-y-3">
-              <p className="font-serif text-base text-foreground">Genre</p>
+              <p className="font-sans text-base font-bold tracking-[-0.03em] text-foreground">
+                Genre
+              </p>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"

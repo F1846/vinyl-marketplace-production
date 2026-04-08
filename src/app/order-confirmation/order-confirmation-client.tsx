@@ -46,7 +46,9 @@ export function OrderConfirmationClient({
       <div className="flex justify-center">
         <CheckCircle className="h-16 w-16 text-success" />
       </div>
-      <h1 className="font-serif text-4xl text-foreground">{title}</h1>
+      <h1 className="font-sans text-4xl font-bold tracking-[-0.04em] text-foreground">
+        {title}
+      </h1>
       <p className="text-lg text-muted">{body}</p>
 
       {orderNumber && (
@@ -59,7 +61,9 @@ export function OrderConfirmationClient({
       )}
 
       <div className="card space-y-3 text-left">
-        <h2 className="font-serif text-2xl text-foreground">What happens next</h2>
+        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
+          What happens next
+        </h2>
         <ul className="space-y-2 text-sm leading-7 text-muted">
           <li>1. You will receive a confirmation email with your order number.</li>
           <li>2. We will prepare your order or arrange pickup details.</li>

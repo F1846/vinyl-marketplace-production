@@ -89,7 +89,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
       <div className={paddingClass}>
         <p className={artistClass}>{product.artist}</p>
         <p
-          className={`mt-1.5 line-clamp-2 font-serif leading-tight text-foreground ${titleClass}`}
+          className={`mt-1.5 line-clamp-2 font-sans font-bold leading-tight tracking-[-0.04em] text-foreground ${titleClass}`}
         >
           {product.title}
         </p>

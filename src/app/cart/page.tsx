@@ -577,7 +577,9 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <div className="card py-16 text-center">
-        <h2 className="font-serif text-3xl text-foreground">Your cart is empty</h2>
+        <h2 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground">
+          Your cart is empty
+        </h2>
         <p className="mt-2 text-muted">Browse the racks and add a few records you love.</p>
         <Link href="/catalog" className="btn-primary mt-6">
           <ArrowLeft className="h-4 w-4" /> Browse catalog
@@ -591,7 +593,7 @@ export default function CartPage() {
       <div className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
         <div className="space-y-3 text-center sm:text-left">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Cart</p>
-          <h1 className="font-serif text-[2.5rem] leading-[0.95] text-foreground sm:text-[2.9rem]">
+          <h1 className="font-sans text-[2.5rem] font-bold leading-[0.95] tracking-[-0.04em] text-foreground sm:text-[2.9rem]">
             Your cart ({totalItems} item{totalItems !== 1 ? "s" : ""})
           </h1>
           <p className="text-sm leading-7 text-muted">
@@ -619,7 +621,7 @@ export default function CartPage() {
                   ) : null}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="line-clamp-1 font-serif text-[0.98rem] text-foreground">
+                  <p className="line-clamp-1 font-sans text-[0.98rem] font-bold tracking-[-0.04em] text-foreground">
                     {item.title}
                   </p>
                   <p className="text-[10px] uppercase tracking-[0.16em] text-muted">
@@ -671,10 +673,10 @@ export default function CartPage() {
                   <div className="min-w-0 flex-1">
                     <Link
                       href={`/products/${item.productId}`}
-                    className="line-clamp-2 font-serif text-[1.15rem] leading-tight text-foreground hover:text-accent"
-                  >
-                    {item.title}
-                  </Link>
+                      className="line-clamp-2 font-sans text-[1.15rem] font-bold leading-tight tracking-[-0.04em] text-foreground hover:text-accent"
+                    >
+                      {item.title}
+                    </Link>
                     {item.format && (
                       <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-muted">
                         {item.format}
@@ -724,7 +726,7 @@ export default function CartPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
                 Checkout
               </p>
-              <h2 className="mt-2 font-serif text-[2.1rem] leading-[0.98] text-foreground">
+              <h2 className="mt-2 font-sans text-[2.1rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground">
                 Finish your order
               </h2>
               <p className="mt-2 text-sm leading-6 text-muted">

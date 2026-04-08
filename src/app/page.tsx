@@ -79,7 +79,7 @@ export default async function HomePage() {
             Independent record store
           </div>
           <div className="space-y-3">
-            <h1 className="max-w-[10.5ch] text-balance font-serif text-[clamp(3.15rem,7vw,5.25rem)] leading-[0.91] text-foreground">
+            <h1 className="max-w-[10.5ch] text-balance font-sans text-[clamp(3.15rem,7vw,5.25rem)] font-bold leading-[0.91] tracking-[-0.05em] text-foreground">
               Records worth having on the shelf.
             </h1>
             <p className="max-w-xl text-[15px] leading-7 text-muted">
@@ -101,7 +101,7 @@ export default async function HomePage() {
               className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted">Available now</p>
-              <p className="mt-1.5 font-serif text-[1.55rem] leading-none text-foreground">
+              <p className="mt-1.5 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
                 {count ?? 0}
               </p>
               <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
@@ -115,7 +115,7 @@ export default async function HomePage() {
               className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted">From</p>
-              <p className="mt-1.5 font-serif text-[1.55rem] leading-none text-foreground">
+              <p className="mt-1.5 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
                 {minPrice === null ? "0 EUR" : formatEuroFromCents(minPrice)}
               </p>
               <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
@@ -133,7 +133,7 @@ export default async function HomePage() {
               className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted">Format mix</p>
-              <p className="mt-1.5 font-serif text-[1.22rem] capitalize text-foreground">
+              <p className="mt-1.5 font-sans text-[1.22rem] font-bold capitalize tracking-[-0.04em] text-foreground">
                 Vinyl / Tape / CD
               </p>
               <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
@@ -171,7 +171,9 @@ export default async function HomePage() {
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
               Fresh in
             </p>
-            <h2 className="font-serif text-[2rem] text-foreground">New arrivals</h2>
+            <h2 className="font-sans text-[2rem] font-bold tracking-[-0.04em] text-foreground">
+              New arrivals
+            </h2>
           </div>
           <Link href="/catalog" className="text-sm text-accent hover:underline">
             View all <ArrowRight className="inline h-4 w-4" />
@@ -199,7 +201,7 @@ export default async function HomePage() {
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
                 Shelf picks
               </p>
-              <h2 className="font-serif text-[1.85rem] text-foreground">
+              <h2 className="font-sans text-[1.85rem] font-bold tracking-[-0.04em] text-foreground">
                 More from the racks
               </h2>
             </div>
@@ -235,7 +237,9 @@ export default async function HomePage() {
         ].map((feature) => (
           <div key={feature.title} className="rounded-[1.2rem] border border-border/90 bg-surface p-4 shadow-card">
             <feature.icon className="h-5 w-5 text-foreground" />
-            <h3 className="mt-3 font-serif text-[1.45rem] text-foreground">{feature.title}</h3>
+            <h3 className="mt-3 font-sans text-[1.45rem] font-bold tracking-[-0.04em] text-foreground">
+              {feature.title}
+            </h3>
             <p className="mt-2 text-sm leading-6 text-muted">{feature.desc}</p>
           </div>
         ))}

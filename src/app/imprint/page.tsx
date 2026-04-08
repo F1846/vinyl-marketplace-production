@@ -11,7 +11,9 @@ export default function ImprintPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-muted">
           Legal
         </p>
-        <h1 className="font-serif text-4xl text-foreground">Imprint</h1>
+        <h1 className="font-sans text-4xl font-bold tracking-[-0.04em] text-foreground">
+          Imprint
+        </h1>
         <p className="max-w-2xl text-base leading-7 text-muted">
           This page contains the operator details for {siteConfig.name}. If any
           legal company information still needs to be updated, replace the
@@ -21,7 +23,9 @@ export default function ImprintPage() {
       </div>
 
       <section className="card space-y-4">
-        <h2 className="font-serif text-2xl text-foreground">Provider Information</h2>
+        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
+          Provider Information
+        </h2>
         <div className="grid gap-6 md:grid-cols-2">
           <div>
             <p className="text-sm font-medium text-foreground">Store operator</p>
@@ -51,7 +55,9 @@ export default function ImprintPage() {
       </section>
 
       <section className="card space-y-3">
-        <h2 className="font-serif text-2xl text-foreground">Editorial Responsibility</h2>
+        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
+          Editorial Responsibility
+        </h2>
         <p className="text-sm leading-7 text-muted">
           The operator named above is responsible for the content of this shop,
           product listings, and transaction-related communication.

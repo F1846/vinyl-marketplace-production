@@ -7,7 +7,9 @@ export function Footer() {
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr_1fr]">
           <div>
-            <span className="font-serif text-3xl text-foreground">{siteConfig.name}</span>
+            <span className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground">
+              {siteConfig.name}
+            </span>
             <p className="mt-3 max-w-md text-sm leading-7 text-muted">
               {siteConfig.description}
             </p>

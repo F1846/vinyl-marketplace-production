@@ -14,7 +14,9 @@ export function EmptyState({ icon: Icon, title, description, actionLabel, action
   return (
     <div className="card flex flex-col items-center justify-center gap-4 py-12 text-center">
       <Icon className="h-12 w-12 text-muted" />
-      <h3 className="font-serif text-2xl text-foreground">{title}</h3>
+      <h3 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
+        {title}
+      </h3>
       <p className="max-w-sm text-sm text-muted">{description}</p>
       {actionLabel && actionHref && (
         <Link href={actionHref} className="btn-primary mt-2">

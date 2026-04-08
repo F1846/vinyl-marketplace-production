@@ -60,7 +60,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
               {product.artist}
             </p>
-            <h1 className="max-w-[15ch] font-serif text-[1.85rem] leading-[0.98] text-foreground sm:text-[2.2rem]">
+            <h1 className="max-w-[15ch] font-sans text-[1.85rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[2.2rem]">
               {product.title}
             </h1>
           </div>
@@ -70,7 +70,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
                 Price
               </p>
-              <p className="mt-1 font-serif text-[1.55rem] leading-none text-foreground">
+              <p className="mt-1 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
                 {formatEuroFromCents(product.priceCents)}
               </p>
             </div>
@@ -147,7 +147,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
           {product.description && (
             <details className="rounded-[1.1rem] border border-border bg-white p-3.5 shadow-soft">
-              <summary className="cursor-pointer list-none font-serif text-[1.15rem] text-foreground">
+              <summary className="cursor-pointer list-none font-sans text-[1.15rem] font-bold tracking-[-0.04em] text-foreground">
                 Release notes
               </summary>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted">

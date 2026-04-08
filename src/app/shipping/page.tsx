@@ -11,7 +11,9 @@ export default function ShippingPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-muted">
           Delivery
         </p>
-        <h1 className="font-serif text-4xl text-foreground">Shipping and Pickup</h1>
+        <h1 className="font-sans text-4xl font-bold tracking-[-0.04em] text-foreground">
+          Shipping and Pickup
+        </h1>
         <p className="text-base leading-7 text-muted">
           Shipping rates are calculated automatically at checkout based on
           destination, quantity, and format.
@@ -19,7 +21,9 @@ export default function ShippingPage() {
       </div>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
-        <h2 className="font-serif text-2xl text-foreground">Shipping</h2>
+        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
+          Shipping
+        </h2>
         <p>
           We use format-aware shipping rules so vinyl, cassette, and CD orders
           are priced fairly. Shipping options are shown in checkout before
@@ -32,7 +36,9 @@ export default function ShippingPage() {
       </section>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
-        <h2 className="font-serif text-2xl text-foreground">Local Pickup</h2>
+        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
+          Local Pickup
+        </h2>
         <p>
           {siteConfig.pickupLabel} is available as a checkout option for local
           customers.

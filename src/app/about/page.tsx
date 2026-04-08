@@ -11,7 +11,9 @@ export default function AboutPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-muted">
           About
         </p>
-        <h1 className="font-serif text-4xl text-foreground">About {siteConfig.name}</h1>
+        <h1 className="font-sans text-4xl font-bold tracking-[-0.04em] text-foreground">
+          About {siteConfig.name}
+        </h1>
         <p className="text-base leading-7 text-muted">
           {siteConfig.name} is a focused shop for graded vinyl, cassette, and CD copies,
           with an emphasis on electronic music, fair euro pricing, and collector-friendly packing.
@@ -19,7 +21,9 @@ export default function AboutPage() {
       </div>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
-        <h2 className="font-serif text-2xl text-foreground">What the shop focuses on</h2>
+        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
+          What the shop focuses on
+        </h2>
         <p>
           The catalog is curated rather than bulk-listed. Each product page includes
           condition details, format information, and shipping that adapts to the destination
