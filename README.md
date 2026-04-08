@@ -136,6 +136,22 @@ See [.env.example](./.env.example) for the complete list.
 | `npm run email:test -- you@example.com` | Send a transactional email test |
 | `npm run email:test-order-flow -- you@example.com` | Send order flow email tests |
 
+### MongoDB Backup Snapshot
+
+Use the Python backup script to copy the current PostgreSQL shop data into a MongoDB Atlas backup database:
+
+```bash
+python scripts/backup_postgres_to_mongo.py "mongodb+srv://..."
+```
+
+Optional second argument:
+
+```bash
+python scripts/backup_postgres_to_mongo.py "mongodb+srv://..." "federico_shop_backup"
+```
+
+This is backup-only and does not change the live app runtime, which still uses a single PostgreSQL `DATABASE_URL`.
+
 ## Admin Features
 
 The admin area is designed for a single-shop workflow.
@@ -210,6 +226,7 @@ Mixed-format carts are calculated once per whole cart, not added separately by m
 - The app uses a single PostgreSQL `DATABASE_URL` at runtime
 - Neon is supported directly through Drizzle + Neon HTTP
 - You can clone the live shop database into another Neon or PostgreSQL database for backup
+- You can also snapshot the PostgreSQL shop data into MongoDB backup collections with `scripts/backup_postgres_to_mongo.py`
 - If you switch databases, update `DATABASE_URL` locally and in Vercel, then redeploy
 - Dual-writing to two databases is not enabled by default; use one primary database and clone backups instead
 
