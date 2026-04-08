@@ -1,4 +1,5 @@
 import { formatEuroFromCents } from "@/lib/money";
+import { createInvoiceToken } from "@/lib/invoice";
 import { siteConfig, siteUrl } from "@/lib/site";
 import type { OrderStatus, TrackingSummary } from "@/types/order";
 import { OrderWithItems, type ShippingAddress } from "@/types/order";
@@ -111,6 +112,9 @@ function statusMessage(status: OrderStatus): string {
 }
 
 export async function sendOrderConfirmation(order: OrderWithItems) {
+  const invoiceUrl = siteUrl(
+    `/api/orders/invoice?token=${encodeURIComponent(createInvoiceToken(order.id))}`
+  );
   const lineItems = order.items
     .map(
       (item) =>
@@ -130,6 +134,7 @@ export async function sendOrderConfirmation(order: OrderWithItems) {
       total: formatEuroFromCents(order.totalCents),
       address: formatAddress(order.shippingAddress),
       deliveryMethod: order.deliveryMethod,
+      invoiceUrl,
     }),
     text: buildOrderEmailText({
       orderNumber: order.orderNumber,
@@ -140,6 +145,7 @@ export async function sendOrderConfirmation(order: OrderWithItems) {
       total: formatEuroFromCents(order.totalCents),
       address: formatAddress(order.shippingAddress),
       deliveryMethod: order.deliveryMethod,
+      invoiceUrl,
     }),
   });
 }
@@ -228,6 +234,7 @@ function buildOrderEmailHtml({
   total,
   address,
   deliveryMethod,
+  invoiceUrl,
 }: Record<string, string>): string {
   const deliveryLabel =
     deliveryMethod === "pickup" ? "Pickup details" : "Shipping address";
@@ -254,7 +261,10 @@ a{color:#171717}
   <div class="totals">Subtotal: ${subtotal}<br>Shipping: ${shipping}<br><strong>Total: ${total}</strong></div>
   <h2>${deliveryLabel}</h2>
   <pre style="white-space:pre-wrap;font-size:14px">${address}</pre>
-  <div class="footer">Track your order: <a href="${siteUrl("/track-order")}">${siteUrl("/track-order")}</a></div>
+  <div class="footer">
+    Track your order: <a href="${siteUrl("/track-order")}">${siteUrl("/track-order")}</a><br>
+    Download invoice: <a href="${invoiceUrl}">${invoiceUrl}</a>
+  </div>
 </div></body></html>`;
 }
 
@@ -267,6 +277,7 @@ function buildOrderEmailText({
   total,
   address,
   deliveryMethod,
+  invoiceUrl,
 }: Record<string, string>): string {
   const deliveryLabel =
     deliveryMethod === "pickup" ? "Pickup details" : "Shipping address";
@@ -285,6 +296,8 @@ function buildOrderEmailText({
     "",
     `${deliveryLabel}:`,
     address,
+    "",
+    `Download invoice: ${invoiceUrl}`,
     "",
     `Track your order: ${siteUrl("/track-order")}`,
   ].join("\n");

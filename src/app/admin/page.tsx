@@ -24,17 +24,23 @@ export default async function AdminDashboard() {
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="card">
+        <Link
+          href="/admin/products"
+          className="card block transition duration-200 hover:-translate-y-0.5 hover:border-foreground/40"
+        >
           <p className="text-sm text-muted">Total Products</p>
           <p className="text-3xl font-bold text-accent">{productCount[0]?.count ?? 0}</p>
           <p className="text-xs text-muted mt-1">
             {activeCount[0]?.count ?? 0} active
           </p>
-        </div>
-        <div className="card">
+        </Link>
+        <Link
+          href="/admin/orders"
+          className="card block transition duration-200 hover:-translate-y-0.5 hover:border-foreground/40"
+        >
           <p className="text-sm text-muted">Total Orders</p>
           <p className="text-3xl font-bold text-accent">{orderCount[0]?.count ?? 0}</p>
-        </div>
+        </Link>
         <div className="card">
           <p className="text-sm text-muted">Quick Actions</p>
           <div className="mt-2 space-y-2">

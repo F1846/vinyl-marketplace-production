@@ -24,6 +24,7 @@ interface OrderData {
   trackingNumber: string | null;
   trackingCarrier: string | null;
   trackingSummary: TrackingSummary | null;
+  invoiceToken: string | null;
   items: Array<{
     title: string;
     format: string;
@@ -223,14 +224,24 @@ function OrderResult({
   return (
     <div className="space-y-6">
       <div className="card space-y-6">
-        <div className="flex items-center gap-3">
-          <StatusIcon className={`h-8 w-8 ${status.color}`} />
-          <div>
-            <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
-              {order.orderNumber}
-            </h2>
-            <p className={`text-sm font-medium ${status.color}`}>{status.label}</p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <StatusIcon className={`h-8 w-8 ${status.color}`} />
+            <div>
+              <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
+                {order.orderNumber}
+              </h2>
+              <p className={`text-sm font-medium ${status.color}`}>{status.label}</p>
+            </div>
           </div>
+          {order.invoiceToken && (
+            <a
+              href={`/api/orders/invoice?token=${encodeURIComponent(order.invoiceToken)}`}
+              className="btn-secondary"
+            >
+              {dictionary.trackOrder.downloadInvoice}
+            </a>
+          )}
         </div>
 
         <div>

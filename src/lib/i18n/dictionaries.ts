@@ -219,6 +219,7 @@ const english = {
   },
   trackOrder: {
     autoRefresh: "Tracking updates refresh automatically while this page is open.",
+    downloadInvoice: "Download invoice",
     email: "Email address",
     empty: "If you have a recent order, you will see its status here.",
     lastChecked: "Last checked: {date}",
@@ -250,6 +251,7 @@ const english = {
   },
   orderConfirmation: {
     continueShopping: "Continue shopping",
+    downloadInvoice: "Download invoice",
     orderConfirmed: "Order confirmed",
     orderNumber: "Order number",
     paypalBody: "Your PayPal payment was captured successfully. We will send a confirmation email shortly.",
@@ -433,6 +435,7 @@ const german: typeof english = {
   trackOrder: {
     ...english.trackOrder,
     autoRefresh: "Tracking Updates werden automatisch aktualisiert, solange diese Seite geoffnet ist.",
+    downloadInvoice: "Rechnung herunterladen",
     email: "E-Mail Adresse",
     empty: "Wenn du eine aktuelle Bestellung hast, wird ihr Status hier angezeigt.",
     lastChecked: "Zuletzt gepruft: {date}",
@@ -462,6 +465,7 @@ const german: typeof english = {
   orderConfirmation: {
     ...english.orderConfirmation,
     continueShopping: "Weiter einkaufen",
+    downloadInvoice: "Rechnung herunterladen",
     orderConfirmed: "Bestellung bestatigt",
     orderNumber: "Bestellnummer",
     paypalBody: "Deine PayPal Zahlung wurde erfolgreich erfasst. Wir schicken dir in Kurze eine Bestatigung per E-Mail.",
@@ -650,6 +654,7 @@ const italian: typeof english = {
   trackOrder: {
     ...english.trackOrder,
     autoRefresh: "Gli aggiornamenti del tracking si ricaricano automaticamente mentre questa pagina resta aperta.",
+    downloadInvoice: "Scarica fattura",
     email: "Indirizzo email",
     empty: "Se hai un ordine recente, vedrai qui il suo stato.",
     lastChecked: "Ultimo controllo: {date}",
@@ -679,6 +684,7 @@ const italian: typeof english = {
   orderConfirmation: {
     ...english.orderConfirmation,
     continueShopping: "Continua lo shopping",
+    downloadInvoice: "Scarica fattura",
     orderConfirmed: "Ordine confermato",
     orderNumber: "Numero ordine",
     paypalBody: "Il pagamento PayPal e stato acquisito con successo. Ti invieremo presto un'email di conferma.",

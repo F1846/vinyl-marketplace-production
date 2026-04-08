@@ -10,12 +10,14 @@ type OrderConfirmationClientProps = {
   sessionId: string | null;
   orderNumber: string | null;
   paymentMethod: string | null;
+  invoiceUrl: string | null;
 };
 
 export function OrderConfirmationClient({
   sessionId,
   orderNumber,
   paymentMethod,
+  invoiceUrl,
 }: OrderConfirmationClientProps) {
   const dictionary = useDictionary();
   const { clearCart } = useCart();
@@ -82,6 +84,11 @@ export function OrderConfirmationClient({
         <Link href="/track-order" className="btn-secondary">
           {dictionary.orderConfirmation.trackOrder}
         </Link>
+        {invoiceUrl && (
+          <a href={invoiceUrl} className="btn-secondary">
+            {dictionary.orderConfirmation.downloadInvoice}
+          </a>
+        )}
         <Link href="/catalog" className="btn-primary">
           {dictionary.orderConfirmation.continueShopping} <ArrowRight className="h-4 w-4" />
         </Link>

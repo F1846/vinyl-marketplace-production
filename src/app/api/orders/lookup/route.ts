@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { schema } from "@/db";
-import { and, eq } from "drizzle-orm";
 import { syncOrderTracking } from "@/lib/order-tracking";
+import { createInvoiceToken, getOrderWithItemsByLookup } from "@/lib/invoice";
 import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
@@ -51,21 +49,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { orderNumber, email } = parsed.data;
-  const d = db();
-
-  const order = await d.query.orders.findFirst({
-    where: and(
-      eq(schema.orders.orderNumber, orderNumber),
-      eq(schema.orders.customerEmail, email)
-    ),
-    with: {
-      items: {
-        with: {
-          product: true,
-        },
-      },
-    },
-  });
+  const order = await getOrderWithItemsByLookup(orderNumber, email);
 
   // Security: return generic message whether order exists or not (prevent info leakage)
   if (!order) {
@@ -115,7 +99,8 @@ export async function POST(req: NextRequest) {
       trackingNumber: effectiveOrder.trackingNumber,
       trackingCarrier: effectiveOrder.trackingCarrier,
       trackingSummary,
-      items: order.items.map((item: any) => ({
+      invoiceToken: createInvoiceToken(order.id),
+      items: order.items.map((item) => ({
         title: `${item.product.artist} - ${item.product.title}`,
         format: item.product.format,
         quantity: item.quantity,

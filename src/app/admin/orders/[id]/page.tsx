@@ -61,9 +61,14 @@ export default async function AdminOrderDetailPage({
             Order {order.orderNumber}
           </h1>
         </div>
-        <Link href="/admin/orders" className="btn-secondary">
-          Back to orders
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <a href={`/api/admin/orders/${order.id}/invoice`} className="btn-secondary">
+            Download invoice
+          </a>
+          <Link href="/admin/orders" className="btn-secondary">
+            Back to orders
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_0.95fr]">
