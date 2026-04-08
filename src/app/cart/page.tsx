@@ -202,7 +202,6 @@ export default function CartPage() {
 
   const isPickup = checkoutMode === "pickup";
   const total = totalPriceCents + (isPickup || items.length === 0 ? 0 : shippingCents);
-  const cartPreviewItems = items.slice(0, 3);
   const phoneCodeOptions = useMemo(
     () => getPhoneCodeOptions(shippingCountries),
     [shippingCountries]
@@ -589,136 +588,41 @@ export default function CartPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
-      <div className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
-        <div className="space-y-3 text-center sm:text-left">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Cart</p>
-          <h1 className="font-sans text-[2.5rem] font-bold leading-[0.95] tracking-[-0.04em] text-foreground sm:text-[2.9rem]">
+    <div className="mx-auto max-w-6xl space-y-6">
+      <div className="flex flex-col gap-4 rounded-[1.2rem] border border-border bg-white px-4 py-4 shadow-card sm:flex-row sm:items-end sm:justify-between sm:px-5">
+        <div className="space-y-2 text-left">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">
+            Cart
+          </p>
+          <h1 className="font-sans text-[1.95rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[2.25rem]">
             Your cart ({totalItems} item{totalItems !== 1 ? "s" : ""})
           </h1>
         </div>
 
-        <div className="rounded-[1.15rem] border border-border bg-white p-3.5 shadow-card">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-            Current cart
-          </p>
-          <div className="mt-3 space-y-2.5">
-            {cartPreviewItems.map((item) => (
-              <div key={item.productId} className="flex items-center gap-3">
-                <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-[0.8rem] bg-[#ebe8e1]">
-                  {item.imageUrl ? (
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.title}
-                      fill
-                      className="object-cover"
-                      sizes="48px"
-                    />
-                  ) : null}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="line-clamp-1 font-sans text-[0.98rem] font-bold tracking-[-0.04em] text-foreground">
-                    {item.title}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-muted">
-                    {item.quantity} x {formatEuroFromCents(item.priceCents)}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {items.length > cartPreviewItems.length && (
-              <p className="pt-1 text-[11px] uppercase tracking-[0.16em] text-muted">
-                + {items.length - cartPreviewItems.length} more item
-                {items.length - cartPreviewItems.length !== 1 ? "s" : ""}
-              </p>
-            )}
-          </div>
+        <div className="inline-flex w-full flex-col gap-1 rounded-[1rem] border border-border/90 bg-background px-4 py-3 sm:w-auto">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+            Total due today
+          </span>
+          <span className="font-sans text-xl font-bold tracking-[-0.04em] text-foreground">
+            {formatEuroFromCents(total)}
+          </span>
         </div>
       </div>
 
       {cartNotice && (
-        <div className="mx-auto max-w-3xl rounded-[1.2rem] border border-border bg-white px-4 py-3 text-sm text-foreground">
+        <div className="rounded-[1.2rem] border border-border bg-white px-4 py-3 text-sm text-foreground">
           {cartNotice}
         </div>
       )}
 
-      <div className="grid gap-6">
-        <div className="order-2 mx-auto w-full max-w-5xl space-y-4">
-          <div className="grid gap-3 md:grid-cols-2">
-            {items.map((item) => (
-              <div
-                key={item.productId}
-                className="rounded-[1.1rem] border border-border/90 bg-white p-3.5 shadow-card"
-              >
-                <div className="flex gap-3.5">
-                  <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-[0.9rem] bg-[#ebe8e1]">
-                    {item.imageUrl ? (
-                      <Image
-                        src={item.imageUrl}
-                        alt={item.title}
-                        fill
-                        className="object-cover"
-                        sizes="96px"
-                      />
-                    ) : null}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/products/${item.productId}`}
-                      className="line-clamp-2 font-sans text-[1.15rem] font-bold leading-tight tracking-[-0.04em] text-foreground hover:text-accent"
-                    >
-                      {item.title}
-                    </Link>
-                    {item.format && (
-                      <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-muted">
-                        {item.format}
-                      </p>
-                    )}
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-surface-hover"
-                          disabled={item.quantity <= 1}
-                        >
-                          -
-                        </button>
-                        <span className="w-8 text-center text-sm">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-surface-hover"
-                          disabled={item.quantity >= item.maxQuantity}
-                        >
-                          +
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm font-semibold text-foreground">
-                          {formatEuroFromCents(item.priceCents * item.quantity)}
-                        </span>
-                        <button
-                          onClick={() => removeItem(item.productId)}
-                          className="text-muted transition-colors hover:text-danger"
-                          title="Remove"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="order-1 mx-auto w-full max-w-3xl space-y-5">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
+        <div className="order-2 mx-auto w-full max-w-3xl space-y-5 xl:order-1 xl:mx-0 xl:max-w-none">
           <div className="card space-y-5">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
                 Checkout
               </p>
-              <h2 className="mt-2 font-sans text-[2.1rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground">
+              <h2 className="mt-2 font-sans text-[1.9rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[2.1rem]">
                 Finish your order
               </h2>
               <p className="mt-2 text-sm leading-6 text-muted">
@@ -727,31 +631,31 @@ export default function CartPage() {
               </p>
             </div>
 
-          <div className="grid gap-3">
-            {checkoutOptions.map((option) => (
-              <button
-                key={option.mode}
-                type="button"
-                onClick={() => {
-                  setCheckoutMode(option.mode);
-                  setError(null);
-                }}
-                className={`rounded-[1.5rem] border p-4 text-left transition ${
-                  checkoutMode === option.mode
-                    ? "border-foreground bg-white shadow-soft"
-                    : "border-border bg-background hover:border-foreground/20"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <option.icon className="mt-0.5 h-5 w-5 text-foreground" />
-                  <div>
-                    <p className="font-medium text-foreground">{option.title}</p>
-                    <p className="mt-1 text-sm leading-6 text-muted">{option.description}</p>
+            <div className="grid gap-3">
+              {checkoutOptions.map((option) => (
+                <button
+                  key={option.mode}
+                  type="button"
+                  onClick={() => {
+                    setCheckoutMode(option.mode);
+                    setError(null);
+                  }}
+                  className={`rounded-[1.35rem] border p-4 text-left transition ${
+                    checkoutMode === option.mode
+                      ? "border-foreground bg-white shadow-soft"
+                      : "border-border bg-background hover:border-foreground/20"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <option.icon className="mt-0.5 h-5 w-5 text-foreground" />
+                    <div>
+                      <p className="font-medium text-foreground">{option.title}</p>
+                      <p className="mt-1 text-sm leading-6 text-muted">{option.description}</p>
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
-          </div>
+                </button>
+              ))}
+            </div>
 
           {!PAYPAL_ENABLED && (
             <p className="text-xs leading-6 text-muted">
@@ -765,7 +669,7 @@ export default function CartPage() {
           )}
 
           {isPickup ? (
-            <div className="space-y-3">
+            <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-1 xl:max-h-[calc(100vh-20rem)]">
               <div>
                 <label htmlFor="pickup-name" className="label">
                   Name
@@ -805,7 +709,7 @@ export default function CartPage() {
               </div>
             </div>
           ) : (
-            <div className="space-y-4 rounded-[1.5rem] border border-border bg-background p-4">
+            <div className="space-y-4 rounded-[1.35rem] border border-border bg-background p-4">
               <div>
                 <p className="text-sm font-semibold text-foreground">Shipping details</p>
                 <p className="mt-1 text-xs leading-6 text-muted">
@@ -1042,27 +946,9 @@ export default function CartPage() {
             </div>
           )}
 
-          <div className="grid gap-3 rounded-[1.2rem] border border-border bg-background p-4 text-sm sm:grid-cols-3">
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.18em] text-muted">Subtotal</p>
-              <p className="mt-1 font-semibold text-foreground">
-                {formatEuroFromCents(totalPriceCents)}
-              </p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.18em] text-muted">{shippingLabel}</p>
-              <p className="mt-1 font-semibold text-foreground">
-                {isPickup
-                  ? "0.00 EUR"
-                  : shippingLoading
-                    ? "Calculating..."
-                    : formatEuroFromCents(shippingCents)}
-              </p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.18em] text-muted">Total</p>
-              <p className="mt-1 font-semibold text-foreground">{formatEuroFromCents(total)}</p>
-            </div>
+          <div className="rounded-[1.2rem] border border-border bg-background px-4 py-3 text-sm">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-muted">Checkout total</p>
+            <p className="mt-1 font-semibold text-foreground">{formatEuroFromCents(total)}</p>
           </div>
 
           <button
@@ -1101,8 +987,120 @@ export default function CartPage() {
             Continue shopping
           </Link>
         </div>
+        </div>
+
+        <aside className="order-1 xl:order-2">
+          <div className="card space-y-4 xl:sticky xl:top-24">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                  Current cart
+                </p>
+                <h2 className="mt-2 font-sans text-[1.45rem] font-bold leading-none tracking-[-0.04em] text-foreground">
+                  Items
+                </h2>
+              </div>
+              <span className="rounded-full border border-border bg-background px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                {totalItems} item{totalItems !== 1 ? "s" : ""}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {items.map((item) => (
+                <div
+                  key={item.productId}
+                  className="rounded-[1.05rem] border border-border/90 bg-white p-3"
+                >
+                  <div className="flex gap-3">
+                    <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-[0.85rem] bg-[#ebe8e1]">
+                      {item.imageUrl ? (
+                        <Image
+                          src={item.imageUrl}
+                          alt={item.title}
+                          fill
+                          className="object-cover"
+                          sizes="64px"
+                        />
+                      ) : null}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/products/${item.productId}`}
+                        className="line-clamp-2 font-sans text-[1rem] font-bold leading-tight tracking-[-0.04em] text-foreground hover:text-accent"
+                      >
+                        {item.title}
+                      </Link>
+                      {item.format && (
+                        <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-muted">
+                          {item.format}
+                        </p>
+                      )}
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                            className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-surface-hover"
+                            disabled={item.quantity <= 1}
+                          >
+                            -
+                          </button>
+                          <span className="w-6 text-center text-sm">{item.quantity}</span>
+                          <button
+                            onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                            className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-surface-hover"
+                            disabled={item.quantity >= item.maxQuantity}
+                          >
+                            +
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-semibold text-foreground">
+                            {formatEuroFromCents(item.priceCents * item.quantity)}
+                          </span>
+                          <button
+                            onClick={() => removeItem(item.productId)}
+                            className="text-muted transition-colors hover:text-danger"
+                            title="Remove"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid gap-3 rounded-[1.1rem] border border-border bg-background p-4 text-sm">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted">Subtotal</p>
+                <p className="font-semibold text-foreground">
+                  {formatEuroFromCents(totalPriceCents)}
+                </p>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted">
+                  {shippingLabel}
+                </p>
+                <p className="font-semibold text-foreground">
+                  {isPickup
+                    ? "0.00 EUR"
+                    : shippingLoading
+                      ? "Calculating..."
+                      : formatEuroFromCents(shippingCents)}
+                </p>
+              </div>
+              <div className="flex items-center justify-between gap-4 border-t border-border pt-3">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted">Total</p>
+                <p className="font-sans text-lg font-bold tracking-[-0.04em] text-foreground">
+                  {formatEuroFromCents(total)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
-    </div>
     </div>
   );
 }
