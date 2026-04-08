@@ -20,11 +20,16 @@ function getConfiguredPasswordHash(): string | null {
 }
 
 function getAdminSessionSecret(): string | null {
-  return (
-    process.env.ADMIN_SESSION_SECRET?.trim() ||
-    getConfiguredPasswordHash() ||
-    getConfiguredPassword()
-  );
+  const dedicatedSecret = process.env.ADMIN_SESSION_SECRET?.trim() || null;
+  if (dedicatedSecret) {
+    return dedicatedSecret;
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return getConfiguredPasswordHash() || getConfiguredPassword();
+  }
+
+  return null;
 }
 
 function isAdminAuthConfigured(): boolean {
@@ -120,7 +125,7 @@ export async function verifyAdminPassword(password: string): Promise<boolean> {
 export function createAdminSessionCookie(): AdminSessionCookie {
   const secret = getAdminSessionSecret();
   if (!secret) {
-    throw new Error("Admin session secret is not configured");
+    throw new Error("ADMIN_SESSION_SECRET must be configured in production");
   }
 
   const sessionId = createSessionToken(secret);

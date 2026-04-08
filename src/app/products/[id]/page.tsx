@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { AddToCart } from "@/components/product/add-to-cart";
 import { ProductImageGallery } from "@/components/product/product-image-gallery";
+import { JsonLd } from "@/components/seo/json-ld";
 import { formatMessage } from "@/lib/i18n/format";
 import { getRequestDictionary } from "@/lib/i18n/server";
 import { formatEuroFromCents } from "@/lib/money";
@@ -140,14 +141,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="mx-auto max-w-5xl">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productStructuredData) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
-      />
+      <JsonLd data={productStructuredData} />
+      <JsonLd data={breadcrumbStructuredData} />
       <div className="grid gap-5 lg:grid-cols-[0.84fr_1.06fr] lg:items-start">
         <div className="lg:max-w-[24.5rem]">
           <ProductImageGallery

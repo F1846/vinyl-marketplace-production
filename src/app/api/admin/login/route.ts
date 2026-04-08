@@ -7,7 +7,7 @@ function redirectWithError(req: NextRequest, error: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const loginRateLimit = rateLimit(
+  const loginRateLimit = await rateLimit(
     `admin-login:${getRequestIp(req)}`,
     5,
     15 * 60 * 1000

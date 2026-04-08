@@ -13,6 +13,7 @@ import { ProductCard } from "@/components/catalog/product-card";
 import { formatMessage } from "@/lib/i18n/format";
 import { getRequestDictionary } from "@/lib/i18n/server";
 import { formatEuroFromCents } from "@/lib/money";
+import { JsonLd } from "@/components/seo/json-ld";
 import {
   buildCatalogPath,
   catalogFormatCollections,
@@ -116,14 +117,8 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-10">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(storefrontStructuredData) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(newArrivalsStructuredData) }}
-      />
+      <JsonLd data={storefrontStructuredData} />
+      <JsonLd data={newArrivalsStructuredData} />
 
       <section className="grid gap-4 overflow-hidden rounded-[1.35rem] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(243,242,238,0.95))] px-4 py-6 shadow-card sm:px-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.82fr)] lg:px-6 lg:py-7">
         <div className="space-y-5">

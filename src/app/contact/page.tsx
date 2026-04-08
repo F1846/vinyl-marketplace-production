@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { JsonLd } from "@/components/seo/json-ld";
 import { getRequestDictionary } from "@/lib/i18n/server";
 import { legalAddressLines, siteConfig, siteUrl } from "@/lib/site";
 
@@ -55,10 +56,7 @@ export default async function ContactPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(contactStructuredData) }}
-      />
+      <JsonLd data={contactStructuredData} />
       <div className="space-y-3">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-muted">
           {dictionary.footer.contact}

@@ -1,11 +1,13 @@
 import type { NextRequest } from "next/server";
+import { sql } from "drizzle-orm";
+import { db } from "@/db";
 
 type RateLimitEntry = {
   count: number;
   resetAt: number;
 };
 
-type RateLimitResult = {
+export type RateLimitResult = {
   success: boolean;
   limit: number;
   remaining: number;
@@ -34,21 +36,7 @@ function cleanupExpiredEntries(store: Map<string, RateLimitEntry>, now: number) 
   }
 }
 
-export function getRequestIp(request: NextRequest): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() || "unknown";
-  }
-
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) {
-    return realIp.trim();
-  }
-
-  return "unknown";
-}
-
-export function rateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
+function rateLimitInMemory(key: string, limit: number, windowMs: number): RateLimitResult {
   const now = Date.now();
   const store = getStore();
   cleanupExpiredEntries(store, now);
@@ -86,4 +74,140 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
     remaining: Math.max(limit - existing.count, 0),
     retryAfterSeconds: Math.max(Math.ceil((existing.resetAt - now) / 1000), 1),
   };
+}
+
+function toResetDate(value: unknown, fallback: number): Date {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value;
+  }
+
+  if (typeof value === "string" || typeof value === "number") {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  return new Date(fallback);
+}
+
+function toCount(value: unknown): number {
+  const count = Number(value);
+  return Number.isFinite(count) ? count : 1;
+}
+
+function isMissingRateLimitTable(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return (
+    error.message.includes('relation "rate_limits" does not exist') ||
+    error.message.includes('table "rate_limits" does not exist')
+  );
+}
+
+async function rateLimitInDatabase(
+  key: string,
+  limit: number,
+  windowMs: number
+): Promise<RateLimitResult> {
+  const now = Date.now();
+  const resetAt = new Date(now + windowMs);
+  const result = await db().execute(sql`
+    WITH existing AS (
+      SELECT count, reset_at
+      FROM rate_limits
+      WHERE bucket_key = ${key}
+    ),
+    inserted AS (
+      INSERT INTO rate_limits (bucket_key, count, reset_at, created_at, updated_at)
+      SELECT ${key}, 1, ${resetAt}, now(), now()
+      WHERE NOT EXISTS (SELECT 1 FROM existing)
+      ON CONFLICT (bucket_key) DO NOTHING
+      RETURNING count, reset_at, true AS success
+    ),
+    updated AS (
+      UPDATE rate_limits
+      SET
+        count = CASE
+          WHEN rate_limits.reset_at <= now() THEN 1
+          WHEN rate_limits.count < ${limit} THEN rate_limits.count + 1
+          ELSE rate_limits.count
+        END,
+        reset_at = CASE
+          WHEN rate_limits.reset_at <= now() THEN ${resetAt}
+          ELSE rate_limits.reset_at
+        END,
+        updated_at = now()
+      WHERE bucket_key = ${key}
+        AND EXISTS (SELECT 1 FROM existing)
+      RETURNING
+        count,
+        reset_at,
+        CASE
+          WHEN (SELECT reset_at <= now() FROM existing) THEN true
+          WHEN (SELECT count < ${limit} FROM existing) THEN true
+          ELSE false
+        END AS success
+    )
+    SELECT count, reset_at, success FROM inserted
+    UNION ALL
+    SELECT count, reset_at, success FROM updated
+    LIMIT 1
+  `);
+
+  const row = result.rows[0] as
+    | { count?: unknown; reset_at?: unknown; success?: unknown }
+    | undefined;
+
+  if (!row) {
+    return rateLimitInMemory(key, limit, windowMs);
+  }
+
+  const count = toCount(row.count);
+  const expiresAt = toResetDate(row.reset_at, now + windowMs).getTime();
+  const success = Boolean(row.success);
+
+  return {
+    success,
+    limit,
+    remaining: success ? Math.max(limit - count, 0) : 0,
+    retryAfterSeconds: Math.max(Math.ceil((expiresAt - now) / 1000), 1),
+  };
+}
+
+export function getRequestIp(request: NextRequest): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0]?.trim() || "unknown";
+  }
+
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) {
+    return realIp.trim();
+  }
+
+  return "unknown";
+}
+
+export async function rateLimit(
+  key: string,
+  limit: number,
+  windowMs: number
+): Promise<RateLimitResult> {
+  if (!process.env.DATABASE_URL) {
+    return rateLimitInMemory(key, limit, windowMs);
+  }
+
+  try {
+    return await rateLimitInDatabase(key, limit, windowMs);
+  } catch (error) {
+    if (isMissingRateLimitTable(error)) {
+      console.warn("rate_limits table is missing; falling back to in-memory rate limiting.");
+      return rateLimitInMemory(key, limit, windowMs);
+    }
+
+    throw error;
+  }
 }

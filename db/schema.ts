@@ -158,3 +158,11 @@ export const shippingRates = pgTable("shipping_rates", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const rateLimits = pgTable("rate_limits", {
+  bucketKey: varchar("bucket_key", { length: 255 }).primaryKey(),
+  count: integer("count").notNull().default(1),
+  resetAt: timestamp("reset_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});

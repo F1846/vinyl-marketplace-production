@@ -10,7 +10,7 @@ const lookupSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const lookupRateLimit = rateLimit(
+  const lookupRateLimit = await rateLimit(
     `order-lookup:${getRequestIp(req)}`,
     10,
     10 * 60 * 1000

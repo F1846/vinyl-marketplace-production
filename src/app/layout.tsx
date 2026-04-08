@@ -6,6 +6,7 @@ import "@/styles/globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { LocaleProvider } from "@/components/providers/locale-provider";
+import { JsonLd } from "@/components/seo/json-ld";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { getRequestLocale } from "@/lib/i18n/server";
 import {
@@ -171,10 +172,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         className={`${sansFont.variable} ${serifFont.variable} flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
       >
         <LocaleProvider locale={locale} dictionary={dictionary}>
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteStructuredData) }}
-          />
+          <JsonLd data={websiteStructuredData} />
           <Header />
           <main className="container mx-auto flex-1 px-4 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
             {children}

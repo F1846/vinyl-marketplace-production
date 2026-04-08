@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CatalogBrowser } from "@/components/catalog/catalog-browser";
+import { JsonLd } from "@/components/seo/json-ld";
 import { catalogSortValues, getCatalogFilters, getCatalogPage } from "@/lib/catalog";
 import { buildCatalogUrl, siteConfig, siteUrl } from "@/lib/site";
 import type { ProductFormat } from "@/types/product";
@@ -173,14 +174,8 @@ export default async function CatalogPage({
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(catalogStructuredData) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
-      />
+      <JsonLd data={catalogStructuredData} />
+      <JsonLd data={breadcrumbStructuredData} />
       <CatalogBrowser
         initialProducts={catalog.products}
         initialHasMore={catalog.hasMore}
