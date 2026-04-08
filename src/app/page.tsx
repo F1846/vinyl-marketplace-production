@@ -14,12 +14,21 @@ import { siteConfig } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
+function shuffleProducts<T>(items: T[]): T[] {
+  const next = [...items];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+  return next;
+}
+
 export default async function HomePage() {
   const d = db();
-  const recentProducts = await d.query.products.findMany({
+  const latestProducts = await d.query.products.findMany({
     where: eq(schema.products.status, "active"),
     orderBy: [desc(schema.products.createdAt)],
-    limit: 8,
+    limit: 50,
     with: { images: { orderBy: [schema.productImages.sortOrder] } },
   });
   const heroPreviewProducts = await d.query.products.findMany({
@@ -41,8 +50,11 @@ export default async function HomePage() {
     orderBy: [asc(schema.products.priceCents), asc(schema.products.artist), asc(schema.products.title)],
     with: { images: { orderBy: [schema.productImages.sortOrder] } },
   });
-  const featuredHeroProduct = heroPreviewProducts[0] ?? recentProducts[0] ?? null;
-  const formatSpotlight = heroPreviewProducts[1] ?? recentProducts[1] ?? null;
+  const shuffledLatestProducts = shuffleProducts(latestProducts);
+  const newArrivalProducts = shuffledLatestProducts.slice(0, 12);
+  const shelfPicks = shuffledLatestProducts.slice(12, 20);
+  const featuredHeroProduct = heroPreviewProducts[0] ?? latestProducts[0] ?? null;
+  const formatSpotlight = heroPreviewProducts[1] ?? latestProducts[1] ?? null;
   const storefrontStructuredData = {
     "@context": "https://schema.org",
     "@type": "MusicStore",
@@ -60,17 +72,17 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(storefrontStructuredData) }}
       />
 
-      <section className="grid gap-6 overflow-hidden rounded-[1.5rem] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(243,242,238,0.96))] px-5 py-8 shadow-card lg:grid-cols-[1.08fr_0.92fr] lg:px-8 lg:py-10">
-        <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
-            <RecordIcon className="h-4 w-4 text-foreground" />
+      <section className="grid gap-5 overflow-hidden rounded-[1.45rem] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(243,242,238,0.95))] px-5 py-7 shadow-card lg:grid-cols-[minmax(0,1.08fr)_minmax(300px,0.84fr)] lg:px-7 lg:py-8">
+        <div className="space-y-5">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">
+            <RecordIcon className="h-3.5 w-3.5 text-foreground" />
             Independent record store
           </div>
-          <div className="space-y-4">
-            <h1 className="max-w-3xl font-serif text-4xl leading-[0.96] text-foreground sm:text-[3.4rem]">
+          <div className="space-y-3">
+            <h1 className="max-w-[10.5ch] text-balance font-serif text-[clamp(3.15rem,7vw,5.25rem)] leading-[0.91] text-foreground">
               Records worth having on the shelf.
             </h1>
-            <p className="max-w-2xl text-base leading-7 text-muted">
+            <p className="max-w-xl text-[15px] leading-7 text-muted">
               {siteConfig.name} is an electronic music record shop with graded vinyl,
               cassette, and CD finds, fair euro pricing, and collector-friendly shipping.
             </p>
@@ -86,14 +98,16 @@ export default async function HomePage() {
           <div className="grid gap-3 sm:grid-cols-3">
             <Link
               href={featuredHeroProduct ? `/products/${featuredHeroProduct.id}` : "/catalog"}
-              className="group rounded-[1rem] border border-border bg-white p-3.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
+              className="group rounded-[0.95rem] border border-border bg-white p-3 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted">Available now</p>
-              <p className="mt-2 font-serif text-[2rem] text-foreground">{count ?? 0}</p>
-              <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted">
+              <p className="mt-2 font-serif text-[1.75rem] leading-none text-foreground">
+                {count ?? 0}
+              </p>
+              <p className="mt-2 line-clamp-2 text-[13px] leading-5 text-muted">
                 {featuredHeroProduct
                   ? `${featuredHeroProduct.artist} - ${featuredHeroProduct.title}`
-                  : "Browse the current selection"}
+                  : "Current records, tapes, and CDs ready to open and play."}
               </p>
               <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground">
                 Open a featured record
@@ -101,16 +115,16 @@ export default async function HomePage() {
             </Link>
             <Link
               href={cheapestProduct ? `/products/${cheapestProduct.id}` : "/catalog?sort=price-asc"}
-              className="group rounded-[1rem] border border-border bg-white p-3.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
+              className="group rounded-[0.95rem] border border-border bg-white p-3 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted">From</p>
-              <p className="mt-2 font-serif text-[2rem] text-foreground">
+              <p className="mt-2 font-serif text-[1.75rem] leading-none text-foreground">
                 {minPrice === null ? "0 EUR" : formatEuroFromCents(minPrice)}
               </p>
-              <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted">
+              <p className="mt-2 line-clamp-2 text-[13px] leading-5 text-muted">
                 {cheapestProduct
                   ? `Start with ${cheapestProduct.artist} - ${cheapestProduct.title}`
-                  : "Low-price picks from the catalog"}
+                  : "Start with the lowest-priced copy currently in the catalog."}
               </p>
               <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground">
                 Shop entry points
@@ -122,16 +136,16 @@ export default async function HomePage() {
                   ? `/catalog?format=${encodeURIComponent(formatSpotlight.format)}`
                   : "/catalog"
               }
-              className="group rounded-[1rem] border border-border bg-white p-3.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
+              className="group rounded-[0.95rem] border border-border bg-white p-3 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted">Format mix</p>
-              <p className="mt-2 font-serif text-[1.7rem] capitalize text-foreground">
-                {formatSpotlight?.format ?? "Vinyl / Tape / CD"}
+              <p className="mt-2 font-serif text-[1.45rem] capitalize text-foreground">
+                Vinyl / Tape / CD
               </p>
-              <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted">
+              <p className="mt-2 line-clamp-2 text-[13px] leading-5 text-muted">
                 {formatSpotlight
                   ? `${formatSpotlight.artist} - ${formatSpotlight.title}`
-                  : "Jump between vinyl, tape, and CD finds"}
+                  : "Browse by format and jump straight into the shelf you want."}
               </p>
               <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground">
                 Browse this format
@@ -139,7 +153,7 @@ export default async function HomePage() {
             </Link>
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-2.5 sm:grid-cols-2">
           {heroPreviewProducts.map((product) => (
             <ProductCard key={product.id} product={product} compact />
           ))}
@@ -158,10 +172,10 @@ export default async function HomePage() {
             View all <ArrowRight className="inline h-4 w-4" />
           </Link>
         </div>
-        {recentProducts.length > 0 ? (
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {recentProducts.map((product) => (
-              <div key={product.id} className="w-[214px] flex-none sm:w-[228px]">
+        {newArrivalProducts.length > 0 ? (
+          <div className="flex gap-2.5 overflow-x-auto pb-2">
+            {newArrivalProducts.map((product) => (
+              <div key={product.id} className="w-[160px] flex-none sm:w-[170px] lg:w-[178px]">
                 <ProductCard product={product} />
               </div>
             ))}
@@ -172,6 +186,29 @@ export default async function HomePage() {
           </div>
         )}
       </section>
+
+      {shelfPicks.length > 0 && (
+        <section className="space-y-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+                Shelf picks
+              </p>
+              <h2 className="font-serif text-[1.85rem] text-foreground">
+                More from the racks
+              </h2>
+            </div>
+            <Link href="/catalog" className="text-sm text-accent hover:underline">
+              Explore more <ArrowRight className="inline h-4 w-4" />
+            </Link>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {shelfPicks.map((product) => (
+              <ProductCard key={product.id} product={product} compact />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="grid gap-4 sm:grid-cols-3">
         {[

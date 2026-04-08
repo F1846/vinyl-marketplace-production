@@ -25,105 +25,136 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const inStock = product.stockQuantity > 0;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-      <ProductImageGallery
-        images={product.images}
-        artist={product.artist}
-        title={product.title}
-      />
-
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <span className={`badge badge-${product.format} capitalize`}>{product.format}</span>
-          {product.conditionMedia && (
-            <span className="text-sm text-muted">
-              Media: <span className="text-foreground">{conditionLabel(product.conditionMedia)}</span>
-            </span>
-          )}
-          {product.conditionSleeve && (
-            <span className="text-sm text-muted">
-              Sleeve: <span className="text-foreground">{conditionLabel(product.conditionSleeve)}</span>
-            </span>
-          )}
+    <div className="mx-auto max-w-5xl">
+      <div className="grid gap-5 lg:grid-cols-[0.84fr_1.06fr] lg:items-start">
+        <div className="lg:max-w-[24.5rem]">
+          <ProductImageGallery
+            images={product.images}
+            artist={product.artist}
+            title={product.title}
+          />
         </div>
 
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
-            {product.artist}
-          </p>
-          <h1 className="font-serif text-4xl text-foreground sm:text-5xl">
-            {product.title}
-          </h1>
-        </div>
+        <div className="space-y-3.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`badge badge-${product.format} capitalize`}>{product.format}</span>
+            {product.conditionMedia && (
+              <span className="rounded-full border border-border bg-white px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-muted">
+                Media:{" "}
+                <span className="text-foreground">
+                  {conditionLabel(product.conditionMedia)}
+                </span>
+              </span>
+            )}
+            {product.conditionSleeve && (
+              <span className="rounded-full border border-border bg-white px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-muted">
+                Sleeve:{" "}
+                <span className="text-foreground">
+                  {conditionLabel(product.conditionSleeve)}
+                </span>
+              </span>
+            )}
+          </div>
 
-        <p className="text-3xl font-semibold text-foreground">
-          {formatEuroFromCents(product.priceCents)}
-        </p>
-
-        {(product.pressingLabel || product.pressingYear || product.pressingCatalogNumber) && (
-          <table className="w-full overflow-hidden rounded-[1.5rem] border border-border bg-white text-sm shadow-soft">
-            <tbody>
-              {product.pressingLabel && (
-                <tr>
-                  <td className="border-b border-border px-4 py-3 text-muted">Label</td>
-                  <td className="border-b border-border px-4 py-3 text-foreground">{product.pressingLabel}</td>
-                </tr>
-              )}
-              {product.pressingCatalogNumber && (
-                <tr>
-                  <td className="border-b border-border px-4 py-3 text-muted">Cat#</td>
-                  <td className="border-b border-border px-4 py-3 font-mono text-foreground">
-                    {product.pressingCatalogNumber}
-                  </td>
-                </tr>
-              )}
-              {product.pressingYear && (
-                <tr>
-                  <td className="px-4 py-3 text-muted">Year</td>
-                  <td className="px-4 py-3 text-foreground">{product.pressingYear}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
-
-        {product.genre && (
-          <p className="text-sm">
-            <span className="text-muted">Genre: </span>
-            <span className="text-foreground">{product.genre}</span>
-          </p>
-        )}
-
-        {product.description && (
-          <div className="card">
-            <h2 className="font-serif text-2xl text-foreground">Release notes</h2>
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-muted">
-              {product.description}
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
+              {product.artist}
             </p>
+            <h1 className="max-w-[15ch] font-serif text-[1.85rem] leading-[0.98] text-foreground sm:text-[2.2rem]">
+              {product.title}
+            </h1>
           </div>
-        )}
 
-        <div className="card space-y-4">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted">Availability</span>
-            <span className={inStock ? "font-medium text-success" : "font-medium text-danger"}>
-              {inStock ? `${product.stockQuantity} in stock` : "Sold out"}
-            </span>
+          <div className="grid gap-3 rounded-[1.15rem] border border-border bg-white p-3.5 shadow-soft sm:grid-cols-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                Price
+              </p>
+              <p className="mt-1 font-serif text-[1.55rem] leading-none text-foreground">
+                {formatEuroFromCents(product.priceCents)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                Availability
+              </p>
+              <p
+                className={`mt-1 text-sm font-medium ${inStock ? "text-success" : "text-danger"}`}
+              >
+                {inStock ? `${product.stockQuantity} in stock` : "Sold out"}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                Pickup
+              </p>
+              <p className="mt-1 text-sm text-foreground">{siteConfig.pickupLabel}</p>
+            </div>
           </div>
-          <p className="text-sm leading-7 text-muted">
-            Packed carefully for collectors. Shipping and pickup options are calculated
-            in checkout, and all prices are shown in euro.
-          </p>
-          {inStock ? (
-            <AddToCart product={product} imageUrl={product.images[0]?.url ?? undefined} />
-          ) : (
-            <button className="btn-secondary w-full" disabled>
-              Sold Out
-            </button>
+
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {product.pressingLabel && (
+              <div className="rounded-[0.95rem] border border-border bg-background px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                  Label
+                </p>
+                <p className="mt-1 text-sm text-foreground">{product.pressingLabel}</p>
+              </div>
+            )}
+            {product.pressingCatalogNumber && (
+              <div className="rounded-[0.95rem] border border-border bg-background px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                  Cat#
+                </p>
+                <p className="mt-1 font-mono text-sm text-foreground">
+                  {product.pressingCatalogNumber}
+                </p>
+              </div>
+            )}
+            {product.pressingYear && (
+              <div className="rounded-[0.95rem] border border-border bg-background px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                  Year
+                </p>
+                <p className="mt-1 text-sm text-foreground">{product.pressingYear}</p>
+              </div>
+            )}
+            {product.genre && (
+              <div className="rounded-[0.95rem] border border-border bg-background px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                  Genre
+                </p>
+                <p className="mt-1 text-sm text-foreground">{product.genre}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-[1.15rem] border border-border bg-white p-3.5 shadow-soft">
+            <div className="space-y-3">
+              <p className="text-sm leading-6 text-muted">
+                Packed carefully for collectors. Shipping and pickup options are calculated
+                in checkout, and all prices are shown in euro.
+              </p>
+              {inStock ? (
+                <AddToCart product={product} imageUrl={product.images[0]?.url ?? undefined} />
+              ) : (
+                <button className="btn-secondary w-full" disabled>
+                  Sold Out
+                </button>
+              )}
+            </div>
+          </div>
+
+          {product.description && (
+            <details className="rounded-[1.1rem] border border-border bg-white p-3.5 shadow-soft">
+              <summary className="cursor-pointer list-none font-serif text-[1.15rem] text-foreground">
+                Release notes
+              </summary>
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted">
+                {product.description}
+              </p>
+            </details>
           )}
-          <p className="text-xs uppercase tracking-[0.18em] text-muted">
-            Pickup available: {siteConfig.pickupLabel}
-          </p>
         </div>
       </div>
     </div>

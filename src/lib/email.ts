@@ -1,22 +1,81 @@
-import { Resend } from "resend";
-import { OrderWithItems, type ShippingAddress } from "@/types/order";
 import { formatEuroFromCents } from "@/lib/money";
 import { siteConfig, siteUrl } from "@/lib/site";
+import { OrderWithItems, type ShippingAddress } from "@/types/order";
 
-let _resend: Resend | null = null;
+type MailgunConfig = {
+  apiKey: string;
+  domain: string;
+  baseUrl: string;
+  from: string;
+  bcc: string | null;
+};
 
-function resend() {
-  if (!_resend) {
-    const key = process.env.RESEND_API_KEY;
-    if (!key) throw new Error("RESEND_API_KEY is not configured");
-    _resend = new Resend(key);
+type TransactionalEmail = {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+};
+
+function getMailgunConfig(): MailgunConfig {
+  const apiKey = process.env.MAILGUN_API_KEY?.trim();
+  const domain = process.env.MAILGUN_DOMAIN?.trim();
+  const from = process.env.EMAIL_FROM?.trim();
+  const fromName = process.env.EMAIL_FROM_NAME?.trim() || "Federico Shop DE";
+  const bcc = process.env.EMAIL_BCC?.trim() || null;
+  const baseUrl = process.env.MAILGUN_BASE_URL?.trim() || "https://api.mailgun.net";
+
+  if (!apiKey) {
+    throw new Error("MAILGUN_API_KEY is not configured");
   }
-  return _resend;
+
+  if (!domain) {
+    throw new Error("MAILGUN_DOMAIN is not configured");
+  }
+
+  return {
+    apiKey,
+    domain,
+    baseUrl,
+    from: from || `${fromName} <postmaster@${domain}>`,
+    bcc,
+  };
+}
+
+async function sendTransactionalEmail({
+  to,
+  subject,
+  html,
+  text,
+}: TransactionalEmail) {
+  const config = getMailgunConfig();
+  const auth = Buffer.from(`api:${config.apiKey}`).toString("base64");
+  const body = new URLSearchParams({
+    from: config.from,
+    to,
+    subject,
+    html,
+    text,
+  });
+  if (config.bcc) {
+    body.append("bcc", config.bcc);
+  }
+
+  const response = await fetch(`${config.baseUrl}/v3/${config.domain}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Mailgun error (${response.status}): ${await response.text()}`);
+  }
 }
 
 export async function sendOrderConfirmation(order: OrderWithItems) {
-  const from = process.env.EMAIL_FROM ?? "orders@yourdomain.com";
-
   const lineItems = order.items
     .map(
       (item) =>
@@ -24,44 +83,52 @@ export async function sendOrderConfirmation(order: OrderWithItems) {
     )
     .join("\n");
 
-  const html = buildEmailHtml({
-    orderNumber: order.orderNumber,
-    customerName: order.customerName,
-    lineItems,
-    subtotal: formatEuroFromCents(order.subtotalCents),
-    shipping: formatEuroFromCents(order.shippingCents),
-    total: formatEuroFromCents(order.totalCents),
-    address: formatAddress(order.shippingAddress),
-    deliveryMethod: order.deliveryMethod,
-  });
-
-  await resend().emails.send({
-    from,
+  await sendTransactionalEmail({
     to: order.customerEmail,
     subject: `Order ${order.orderNumber} confirmed - ${siteConfig.name}`,
-    html,
+    html: buildOrderEmailHtml({
+      orderNumber: order.orderNumber,
+      customerName: order.customerName,
+      lineItems,
+      subtotal: formatEuroFromCents(order.subtotalCents),
+      shipping: formatEuroFromCents(order.shippingCents),
+      total: formatEuroFromCents(order.totalCents),
+      address: formatAddress(order.shippingAddress),
+      deliveryMethod: order.deliveryMethod,
+    }),
+    text: buildOrderEmailText({
+      orderNumber: order.orderNumber,
+      customerName: order.customerName,
+      lineItems,
+      subtotal: formatEuroFromCents(order.subtotalCents),
+      shipping: formatEuroFromCents(order.shippingCents),
+      total: formatEuroFromCents(order.totalCents),
+      address: formatAddress(order.shippingAddress),
+      deliveryMethod: order.deliveryMethod,
+    }),
   });
 }
 
 export async function sendShippingNotification(order: OrderWithItems) {
-  const from = process.env.EMAIL_FROM ?? "orders@yourdomain.com";
-
-  const html = buildShippingEmail({
-    orderNumber: order.orderNumber,
-    customerName: order.customerName,
-    trackingNumber: order.trackingNumber,
-    trackingCarrier: order.trackingCarrier,
-  });
-
-  await resend().emails.send({
-    from,
+  await sendTransactionalEmail({
     to: order.customerEmail,
     subject: `Order ${order.orderNumber} shipped - ${siteConfig.name}`,
-    html,
+    html: buildShippingEmailHtml({
+      orderNumber: order.orderNumber,
+      customerName: order.customerName,
+      trackingNumber: order.trackingNumber,
+      trackingCarrier: order.trackingCarrier,
+    }),
+    text: buildShippingEmailText({
+      orderNumber: order.orderNumber,
+      customerName: order.customerName,
+      trackingNumber: order.trackingNumber,
+      trackingCarrier: order.trackingCarrier,
+    }),
   });
 }
 
-function buildEmailHtml({
+function buildOrderEmailHtml({
   orderNumber,
   customerName,
   lineItems,
@@ -100,7 +167,39 @@ a{color:#171717}
 </div></body></html>`;
 }
 
-function buildShippingEmail({
+function buildOrderEmailText({
+  orderNumber,
+  customerName,
+  lineItems,
+  subtotal,
+  shipping,
+  total,
+  address,
+  deliveryMethod,
+}: Record<string, string>): string {
+  const deliveryLabel =
+    deliveryMethod === "pickup" ? "Pickup details" : "Shipping address";
+
+  return [
+    siteConfig.name,
+    "",
+    `Thanks, ${customerName}.`,
+    "",
+    `Order ${orderNumber}`,
+    lineItems,
+    "",
+    `Subtotal: ${subtotal}`,
+    `Shipping: ${shipping}`,
+    `Total: ${total}`,
+    "",
+    `${deliveryLabel}:`,
+    address,
+    "",
+    `Track your order: ${siteUrl("/track-order")}`,
+  ].join("\n");
+}
+
+function buildShippingEmailHtml({
   orderNumber,
   customerName,
   trackingNumber,
@@ -116,13 +215,32 @@ function buildShippingEmail({
 </div></body></html>`;
 }
 
+function buildShippingEmailText({
+  orderNumber,
+  customerName,
+  trackingNumber,
+  trackingCarrier,
+}: Record<string, string | null>): string {
+  return [
+    siteConfig.name,
+    "",
+    `Thanks, ${customerName}.`,
+    `Order ${orderNumber} has shipped.`,
+    `${trackingCarrier}: ${trackingNumber}`,
+    "",
+    "Questions? Reply to this email.",
+  ].join("\n");
+}
+
 function formatAddress(addr: ShippingAddress): string {
   if (addr.country === "PICKUP") {
     return [addr.pickupLocation ?? addr.line1, addr.pickupNote].filter(Boolean).join("\n");
   }
 
   const locality = [addr.postalCode, addr.city].filter(Boolean).join(" ");
-  const stateLine = addr.state?.trim() ? [locality, addr.state.trim()].filter(Boolean).join(", ") : locality;
+  const stateLine = addr.state?.trim()
+    ? [locality, addr.state.trim()].filter(Boolean).join(", ")
+    : locality;
 
   return [
     addr.name,
