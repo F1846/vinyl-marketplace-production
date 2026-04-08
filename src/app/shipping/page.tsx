@@ -1,48 +1,41 @@
+import { formatMessage } from "@/lib/i18n/format";
+import { getRequestDictionary } from "@/lib/i18n/server";
 import { siteConfig } from "@/lib/site";
 
 export const metadata = {
   title: "Shipping and Pickup",
 };
 
-export default function ShippingPage() {
+export default async function ShippingPage() {
+  const dictionary = await getRequestDictionary();
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="space-y-3">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-muted">
-          Delivery
+          {dictionary.shippingPage.delivery}
         </p>
         <h1 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground sm:text-4xl">
-          Shipping and Pickup
+          {dictionary.shippingPage.title}
         </h1>
         <p className="text-base leading-7 text-muted">
-          Shipping rates are calculated automatically at checkout based on
-          destination, quantity, and format.
+          {dictionary.shippingPage.rates}
         </p>
       </div>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
         <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
-          Shipping
+          {dictionary.shippingPage.shipping}
         </h2>
-        <p>
-          We use format-aware shipping rules so vinyl, cassette, and CD orders
-          are priced fairly. Shipping options are shown in checkout before
-          payment.
-        </p>
-        <p>
-          Orders are usually packed within 1 to 2 business days. Tracking is
-          added once the parcel has been dispatched.
-        </p>
+        <p>{dictionary.shippingPage.shippingBody}</p>
+        <p>{dictionary.shippingPage.shippingBodyTwo}</p>
       </section>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
         <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
-          Local Pickup
+          {dictionary.shippingPage.localPickup}
         </h2>
-        <p>
-          {siteConfig.pickupLabel} is available as a checkout option for local
-          customers.
-        </p>
+        <p>{formatMessage(dictionary.shippingPage.localPickupBody, { pickupLabel: siteConfig.pickupLabel })}</p>
         <p>{siteConfig.pickupNote}</p>
       </section>
     </div>

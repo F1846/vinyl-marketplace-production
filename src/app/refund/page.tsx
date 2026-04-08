@@ -1,44 +1,40 @@
+import { formatMessage } from "@/lib/i18n/format";
+import { getRequestDictionary } from "@/lib/i18n/server";
 import { siteConfig } from "@/lib/site";
 
 export const metadata = {
   title: "Refund Policy",
 };
 
-export default function RefundPage() {
+export default async function RefundPage() {
+  const dictionary = await getRequestDictionary();
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="space-y-3">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-muted">
-          Refunds
+          {dictionary.footer.refundPolicy}
         </p>
         <h1 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground sm:text-4xl">
-          Refund Policy
+          {dictionary.refund.title}
         </h1>
         <p className="text-base leading-7 text-muted">
-          If an order arrives damaged or materially different from its listing,
-          contact {siteConfig.legal.contactEmail} and include your order number.
+          {formatMessage(dictionary.refund.intro, { email: siteConfig.legal.contactEmail })}
         </p>
       </div>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
         <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
-          Damaged or Incorrect Items
+          {dictionary.refund.damaged}
         </h2>
-        <p>
-          Please reach out within 14 days of delivery. Include photos of the
-          packaging and the item so we can review the issue quickly.
-        </p>
+        <p>{dictionary.refund.damagedBody}</p>
       </section>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
         <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
-          Approved Refunds
+          {dictionary.refund.approved}
         </h2>
-        <p>
-          Approved refunds are returned to the original payment method whenever
-          possible. For local pickup reservations, any pre-arranged payment
-          handling will be confirmed directly by email.
-        </p>
+        <p>{dictionary.refund.approvedBody}</p>
       </section>
     </div>
   );

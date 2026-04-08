@@ -20,6 +20,7 @@ import {
   checkoutContactSchema,
   type CheckoutContactInput,
 } from "@/validations/checkout";
+import { useDictionary } from "@/components/providers/locale-provider";
 
 type ShippingCountry = {
   code: string;
@@ -172,6 +173,7 @@ function fieldClassName(error?: string) {
 }
 
 export default function CartPage() {
+  const dictionary = useDictionary();
   const router = useRouter();
   const {
     items,
@@ -188,7 +190,7 @@ export default function CartPage() {
   const [shippingCountries, setShippingCountries] = useState<ShippingCountry[]>([]);
   const [shippingCountry, setShippingCountry] = useState("");
   const [shippingCents, setShippingCents] = useState(0);
-  const [shippingLabel, setShippingLabel] = useState("Shipping");
+  const [shippingLabel, setShippingLabel] = useState<string>(dictionary.cart.shipping);
   const [shippingLoading, setShippingLoading] = useState(false);
   const [shippingError, setShippingError] = useState<string | null>(null);
   const [checkoutMode, setCheckoutMode] = useState<CheckoutMode>("card");
@@ -358,7 +360,7 @@ export default function CartPage() {
   useEffect(() => {
     if (isPickup) {
       setShippingCents(0);
-      setShippingLabel("Local pickup");
+      setShippingLabel(siteConfig.pickupLabel);
       setShippingError(null);
       return;
     }
@@ -395,7 +397,7 @@ export default function CartPage() {
 
         if (!res.ok || !json.quote) {
           setShippingCents(0);
-          setShippingLabel("Shipping");
+          setShippingLabel(dictionary.cart.shipping);
           setShippingError(json.error?.message ?? "No shipping option is configured for this cart.");
           return;
         }
@@ -405,7 +407,7 @@ export default function CartPage() {
       } catch {
         if (!cancelled) {
           setShippingCents(0);
-          setShippingLabel("Shipping");
+          setShippingLabel(dictionary.cart.shipping);
           setShippingError("Could not calculate shipping right now.");
         }
       } finally {
@@ -420,7 +422,7 @@ export default function CartPage() {
     return () => {
       cancelled = true;
     };
-  }, [isLoaded, isPickup, items, shippingCountry]);
+  }, [dictionary.cart.shipping, isLoaded, isPickup, items, shippingCountry]);
 
   useEffect(() => {
     if (!shippingCountry || shippingForm.phoneCountryCode) {
@@ -501,7 +503,7 @@ export default function CartPage() {
           phoneNumber: getFriendlyFieldError("phoneNumber", flattened.phoneNumber),
           additionalInfo: getFriendlyFieldError("additionalInfo", flattened.additionalInfo),
         });
-        setError("Please fill the form before payment.");
+        setError(dictionary.cart.fillFormBeforePayment);
         return;
       }
 
@@ -577,11 +579,11 @@ export default function CartPage() {
     return (
       <div className="card py-16 text-center">
         <h2 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground">
-          Your cart is empty
+          {dictionary.cart.cartEmpty}
         </h2>
-        <p className="mt-2 text-muted">Browse the racks and add a few records you love.</p>
+        <p className="mt-2 text-muted">{dictionary.cart.cartEmptyBody}</p>
         <Link href="/catalog" className="btn-primary mt-6">
-          <ArrowLeft className="h-4 w-4" /> Browse catalog
+          <ArrowLeft className="h-4 w-4" /> {dictionary.cart.browseCatalog}
         </Link>
       </div>
     );
@@ -592,16 +594,16 @@ export default function CartPage() {
       <div className="flex flex-col gap-4 rounded-[1.2rem] border border-border bg-white px-4 py-4 shadow-card sm:flex-row sm:items-end sm:justify-between sm:px-5">
         <div className="space-y-2 text-left">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">
-            Cart
+            {dictionary.cart.cart}
           </p>
           <h1 className="font-sans text-[1.95rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[2.25rem]">
-            Your cart ({totalItems} item{totalItems !== 1 ? "s" : ""})
+            {dictionary.cart.yourCart} ({totalItems} item{totalItems !== 1 ? "s" : ""})
           </h1>
         </div>
 
         <div className="inline-flex w-full flex-col gap-1 rounded-[1rem] border border-border/90 bg-background px-4 py-3 sm:w-auto">
           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-            Total due today
+            {dictionary.cart.totalDueToday}
           </span>
           <span className="font-sans text-xl font-bold tracking-[-0.04em] text-foreground">
             {formatEuroFromCents(total)}
@@ -620,14 +622,13 @@ export default function CartPage() {
           <div className="card space-y-5">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
-                Checkout
+                {dictionary.cart.checkout}
               </p>
               <h2 className="mt-2 font-sans text-[1.9rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[2.1rem]">
-                Finish your order
+                {dictionary.cart.finishYourOrder}
               </h2>
               <p className="mt-2 text-sm leading-6 text-muted">
-                Name, email, phone, and address are collected before payment and used
-                for the order, invoice, and shipping details.
+                {dictionary.cart.checkoutIntro}
               </p>
             </div>
 
@@ -711,10 +712,9 @@ export default function CartPage() {
           ) : (
             <div className="space-y-4 rounded-[1.35rem] border border-border bg-background p-4">
               <div>
-                <p className="text-sm font-semibold text-foreground">Shipping details</p>
+                <p className="text-sm font-semibold text-foreground">{dictionary.cart.shippingDetails}</p>
                 <p className="mt-1 text-xs leading-6 text-muted">
-                  These details are required before payment and will be used for your order,
-                  invoice, and PayPal shipping address.
+                  {dictionary.cart.shippingDetailsBody}
                 </p>
               </div>
 
@@ -947,7 +947,7 @@ export default function CartPage() {
           )}
 
           <div className="rounded-[1.2rem] border border-border bg-background px-4 py-3 text-sm">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-muted">Checkout total</p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-muted">{dictionary.cart.checkoutTotal}</p>
             <p className="mt-1 font-semibold text-foreground">{formatEuroFromCents(total)}</p>
           </div>
 
@@ -984,7 +984,7 @@ export default function CartPage() {
           {error && <p className="text-center text-sm text-danger">{error}</p>}
 
           <Link href="/catalog" className="btn-secondary w-full text-center">
-            Continue shopping
+            {dictionary.cart.continueShopping}
           </Link>
         </div>
         </div>
@@ -994,7 +994,7 @@ export default function CartPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                  Current cart
+                  {dictionary.cart.currentCart}
                 </p>
                 <h2 className="mt-2 font-sans text-[1.45rem] font-bold leading-none tracking-[-0.04em] text-foreground">
                   Items

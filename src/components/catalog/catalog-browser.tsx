@@ -4,7 +4,9 @@ import { startTransition, useCallback, useEffect, useMemo, useRef, useState } fr
 import Link from "next/link";
 import { Filter, Loader2, Search } from "lucide-react";
 import { ProductCard } from "./product-card";
+import { useDictionary } from "@/components/providers/locale-provider";
 import type { CatalogProduct, CatalogSort } from "@/lib/catalog";
+import { formatMessage } from "@/lib/i18n/format";
 import type { ProductFormat } from "@/types/product";
 
 type CatalogBrowserProps = {
@@ -62,6 +64,7 @@ export function CatalogBrowser({
   initialQuery,
   filters,
 }: CatalogBrowserProps) {
+  const dictionary = useDictionary();
   const [products, setProducts] = useState(initialProducts);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [totalCount, setTotalCount] = useState(initialTotalCount);
@@ -75,7 +78,7 @@ export function CatalogBrowser({
 
   const activeLabel = useMemo(() => {
     if (query.q) {
-      return `Results for "${query.q}"`;
+      return formatMessage(dictionary.catalog.activeResultsFor, { query: query.q });
     }
     if (query.genre) {
       return query.genre;
@@ -83,8 +86,8 @@ export function CatalogBrowser({
     if (query.format) {
       return query.format;
     }
-    return "All catalog";
-  }, [query]);
+    return dictionary.catalog.activeAllCatalog;
+  }, [dictionary.catalog.activeAllCatalog, dictionary.catalog.activeResultsFor, query]);
 
   const fetchCatalog = useCallback(async (nextQuery: typeof query, offset = 0) => {
     const params = new URLSearchParams();
@@ -99,7 +102,7 @@ export function CatalogBrowser({
     const json = (await res.json()) as CatalogResponse;
 
     if (!res.ok) {
-      throw new Error("Could not load catalog");
+        throw new Error("Could not load catalog");
     }
 
     return json;
@@ -171,14 +174,14 @@ export function CatalogBrowser({
   return (
     <div className="space-y-5">
       <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Catalog</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">{dictionary.catalog.catalog}</p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="font-sans text-[2rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[2.15rem]">
-              Shop the archive
+              {dictionary.catalog.shopArchive}
             </h1>
             <p className="mt-2 text-sm leading-6 text-muted">
-              Browse collector copies without leaving the page every time you filter.
+              {dictionary.catalog.browseWithoutReload}
             </p>
           </div>
           <div className="rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
@@ -191,7 +194,7 @@ export function CatalogBrowser({
         <aside className="space-y-4">
           <div className="card space-y-4 p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Filter className="h-4 w-4" /> Filters
+              <Filter className="h-4 w-4" /> {dictionary.catalog.filters}
             </div>
 
             <form
@@ -202,7 +205,7 @@ export function CatalogBrowser({
               }}
             >
               <label htmlFor="catalog-search" className="label">
-                Search
+                {dictionary.catalog.search}
               </label>
               <div className="relative">
                 <Search className="absolute left-4 top-3.5 h-4 w-4 text-muted" />
@@ -211,17 +214,17 @@ export function CatalogBrowser({
                   className="input pl-10"
                   value={draftQuery}
                   onChange={(event) => setDraftQuery(event.target.value)}
-                  placeholder="Artist, title, label"
+                  placeholder={dictionary.catalog.artistTitleLabel}
                 />
               </div>
               <button type="submit" className="btn-secondary w-full">
-                Update results
+                {dictionary.catalog.updateResults}
               </button>
             </form>
 
             <div className="space-y-3">
               <p className="font-sans text-base font-bold tracking-[-0.03em] text-foreground">
-                Format
+                {dictionary.catalog.format}
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -229,7 +232,7 @@ export function CatalogBrowser({
                   onClick={() => void applyQuery({ ...query, format: undefined })}
                   className={getFilterButtonClass(!query.format)}
                 >
-                  All
+                  {dictionary.common.all}
                 </button>
                 {filters.formats.map((format) => (
                   <button
@@ -246,7 +249,7 @@ export function CatalogBrowser({
 
             <div className="space-y-3">
               <p className="font-sans text-base font-bold tracking-[-0.03em] text-foreground">
-                Genre
+                {dictionary.catalog.genre}
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -254,7 +257,7 @@ export function CatalogBrowser({
                   onClick={() => void applyQuery({ ...query, genre: "" })}
                   className={getFilterButtonClass(!query.genre)}
                 >
-                  All
+                  {dictionary.common.all}
                 </button>
                 {filters.genres.map((genre) => (
                   <button
@@ -280,11 +283,15 @@ export function CatalogBrowser({
             <>
               <div className="flex flex-col gap-4 rounded-[1.3rem] border border-border bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted">
-                  Showing {products.length} of {totalCount} record{totalCount === 1 ? "" : "s"}
+                  {formatMessage(dictionary.catalog.resultsShowing, {
+                    shown: products.length,
+                    total: totalCount,
+                    suffix: totalCount === 1 ? "" : "s",
+                  })}
                 </p>
                 <div className="flex items-center gap-3 sm:justify-end">
                   <label htmlFor="catalog-sort" className="text-sm font-medium text-foreground">
-                    Sort
+                    {dictionary.catalog.sort}
                   </label>
                   <select
                     id="catalog-sort"
@@ -299,7 +306,15 @@ export function CatalogBrowser({
                   >
                     {SORT_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
-                        {option.label}
+                        {{
+                          newest: dictionary.catalog.sortNewest,
+                          "price-asc": dictionary.catalog.sortPriceAsc,
+                          "price-desc": dictionary.catalog.sortPriceDesc,
+                          "title-asc": dictionary.catalog.sortTitleAsc,
+                          "title-desc": dictionary.catalog.sortTitleDesc,
+                          "label-asc": dictionary.catalog.sortLabelAsc,
+                          "label-desc": dictionary.catalog.sortLabelDesc,
+                        }[option.value]}
                       </option>
                     ))}
                   </select>
@@ -314,33 +329,33 @@ export function CatalogBrowser({
                 {loadingMore ? (
                   <p className="inline-flex items-center gap-2 text-sm text-muted">
                     <Loader2 className="h-4 w-4 animate-spin text-accent" />
-                    Loading more records...
+                    {dictionary.catalog.loadingMore}
                   </p>
                 ) : autoLoadEnabled ? (
-                  <p className="text-sm text-muted">Scroll to the bottom to load more.</p>
+                  <p className="text-sm text-muted">{dictionary.catalog.scrollToLoad}</p>
                 ) : hasMore ? (
                   <div className="rounded-[1rem] border border-border bg-white px-4 py-4 text-center shadow-card">
                     <p className="text-sm text-muted">
-                      Auto-loading pauses here so the footer stays reachable.
+                      {dictionary.catalog.autoLoadPaused}
                     </p>
                     <button
                       type="button"
                       onClick={() => void handleLoadMore("manual")}
                       className="btn-secondary mt-3"
                     >
-                      Load 24 more records
+                      {dictionary.catalog.loadMore}
                     </button>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted">All matching records are loaded.</p>
+                  <p className="text-sm text-muted">{dictionary.catalog.allLoaded}</p>
                 )}
               </div>
             </>
           ) : (
             <div className="card py-12 text-center">
-              <p className="text-lg text-muted">No items match your filters.</p>
+              <p className="text-lg text-muted">{dictionary.catalog.noMatches}</p>
               <Link href="/catalog" className="btn-secondary mt-4 inline-flex">
-                Clear filters
+                {dictionary.common.clearFilters}
               </Link>
             </div>
           )}

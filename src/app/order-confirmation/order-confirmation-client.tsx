@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { ArrowRight, CheckCircle } from "lucide-react";
+import { useDictionary } from "@/components/providers/locale-provider";
 import { useCart } from "@/hooks/use-cart";
 
 type OrderConfirmationClientProps = {
@@ -16,6 +17,7 @@ export function OrderConfirmationClient({
   orderNumber,
   paymentMethod,
 }: OrderConfirmationClientProps) {
+  const dictionary = useDictionary();
   const { clearCart } = useCart();
 
   useEffect(() => {
@@ -26,20 +28,25 @@ export function OrderConfirmationClient({
 
   const title = useMemo(() => {
     if (paymentMethod === "pickup") {
-      return "Pickup reserved";
+      return dictionary.orderConfirmation.pickupReserved;
     }
-    return "Order confirmed";
-  }, [paymentMethod]);
+    return dictionary.orderConfirmation.orderConfirmed;
+  }, [dictionary.orderConfirmation.orderConfirmed, dictionary.orderConfirmation.pickupReserved, paymentMethod]);
 
   const body = useMemo(() => {
     if (paymentMethod === "pickup") {
-      return "Your items are reserved. We will contact you by email to arrange collection.";
+      return dictionary.orderConfirmation.pickupBody;
     }
     if (paymentMethod === "paypal") {
-      return "Your PayPal payment was captured successfully. We will send a confirmation email shortly.";
+      return dictionary.orderConfirmation.paypalBody;
     }
-    return "Your payment was successful. We will send you a confirmation email shortly.";
-  }, [paymentMethod]);
+    return dictionary.orderConfirmation.successBody;
+  }, [
+    dictionary.orderConfirmation.paypalBody,
+    dictionary.orderConfirmation.pickupBody,
+    dictionary.orderConfirmation.successBody,
+    paymentMethod,
+  ]);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 py-8 text-center">
@@ -54,7 +61,7 @@ export function OrderConfirmationClient({
       {orderNumber && (
         <div className="card space-y-2 text-left">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-            Order number
+            {dictionary.orderConfirmation.orderNumber}
           </p>
           <p className="font-mono text-lg text-foreground">{orderNumber}</p>
         </div>
@@ -62,21 +69,21 @@ export function OrderConfirmationClient({
 
       <div className="card space-y-3 text-left">
         <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
-          What happens next
+          {dictionary.orderConfirmation.whatNext}
         </h2>
         <ul className="space-y-2 text-sm leading-7 text-muted">
-          <li>1. You will receive a confirmation email with your order number.</li>
-          <li>2. We will prepare your order or arrange pickup details.</li>
-          <li>3. Tracking is added once shipped.</li>
+          <li>{dictionary.orderConfirmation.step1}</li>
+          <li>{dictionary.orderConfirmation.step2}</li>
+          <li>{dictionary.orderConfirmation.step3}</li>
         </ul>
       </div>
 
       <div className="flex justify-center gap-4 pt-4">
         <Link href="/track-order" className="btn-secondary">
-          Track your order
+          {dictionary.orderConfirmation.trackOrder}
         </Link>
         <Link href="/catalog" className="btn-primary">
-          Continue shopping <ArrowRight className="h-4 w-4" />
+          {dictionary.orderConfirmation.continueShopping} <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
     </div>

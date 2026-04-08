@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { useDictionary } from "@/components/providers/locale-provider";
+import { formatMessage } from "@/lib/i18n/format";
 import { formatEuroFromCents } from "@/lib/money";
 
 type ProductCardProduct = {
@@ -33,6 +37,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, size = "default" }: ProductCardProps) {
+  const dictionary = useDictionary();
   const imageUrl = product.images[0]?.url ?? null;
   const isMini = size === "mini";
   const isCompact = size === "compact" || isMini;
@@ -76,12 +81,12 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-muted">
-            No image
+            {dictionary.common.noImage}
           </div>
         )}
         {product.stockQuantity === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/45">
-            <span className="badge-sold font-semibold">Sold out</span>
+            <span className="badge-sold font-semibold">{dictionary.productCard.soldOut}</span>
           </div>
         )}
         <div className="absolute left-2.5 top-2.5">{formatBadge(product.format)}</div>
@@ -105,7 +110,9 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
           <div className={metaClass}>
             <span className="line-clamp-1">{product.genre}</span>
             <span>
-              {product.stockQuantity > 0 ? `${product.stockQuantity} in stock` : "Unavailable"}
+              {product.stockQuantity > 0
+                ? formatMessage(dictionary.productCard.inStock, { count: product.stockQuantity })
+                : dictionary.productCard.unavailable}
             </span>
           </div>
         </div>

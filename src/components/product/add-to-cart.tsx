@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Product } from "@/types/product";
 import { ShoppingCart, Check } from "lucide-react";
+import { useDictionary } from "@/components/providers/locale-provider";
 import { useCart } from "@/hooks/use-cart";
 
 interface AddToCartProps {
@@ -11,6 +12,7 @@ interface AddToCartProps {
 }
 
 export function AddToCart({ product, imageUrl }: AddToCartProps) {
+  const dictionary = useDictionary();
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
 
@@ -35,11 +37,11 @@ export function AddToCart({ product, imageUrl }: AddToCartProps) {
     >
       {added ? (
         <>
-          <Check className="h-5 w-5" /> Added to Cart
+          <Check className="h-5 w-5" /> {dictionary.addToCart.added}
         </>
       ) : (
         <>
-          <ShoppingCart className="h-5 w-5" /> Add to Cart
+          <ShoppingCart className="h-5 w-5" /> {dictionary.addToCart.add}
         </>
       )}
     </button>

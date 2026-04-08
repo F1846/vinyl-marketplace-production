@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { useDictionary } from "@/components/providers/locale-provider";
 import { useCart } from "@/hooks/use-cart";
 
 type PayPalReturnClientProps = {
@@ -11,15 +12,16 @@ type PayPalReturnClientProps = {
 };
 
 export function PayPalReturnClient({ token, state }: PayPalReturnClientProps) {
+  const dictionary = useDictionary();
   const router = useRouter();
   const { clearCart } = useCart();
-  const [message, setMessage] = useState("Capturing your PayPal order...");
+  const [message, setMessage] = useState<string>(dictionary.paypalReturn.capturing);
 
   const isReady = useMemo(() => Boolean(token && state), [token, state]);
 
   useEffect(() => {
     if (!isReady) {
-      setMessage("PayPal did not return the checkout details we expected.");
+      setMessage(dictionary.paypalReturn.missing);
       return;
     }
 
@@ -38,7 +40,7 @@ export function PayPalReturnClient({ token, state }: PayPalReturnClientProps) {
       }
 
       if (!res.ok || !json.orderNumber) {
-        setMessage(json.error?.message ?? "PayPal capture failed.");
+        setMessage(json.error?.message ?? dictionary.paypalReturn.failed);
         return;
       }
 
@@ -53,13 +55,13 @@ export function PayPalReturnClient({ token, state }: PayPalReturnClientProps) {
     return () => {
       cancelled = true;
     };
-  }, [clearCart, isReady, router, state, token]);
+  }, [clearCart, dictionary.paypalReturn.failed, dictionary.paypalReturn.missing, isReady, router, state, token]);
 
   return (
     <div className="card mx-auto max-w-xl space-y-4 py-12 text-center">
       <Loader2 className="mx-auto h-8 w-8 animate-spin text-accent" />
       <h1 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground">
-        PayPal checkout
+        {dictionary.paypalReturn.title}
       </h1>
       <p className="text-sm leading-7 text-muted">{message}</p>
     </div>

@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { AddToCart } from "@/components/product/add-to-cart";
 import { ProductImageGallery } from "@/components/product/product-image-gallery";
+import { formatMessage } from "@/lib/i18n/format";
+import { getRequestDictionary } from "@/lib/i18n/server";
 import { formatEuroFromCents } from "@/lib/money";
 import { siteUrl } from "@/lib/site";
 import { conditionLabel } from "@/types/product";
@@ -61,6 +63,7 @@ export async function generateMetadata({
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const product = await getProduct(id);
+  const dictionary = await getRequestDictionary();
 
   if (!product || product.status === "archived") {
     notFound();
@@ -122,7 +125,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             <span className={`badge badge-${product.format} capitalize`}>{product.format}</span>
             {product.conditionMedia && (
               <span className="rounded-full border border-border bg-white px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-muted">
-                Media:{" "}
+                {dictionary.product.media}:{" "}
                 <span className="text-foreground">
                   {conditionLabel(product.conditionMedia)}
                 </span>
@@ -130,7 +133,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             )}
             {product.conditionSleeve && (
               <span className="rounded-full border border-border bg-white px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-muted">
-                Sleeve:{" "}
+                {dictionary.product.sleeve}:{" "}
                 <span className="text-foreground">
                   {conditionLabel(product.conditionSleeve)}
                 </span>
@@ -150,7 +153,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           <div className="grid gap-3 rounded-[1.15rem] border border-border bg-white p-3.5 shadow-soft sm:grid-cols-2">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                Price
+                {dictionary.product.price}
               </p>
               <p className="mt-1 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
                 {formatEuroFromCents(product.priceCents)}
@@ -158,12 +161,14 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             </div>
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                Availability
+                {dictionary.product.availability}
               </p>
               <p
                 className={`mt-1 text-sm font-medium ${inStock ? "text-success" : "text-danger"}`}
               >
-                {inStock ? `${product.stockQuantity} in stock` : "Sold out"}
+                {inStock
+                  ? formatMessage(dictionary.product.inStock, { count: product.stockQuantity })
+                  : dictionary.product.soldOut}
               </p>
             </div>
           </div>
@@ -172,7 +177,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             {product.pressingLabel && (
               <div className="rounded-[0.95rem] border border-border bg-background px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                  Label
+                  {dictionary.product.label}
                 </p>
                 <p className="mt-1 text-sm text-foreground">{product.pressingLabel}</p>
               </div>
@@ -180,7 +185,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             {product.pressingCatalogNumber && (
               <div className="rounded-[0.95rem] border border-border bg-background px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                  Cat#
+                  {dictionary.product.catNumber}
                 </p>
                 <p className="mt-1 font-mono text-sm text-foreground">
                   {product.pressingCatalogNumber}
@@ -190,7 +195,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             {product.pressingYear && (
               <div className="rounded-[0.95rem] border border-border bg-background px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                  Year
+                  {dictionary.product.year}
                 </p>
                 <p className="mt-1 text-sm text-foreground">{product.pressingYear}</p>
               </div>
@@ -198,7 +203,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             {product.genre && (
               <div className="rounded-[0.95rem] border border-border bg-background px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                  Genre
+                  {dictionary.product.genre}
                 </p>
                 <p className="mt-1 text-sm text-foreground">{product.genre}</p>
               </div>
@@ -208,14 +213,13 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           <div className="rounded-[1.15rem] border border-border bg-white p-3.5 shadow-soft">
             <div className="space-y-3">
               <p className="text-sm leading-6 text-muted">
-                Packed carefully for collectors. Shipping and pickup options are calculated
-                in checkout, and all prices are shown in euro.
+                {dictionary.product.packedCarefully}
               </p>
               {inStock ? (
                 <AddToCart product={product} imageUrl={product.images[0]?.url ?? undefined} />
               ) : (
                 <button className="btn-secondary w-full" disabled>
-                  Sold Out
+                  {dictionary.product.soldOutButton}
                 </button>
               )}
             </div>
@@ -224,7 +228,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           {product.description && (
             <section className="rounded-[1.1rem] border border-border bg-white p-3.5 shadow-soft">
               <h2 className="font-sans text-[1.15rem] font-bold tracking-[-0.04em] text-foreground">
-                Release notes
+                {dictionary.product.releaseNotes}
               </h2>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted">
                 {product.description}

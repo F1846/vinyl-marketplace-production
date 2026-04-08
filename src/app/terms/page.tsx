@@ -1,68 +1,54 @@
+import { formatMessage } from "@/lib/i18n/format";
+import { getRequestDictionary } from "@/lib/i18n/server";
 import { siteConfig } from "@/lib/site";
 
 export const metadata = {
   title: "Terms and Conditions",
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const dictionary = await getRequestDictionary();
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="space-y-3">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-muted">
-          Policies
+          {dictionary.footer.terms}
         </p>
         <h1 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground sm:text-4xl">
-          Terms and Conditions
+          {dictionary.terms.title}
         </h1>
         <p className="text-base leading-7 text-muted">
-          These terms apply to purchases made through {siteConfig.name}.
+          {dictionary.terms.intro}
         </p>
       </div>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
         <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
-          Product Condition
+          {dictionary.terms.productCondition}
         </h2>
-        <p>
-          Used media is sold with visible grading notes. Product photos and
-          descriptions are prepared carefully, but minor cosmetic differences can
-          exist between listings and the received item.
-        </p>
+        <p>{dictionary.terms.productConditionBody}</p>
       </section>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
         <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
-          Orders and Payment
+          {dictionary.terms.orders}
         </h2>
-        <p>
-          Orders are confirmed after successful payment or, for local pickup
-          reservations, after order acceptance by the shop. Prices are listed in
-          euro and exclude only any explicitly stated shipping charge.
-        </p>
+        <p>{dictionary.terms.ordersBody}</p>
       </section>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
         <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
-          Availability
+          {dictionary.terms.availability}
         </h2>
-        <p>
-          Catalog quantities are limited. If a product becomes unavailable due to
-          a stock conflict, the order may be cancelled and any payment will be
-          refunded.
-        </p>
+        <p>{dictionary.terms.availabilityBody}</p>
       </section>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
         <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
-          Support
+          {dictionary.terms.support}
         </h2>
-        <p>
-          Questions about an order can be sent to{" "}
-          <span className="font-medium text-foreground">
-            {siteConfig.legal.contactEmail}
-          </span>
-          .
-        </p>
+        <p>{formatMessage(dictionary.terms.supportBody, { email: siteConfig.legal.contactEmail })}</p>
       </section>
     </div>
   );

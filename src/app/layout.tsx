@@ -5,6 +5,9 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "@/styles/globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { LocaleProvider } from "@/components/providers/locale-provider";
+import { getDictionary } from "@/lib/i18n/dictionaries";
+import { getRequestLocale } from "@/lib/i18n/server";
 import { siteConfig } from "@/lib/site";
 
 const sansFont = Manrope({
@@ -94,22 +97,27 @@ const websiteStructuredData = [
   },
 ];
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = await getRequestLocale();
+  const dictionary = getDictionary(locale);
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body
         className={`${sansFont.variable} ${serifFont.variable} flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
       >
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteStructuredData) }}
-        />
-        <Header />
-        <main className="container mx-auto flex-1 px-4 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
-          {children}
-        </main>
-        <Footer />
-        <SpeedInsights />
+        <LocaleProvider locale={locale} dictionary={dictionary}>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteStructuredData) }}
+          />
+          <Header />
+          <main className="container mx-auto flex-1 px-4 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
+            {children}
+          </main>
+          <Footer />
+          <SpeedInsights />
+        </LocaleProvider>
       </body>
     </html>
   );

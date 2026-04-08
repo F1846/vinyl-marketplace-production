@@ -9,6 +9,8 @@ import {
   Package,
   Truck,
 } from "lucide-react";
+import { useDictionary } from "@/components/providers/locale-provider";
+import { formatMessage } from "@/lib/i18n/format";
 import { formatEuroFromCents } from "@/lib/money";
 import type { TrackingSummary } from "@/types/order";
 
@@ -30,15 +32,8 @@ interface OrderData {
   }>;
 }
 
-const STATUS_CONFIG = {
-  pending: { icon: Clock, color: "text-yellow-500", label: "Order placed" },
-  processing: { icon: Package, color: "text-blue-500", label: "Processing" },
-  shipped: { icon: Truck, color: "text-zinc-700", label: "Shipped" },
-  delivered: { icon: CheckCircle, color: "text-green-600", label: "Delivered" },
-  cancelled: { icon: AlertCircle, color: "text-danger", label: "Cancelled" },
-};
-
 export default function TrackOrderPage() {
+  const dictionary = useDictionary();
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -64,10 +59,10 @@ export default function TrackOrderPage() {
       if (json.data) {
         setOrder(json.data);
       } else {
-        setError("If you have a recent order, you will see its status here.");
+        setError(dictionary.trackOrder.empty);
       }
     } catch {
-      setError("Network error. Please try again.");
+      setError(dictionary.trackOrder.lookupFailed);
     } finally {
       setLoading(false);
     }
@@ -77,44 +72,44 @@ export default function TrackOrderPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="space-y-3 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
-          Order status
+          {dictionary.trackOrder.orderStatus}
         </p>
         <h1 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground sm:text-4xl">
-          Track your order
+          {dictionary.trackOrder.title}
         </h1>
         <p className="mx-auto max-w-xl text-muted">
-          Enter your order number and the email you used at checkout.
+          {dictionary.trackOrder.titleBody}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="card space-y-4">
         <div>
           <label htmlFor="orderNumber" className="label">
-            Order number
+            {dictionary.trackOrder.orderNumber}
           </label>
           <input
             id="orderNumber"
             name="orderNumber"
             className="input"
-            placeholder="e.g. FS-20260408-A7K2"
+            placeholder={dictionary.trackOrder.placeholderOrder}
             required
           />
         </div>
         <div>
           <label htmlFor="email" className="label">
-            Email address
+            {dictionary.trackOrder.email}
           </label>
           <input
             id="email"
             name="email"
             type="email"
             className="input"
-            placeholder="your@email.com"
+            placeholder={dictionary.trackOrder.placeholderEmail}
             required
           />
         </div>
         <button type="submit" className="btn-primary w-full" disabled={loading}>
-          {loading ? "Looking up..." : "Track order"}
+          {loading ? dictionary.trackOrder.lookupLoading : dictionary.trackOrder.trackOrder}
         </button>
       </form>
 
@@ -130,8 +125,16 @@ export default function TrackOrderPage() {
 }
 
 function OrderResult({ order }: { order: OrderData }) {
+  const dictionary = useDictionary();
+  const statusConfig = {
+    pending: { icon: Clock, color: "text-yellow-500", label: dictionary.trackOrder.statusPending },
+    processing: { icon: Package, color: "text-blue-500", label: dictionary.trackOrder.statusProcessing },
+    shipped: { icon: Truck, color: "text-zinc-700", label: dictionary.trackOrder.statusShipped },
+    delivered: { icon: CheckCircle, color: "text-green-600", label: dictionary.trackOrder.statusDelivered },
+    cancelled: { icon: AlertCircle, color: "text-danger", label: dictionary.trackOrder.statusCancelled },
+  };
   const status =
-    STATUS_CONFIG[order.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
+    statusConfig[order.status as keyof typeof statusConfig] || statusConfig.pending;
   const StatusIcon = status.icon;
 
   return (
@@ -149,7 +152,7 @@ function OrderResult({ order }: { order: OrderData }) {
 
         <div>
           <h3 className="mb-2 font-sans text-xl font-bold tracking-[-0.04em] text-foreground">
-            Items
+            {dictionary.trackOrder.items}
           </h3>
           <div className="space-y-2">
             {order.items.map((item, index) => (
@@ -167,14 +170,19 @@ function OrderResult({ order }: { order: OrderData }) {
 
         <div className="border-t border-border pt-3">
           <div className="flex justify-between text-lg font-bold text-foreground">
-            <span>Order total</span>
+            <span>{dictionary.trackOrder.orderTotal}</span>
             <span>{formatEuroFromCents(order.totalCents)}</span>
           </div>
           <p className="mt-1 text-xs text-muted">
-            Ordered: {new Date(order.createdAt).toLocaleDateString()}
+            {formatMessage(dictionary.trackOrder.orderedOn, {
+              date: new Date(order.createdAt).toLocaleDateString(),
+            })}
           </p>
           <p className="text-xs text-muted">
-            Payment: {order.paymentMethod} / Delivery: {order.deliveryMethod}
+            {formatMessage(dictionary.trackOrder.paymentDelivery, {
+              payment: order.paymentMethod,
+              delivery: order.deliveryMethod,
+            })}
           </p>
         </div>
       </div>
@@ -184,10 +192,10 @@ function OrderResult({ order }: { order: OrderData }) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-                Shipment tracking
+                {dictionary.trackOrder.trackingHeading}
               </p>
               <h3 className="mt-1 font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
-                {order.trackingSummary?.carrierStatusLabel ?? "Tracking active"}
+                {order.trackingSummary?.carrierStatusLabel ?? dictionary.trackOrder.trackingActive}
               </h3>
             </div>
             {order.trackingSummary?.trackingUrl && (
@@ -197,7 +205,7 @@ function OrderResult({ order }: { order: OrderData }) {
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline"
               >
-                Open carrier page <ExternalLink className="h-4 w-4" />
+                {dictionary.trackOrder.openCarrierPage} <ExternalLink className="h-4 w-4" />
               </a>
             )}
           </div>
@@ -216,8 +224,9 @@ function OrderResult({ order }: { order: OrderData }) {
             {order.trackingSummary?.message && <p>{order.trackingSummary.message}</p>}
             {order.trackingSummary?.lastUpdatedAt && (
               <p>
-                Latest carrier update:{" "}
-                {new Date(order.trackingSummary.lastUpdatedAt).toLocaleString()}
+                {formatMessage(dictionary.trackOrder.latestCarrierUpdate, {
+                  date: new Date(order.trackingSummary.lastUpdatedAt).toLocaleString(),
+                })}
               </p>
             )}
           </div>
@@ -240,7 +249,7 @@ function OrderResult({ order }: { order: OrderData }) {
             </div>
           ) : (
             <p className="text-sm text-muted">
-              We are waiting for the carrier to publish the first shipment scan.
+              {dictionary.trackOrder.trackingWaiting}
             </p>
           )}
         </div>

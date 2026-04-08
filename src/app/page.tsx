@@ -9,6 +9,8 @@ import {
 import { db, schema } from "@/db";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { ProductCard } from "@/components/catalog/product-card";
+import { formatMessage } from "@/lib/i18n/format";
+import { getRequestDictionary } from "@/lib/i18n/server";
 import { formatEuroFromCents } from "@/lib/money";
 import { siteConfig } from "@/lib/site";
 
@@ -24,6 +26,7 @@ function shuffleProducts<T>(items: T[]): T[] {
 }
 
 export default async function HomePage() {
+  const dictionary = await getRequestDictionary();
   const d = db();
   const latestProducts = await d.query.products.findMany({
     where: eq(schema.products.status, "active"),
@@ -77,23 +80,22 @@ export default async function HomePage() {
         <div className="space-y-5">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">
             <RecordIcon className="h-3.5 w-3.5 text-foreground" />
-            Independent record store
+            {dictionary.home.independentRecordStore}
           </div>
           <div className="space-y-3">
             <h1 className="max-w-[10.5ch] text-balance font-sans text-[clamp(3.15rem,7vw,5.25rem)] font-bold leading-[0.91] tracking-[-0.05em] text-foreground">
-              Records worth having on the shelf.
+              {dictionary.home.worthHaving}
             </h1>
             <p className="max-w-xl text-[15px] leading-7 text-muted">
-              {siteConfig.name} is an electronic music record shop with graded vinyl,
-              cassette, and CD finds, fair euro pricing, and collector-friendly shipping.
+              {dictionary.home.worthHavingBody}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/catalog" className="btn-primary">
-              Browse the catalog <ArrowRight className="h-5 w-5" />
+              {dictionary.home.browseCatalog} <ArrowRight className="h-5 w-5" />
             </Link>
             <Link href="/shipping" className="btn-secondary">
-              Shipping and pickup
+              {dictionary.home.shippingAndPickup}
             </Link>
           </div>
           <div className="grid gap-2.5 sm:grid-cols-3">
@@ -101,28 +103,30 @@ export default async function HomePage() {
               href={featuredHeroProduct ? `/products/${featuredHeroProduct.id}` : "/catalog"}
               className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
-              <p className="text-[10px] uppercase tracking-[0.2em] text-muted">Available now</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.availableNow}</p>
               <p className="mt-1.5 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
                 {count ?? 0}
               </p>
               <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
                 {featuredHeroProduct
                   ? `${featuredHeroProduct.artist} - ${featuredHeroProduct.title}`
-                  : "Current records, tapes, and CDs ready to open and play."}
+                  : dictionary.home.currentFallback}
               </p>
             </Link>
             <Link
               href={cheapestProduct ? `/products/${cheapestProduct.id}` : "/catalog?sort=price-asc"}
               className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
-              <p className="text-[10px] uppercase tracking-[0.2em] text-muted">From</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.from}</p>
               <p className="mt-1.5 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
                 {minPrice === null ? "0 EUR" : formatEuroFromCents(minPrice)}
               </p>
               <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
                 {cheapestProduct
-                  ? `Start with ${cheapestProduct.artist} - ${cheapestProduct.title}`
-                  : "Start with the lowest-priced copy currently in the catalog."}
+                  ? formatMessage(dictionary.home.startWith, {
+                      product: `${cheapestProduct.artist} - ${cheapestProduct.title}`,
+                    })
+                  : dictionary.home.currentFallback}
               </p>
             </Link>
             <Link
@@ -133,14 +137,14 @@ export default async function HomePage() {
               }
               className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
-              <p className="text-[10px] uppercase tracking-[0.2em] text-muted">Format mix</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.formatMix}</p>
               <p className="mt-1.5 font-sans text-[1.22rem] font-bold capitalize tracking-[-0.04em] text-foreground">
                 Vinyl / Tape / CD
               </p>
               <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
                 {formatSpotlight
                   ? `${formatSpotlight.artist} - ${formatSpotlight.title}`
-                  : "Browse by format and jump straight into the shelf you want."}
+                  : dictionary.home.formatFallback}
               </p>
             </Link>
           </div>
@@ -163,14 +167,14 @@ export default async function HomePage() {
         <div className="mb-6 flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
-              Fresh in
+              {dictionary.home.freshIn}
             </p>
             <h2 className="font-sans text-[2rem] font-bold tracking-[-0.04em] text-foreground">
-              New arrivals
+              {dictionary.home.newArrivals}
             </h2>
           </div>
           <Link href="/catalog" className="text-sm text-accent hover:underline">
-            View all <ArrowRight className="inline h-4 w-4" />
+            {dictionary.common.viewAll} <ArrowRight className="inline h-4 w-4" />
           </Link>
         </div>
         {newArrivalProducts.length > 0 ? (
@@ -183,7 +187,7 @@ export default async function HomePage() {
           </div>
         ) : (
           <div className="card text-center text-muted">
-            <p>Catalog is empty. Check back soon.</p>
+            <p>{dictionary.home.catalogEmpty}</p>
           </div>
         )}
       </section>
@@ -192,17 +196,17 @@ export default async function HomePage() {
         <section className="space-y-5">
           <div className="flex items-center justify-between gap-3">
             <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
-                Shelf picks
-              </p>
-              <h2 className="font-sans text-[1.85rem] font-bold tracking-[-0.04em] text-foreground">
-                More from the racks
-              </h2>
-            </div>
-            <Link href="/catalog" className="text-sm text-accent hover:underline">
-              Explore more <ArrowRight className="inline h-4 w-4" />
-            </Link>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+              {dictionary.home.shelfPicks}
+            </p>
+            <h2 className="font-sans text-[1.85rem] font-bold tracking-[-0.04em] text-foreground">
+              {dictionary.home.moreFromTheRacks}
+            </h2>
           </div>
+          <Link href="/catalog" className="text-sm text-accent hover:underline">
+            {dictionary.home.exploreMore} <ArrowRight className="inline h-4 w-4" />
+          </Link>
+        </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {shelfPicks.map((product) => (
               <ProductCard key={product.id} product={product} size="compact" />

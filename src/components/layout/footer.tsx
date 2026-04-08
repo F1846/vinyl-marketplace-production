@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useDictionary } from "@/components/providers/locale-provider";
 import { siteConfig } from "@/lib/site";
 
 export function Footer() {
+  const dictionary = useDictionary();
+
   return (
     <footer className="border-t border-border bg-[rgba(255,255,255,0.76)]">
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -11,49 +16,49 @@ export function Footer() {
               {siteConfig.name}
             </span>
             <p className="mt-3 max-w-md text-sm leading-7 text-muted">
-              {siteConfig.description}
+              {dictionary.home.worthHavingBody}
             </p>
           </div>
           <div className="space-y-3 text-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Shop</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">{dictionary.footer.shop}</p>
             <div className="flex flex-col gap-3">
               <Link href="/catalog" className="text-muted transition-colors hover:text-accent">
-                Catalog
+                {dictionary.header.browseCatalog}
               </Link>
               <Link href="/shipping" className="text-muted transition-colors hover:text-accent">
-                Shipping and pickup
+                {dictionary.footer.shippingAndPickup}
               </Link>
               <Link href="/track-order" className="text-muted transition-colors hover:text-accent">
-                Track Order
+                {dictionary.footer.trackOrder}
               </Link>
             </div>
           </div>
           <div className="space-y-3 text-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Info</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">{dictionary.footer.info}</p>
             <div className="flex flex-col gap-3">
               <Link href="/about" className="text-muted transition-colors hover:text-accent">
-                About
+                {dictionary.footer.about}
               </Link>
               <Link href="/contact" className="text-muted transition-colors hover:text-accent">
-                Contact
+                {dictionary.footer.contact}
               </Link>
               <Link href="/imprint" className="text-muted transition-colors hover:text-accent">
-                Imprint
+                {dictionary.footer.imprint}
               </Link>
               <Link href="/privacy" className="text-muted transition-colors hover:text-accent">
-                Privacy Policy
+                {dictionary.footer.privacyPolicy}
               </Link>
               <Link href="/terms" className="text-muted transition-colors hover:text-accent">
-                Terms
+                {dictionary.footer.terms}
               </Link>
               <Link href="/refund" className="text-muted transition-colors hover:text-accent">
-                Refund policy
+                {dictionary.footer.refundPolicy}
               </Link>
             </div>
           </div>
         </div>
         <div className="mt-8 border-t border-border pt-4 text-center text-xs text-muted">
-          &copy; {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
+          &copy; {new Date().getFullYear()} {siteConfig.name}. {dictionary.footer.allRightsReserved}
         </div>
       </div>
     </footer>
