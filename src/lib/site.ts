@@ -20,11 +20,6 @@ export const siteConfig = {
   tagline: "Electronic music record shop",
   orderEmail: configuredOrderEmail ?? fallbackOrderEmail,
   supportEmail: configuredSupportEmail ?? fallbackSupportEmail,
-  emergencyEmail:
-    clean(process.env.STORE_EMERGENCY_EMAIL) ?? "sandrodoglio40@gmail.com",
-  emergencyEmailNote:
-    clean(process.env.STORE_EMERGENCY_EMAIL_NOTE) ??
-    "Fallback contact if you do not receive a reply from the domain inbox.",
   baseUrl:
     clean(process.env.NEXT_PUBLIC_SITE_URL) ?? "https://www.federicoshop.de",
   pickupLabel:

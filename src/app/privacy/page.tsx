@@ -63,10 +63,6 @@ export default async function PrivacyPage() {
         <p>
           Orders: <span className="font-medium text-foreground">{siteConfig.orderEmail}</span>
         </p>
-        <p>
-          Emergency temporary: <span className="font-medium text-foreground">{siteConfig.emergencyEmail}</span>
-        </p>
-        <p className="text-xs leading-6 text-muted">{siteConfig.emergencyEmailNote}</p>
       </section>
     </div>
   );
