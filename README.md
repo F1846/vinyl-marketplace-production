@@ -1,138 +1,248 @@
 # Federico Shop
 
-Electronic music marketplace for vinyl records, cassette tapes, and CDs. Inspired by Discogs. Single-vendor MVP with card checkout, PayPal, and local pickup support.
+Production codebase for Federico Shop, an editorial storefront for electronic music records, tapes, and CDs with admin tools for catalog, shipping, checkout, invoices, and order tracking.
+
+## Live Site
+
+- Storefront: [https://www.federicoshop.de](https://www.federicoshop.de)
+- Catalog: [https://www.federicoshop.de/catalog](https://www.federicoshop.de/catalog)
+- Order tracking: [https://www.federicoshop.de/track-order](https://www.federicoshop.de/track-order)
+- Admin login: [https://www.federicoshop.de/admin](https://www.federicoshop.de/admin)
+
+## What Is Included
+
+- Editorial storefront with responsive catalog, product pages, and homepage shelves
+- Auto-detected storefront language with manual language switcher
+- Stripe Checkout, PayPal checkout, and Berlin local pickup
+- Mandatory checkout address step before payment
+- Country and quantity based shipping rules managed in admin
+- PDF invoice downloads for customers and admins
+- Transactional order emails via Mailgun
+- Live tracking support with Ship24, plus 17TRACK or AfterShip fallback
+- Admin order tools for status updates, tracking numbers, VAT, invoice download, and pickup handling
+- Admin product tools for edit, archive, hide/show, and sold-out relist
+- Discogs CSV import workflow with Discogs image lookup
+- SEO support with sitemap, robots, structured data, and Google verification tag support
+- GitHub Actions CI and Vercel production deploy
 
 ## Tech Stack
 
-- **Framework**: Next.js 15 (App Router, Server Components)
-- **Database**: PostgreSQL via Drizzle ORM (Neon/Vercel Postgres)
-- **Payments**: Stripe Checkout, PayPal redirect checkout, local pickup reservations
-- **Email**: Resend (transactional)
-- **Images**: Vercel Blob
-- **Styling**: Tailwind CSS (light editorial storefront)
-- **Deploy**: Vercel
-- **CI/CD**: GitHub Actions (lint, typecheck, build, deploy)
+- Framework: Next.js 15 App Router
+- Runtime: React 19
+- Database: PostgreSQL with Drizzle ORM
+- Styling: Tailwind CSS
+- Payments: Stripe Checkout and PayPal
+- Email: Mailgun
+- Storage: Vercel Blob
+- Tracking: Ship24, 17TRACK, or AfterShip
+- Deployment: Vercel
+- CI/CD: GitHub Actions
 
-## Quick Start
+## Local Development
 
 ### Prerequisites
 
 - Node.js 22+
-- PostgreSQL database (Neon, Supabase, or Vercel Postgres)
-- Stripe account (test mode)
-- Resend account (for emails)
+- PostgreSQL database
+- Stripe account
+- Mailgun account
+- Optional: PayPal account
+- Optional: Discogs user token
 
 ### Setup
 
 ```bash
-# 1. Clone and install
 git clone <your-repo-url>
-cd vinyl-marketplace
+cd vinyl-marketplace-production
 npm install
-
-# 2. Set up environment variables
 cp .env.example .env.local
-# Edit .env.local with your values
+```
 
-# 3. Set up the database
-npm run db:push        # or npm run db:migrate for full migrations
+Fill in `.env.local`, then run:
 
-# 4. Seed sample data
+```bash
+npm run db:push
 npm run db:seed
-
-# 5. Start the dev server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000).
 
-## Environment Variables
+## Key Environment Variables
 
-See `.env.example` for the full list. Key variables:
+See [.env.example](./.env.example) for the complete list.
 
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `STRIPE_SECRET_KEY` | Stripe secret key (sk_test_...) |
-| `STRIPE_WEBHOOK_SECRET` | Webhook signing secret (whsec_...) |
-| `SHIPPING_RATE_CENTS` | Flat shipping rate in cents (e.g., 899 = $8.99) |
-| `ADMIN_PASSWORD` | Admin panel password (plaintext for dev) |
-| `RESEND_API_KEY` | Resend API key for emails |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob token for images |
+### Core
 
-## Project Structure
+- `DATABASE_URL`
+- `NEXT_PUBLIC_SITE_URL`
+- `GOOGLE_SITE_VERIFICATION`
 
-See `ARCHITECTURE.md` for the complete architecture documentation.
+### Admin
 
-### Key directories:
+- `ADMIN_PASSWORD`
+- `ADMIN_PASSWORD_HASH`
+- `ADMIN_SESSION_SECRET`
 
-- `src/app/` — Next.js routes (pages, API routes, admin)
-- `src/components/` — React components organized by feature
-- `src/actions/` — Server Actions for mutations
-- `src/hooks/` — Client-side hooks (cart, etc.)
-- `src/lib/` — Singletons (database, Stripe, email)
-- `src/types/` — TypeScript type definitions
-- `src/validations/` — Zod schemas for all form/API inputs
-- `db/` — Drizzle schema, migrations, seed data
+### Checkout
 
-## Stripe Webhook Setup
+- `STRIPE_MODE`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `PAYPAL_ENVIRONMENT`
+- `PAYPAL_CLIENT_ID`
+- `PAYPAL_CLIENT_SECRET`
+- `CHECKOUT_STATE_SECRET`
 
-1. Install Stripe CLI: `stripe login`
-2. Listen for events: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`
-3. Copy the webhook signing secret to your `.env.local` as `STRIPE_WEBHOOK_SECRET`
-4. Or configure in Stripe Dashboard: `https://yourdomain.com/api/webhooks/stripe`
+### Email
+
+- `MAILGUN_API_KEY`
+- `MAILGUN_DOMAIN`
+- `MAILGUN_BASE_URL`
+- `EMAIL_FROM`
+- `EMAIL_FROM_NAME`
+- `EMAIL_BCC`
+
+### Tracking
+
+- `TRACKING_PROVIDER`
+- `SHIP24_API_KEY`
+- `SEVENTEENTRACK_API_KEY`
+- `AFTERSHIP_API_KEY`
+- `CRON_SECRET`
+
+### Catalog and Media
+
+- `BLOB_READ_WRITE_TOKEN`
+- `DISCOGS_USER_TOKEN`
+- `DISCOGS_USER_AGENT`
+
+## Common Scripts
+
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Start the local Next.js dev server |
+| `npm run build` | Create a production build |
+| `npm run start` | Start the production server locally |
+| `npm run lint` | Run ESLint |
+| `npm run typecheck` | Run TypeScript checks |
+| `npm run db:push` | Push schema changes to the database |
+| `npm run db:migrate` | Run Drizzle migrations |
+| `npm run db:seed` | Seed starter data |
+| `npm run db:studio` | Open Drizzle Studio |
+| `npm run admin:hash-password -- "your-password"` | Generate an admin password hash |
+| `npm run catalog:import-discogs -- "path-to-csv"` | Import catalog rows from a Discogs style inventory CSV |
+| `npm run shipping:apply` | Apply shipping rate seed rules |
+| `npm run email:test -- you@example.com` | Send a transactional email test |
+| `npm run email:test-order-flow -- you@example.com` | Send order flow email tests |
+
+## Admin Features
+
+The admin area is designed for a single-shop workflow.
+
+- Dashboard with product and order totals
+- Product list with sort controls for price, stock, and status
+- Product actions for edit, archive, hide/show, and relist
+- Shipping rules editor
+- Order detail page with:
+  - status updates
+  - tracking number and carrier or tracking URL
+  - VAT override
+  - PDF invoice download
+  - pickup details
+- Absolute session expiry after login for admin security
+
+## Orders and Customer Flow
+
+- Cart and checkout collect full customer details before payment
+- Card payments create orders through Stripe webhooks
+- PayPal orders use a signed return flow
+- Local pickup orders show fixed pickup details
+- Customers can track orders at `/track-order`
+- Customers can download invoice PDFs from order emails and order lookup
+- Order emails share a consistent Federico Shop layout and subject style
+
+## Shipping Model
+
+Shipping is database-driven and can be updated in admin. Current rules are based on destination country, total item count, and whether the cart contains vinyl.
+
+Examples:
+
+- Germany vinyl carts: `6 EUR` up to 5 items, then `10 EUR`
+- Europe vinyl carts: `14 EUR` up to 3 items, then `+2 EUR` per additional item
+- UK and Switzerland vinyl carts: `21 EUR` up to 2 items, then `+2 EUR` per additional item
+- Germany cassette or CD only carts: `4 EUR`
+- Europe cassette or CD only carts: `10 EUR`
+- UK and temporary rest-of-world cassette or CD only carts: `14 EUR`
+- Palestine: `30 EUR` fixed up to 10 items
+
+Mixed-format carts are calculated once per whole cart, not added separately by medium.
+
+## Email and Tracking Notes
+
+### Mailgun
+
+- Use a verified Mailgun domain for production sending
+- Set `EMAIL_FROM` to a verified sender such as `Federico Shop DE <orders@federicoshop.de>`
+- Incoming support and order mailbox forwarding can be handled separately at the DNS or provider level
+
+### Tracking
+
+- `ship24` is the preferred live tracking provider
+- `17track` is supported as a free alternative
+- `aftership` remains available if needed
+- Admins can also store a direct tracking URL template
 
 ## Deployment
 
-### Vercel (Recommended)
+### Vercel
 
 1. Push to GitHub
-2. Connect repo to Vercel
-3. Set environment variables in Vercel dashboard
-4. Deploy happens automatically on push to main
+2. Connect the repository to Vercel
+3. Add production environment variables
+4. Redeploy production
 
-### GitHub Actions CI/CD
+### Stripe Webhook
 
-Push to main branches triggers:
-1. **CI** — lint, typecheck, build
-2. **Deploy** — automatic deploy via Vercel CLI (requires `VERCEL_TOKEN` secret)
+Use:
 
-## Admin Panel
-
-Access at `/admin`. Default password set via `ADMIN_PASSWORD` env var.
-
-Features:
-- Product CRUD with image uploads
-- Order management with status updates
-- Tracking number entry
-
-## Database
-
-Uses Drizzle ORM with PostgreSQL. Commands:
-
-```bash
-npm run db:generate  # Generate migration from schema changes
-npm run db:migrate   # Run migrations
-npm run db:push      # Push schema directly (dev only)
-npm run db:studio    # Open Drizzle Studio GUI
-npm run db:seed      # Seed 10 electronic music products
+```text
+https://www.federicoshop.de/api/webhooks/stripe
 ```
 
-## Seed Data
+### Scheduled Tracking Sync
 
-Seeds 10 electronic music releases across all three formats:
-- Aphex Twin, Jeff Mills, Daft Punk, Autechre, Orbital, Boards of Canada, and more
-- Formats: vinyl, cassette, CD
-- Genres: Techno, House, Ambient, IDM, Drum & Bass
+Set a cron job to call:
 
-## Scripts
+```text
+/api/tracking/sync
+```
 
-| Script | Description |
-|---|---|
-| `npm run dev` | Start Next.js dev server with Turbopack |
-| `npm run build` | Production build |
-| `npm run start` | Production server |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | TypeScript type check |
-| `npm run db:push` | Push schema to database |
-| `npm run db:seed` | Seed sample products |
+with the `CRON_SECRET` header or query value expected by the route.
+
+## Project Structure
+
+- `src/app/` - App Router pages, route handlers, admin pages, checkout, tracking
+- `src/components/` - storefront, admin, and shared React components
+- `src/actions/` - server actions for products, orders, shipping, and admin updates
+- `src/lib/` - database, auth, checkout, email, invoices, SEO, tracking, site config
+- `src/hooks/` - client hooks such as cart state
+- `src/types/` - shared TypeScript types
+- `src/validations/` - Zod schemas
+- `db/` - schema, migrations, and seed data
+- `scripts/` - one-off maintenance, email, shipping, and import scripts
+- `.github/workflows/` - CI, deploy, and CodeQL workflows
+
+## Security and Ops
+
+- Admin routes are intentionally `noindex`
+- Cart, checkout, order confirmation, and API routes are intentionally `noindex`
+- Public storefront pages are indexable
+- Repo security policy lives in [.github/SECURITY.md](./.github/SECURITY.md)
+- Code scanning is configured with GitHub CodeQL
+
+## Related Docs
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md)
+- [DEPLOY.md](./DEPLOY.md)
+- [SEO-STRATEGY.md](./SEO-STRATEGY.md)
