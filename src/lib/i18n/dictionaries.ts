@@ -61,7 +61,7 @@ const english = {
     startWith: "Start with {product}",
     worthHaving: "Records worth having on the shelf.",
     worthHavingBody:
-      "Federico Shop is an electronic music record shop with graded vinyl, cassette, and CD finds, fair euro pricing, and collector-friendly shipping.",
+      "Federico Shop is an electronic music record shop with graded vinyl, cassette, and CD finds, fair pricing, and collector-friendly shipping.",
   },
   productCard: {
     inStock: "{count} in stock",
@@ -350,7 +350,7 @@ const german: typeof english = {
     startWith: "Starte mit {product}",
     worthHaving: "Schallplatten zum Sammeln",
     worthHavingBody:
-      "Federico Shop ist ein Laden fur elektronische Musik mit gegradeten Vinyl-, Kassetten- und CD-Funden, fairen Euro-Preisen und sammlerfreundlichem Versand.",
+      "Federico Shop ist ein Laden fur elektronische Musik mit gegradeten Vinyl-, Kassetten- und CD-Funden, fairen Preisen und sammlerfreundlichem Versand.",
   },
   productCard: {
     ...english.productCard,
@@ -578,7 +578,7 @@ const italian: typeof english = {
     startWith: "Inizia con {product}",
     worthHaving: "Vinili da collezione",
     worthHavingBody:
-      "Federico Shop e un negozio di musica elettronica con vinili, cassette e CD selezionati e gradati, prezzi equi in euro e spedizioni pensate per i collezionisti.",
+      "Federico Shop e un negozio di musica elettronica con vinili, cassette e CD selezionati e gradati, prezzi equi e spedizioni pensate per i collezionisti.",
   },
   productCard: {
     ...english.productCard,
