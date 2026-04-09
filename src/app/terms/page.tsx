@@ -18,9 +18,6 @@ export default async function TermsPage() {
         <h1 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground sm:text-4xl">
           {dictionary.terms.title}
         </h1>
-        <p className="text-base leading-7 text-muted">
-          {dictionary.terms.intro}
-        </p>
       </div>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
