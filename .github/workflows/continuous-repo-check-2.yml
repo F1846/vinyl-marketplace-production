@@ -1,0 +1,341 @@
+name: Continuous Repo Check
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: continuous-repo-check
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Audit and Patch
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      CI: "1"
+      DATABASE_URL: "postgresql://user:password@localhost:5432/vinyl_marketplace?sslmode=require"
+      NEXT_PUBLIC_SITE_URL: "http://localhost:3000"
+      STRIPE_MODE: "test"
+      STRIPE_SECRET_KEY: "sk_test_placeholder"
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_test_placeholder"
+      STRIPE_WEBHOOK_SECRET: "whsec_placeholder"
+      ADMIN_PASSWORD: "placeholder"
+      ADMIN_PASSWORD_HASH: ""
+      ADMIN_SESSION_SECRET: "codex-session-secret"
+      CHECKOUT_STATE_SECRET: "codex-checkout-state-secret"
+      MAILGUN_API_KEY: "key-placeholder"
+      MAILGUN_DOMAIN: "sandbox123.mailgun.org"
+      MAILGUN_BASE_URL: "https://api.mailgun.net"
+      EMAIL_FROM_NAME: "Federico Shop DE"
+      EMAIL_FROM: "Federico Shop DE <orders@example.com>"
+      EMAIL_BCC: ""
+      TEST_NOTIFICATION_EMAIL: ""
+      BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_placeholder"
+      DISCOGS_USER_TOKEN: ""
+      DISCOGS_USER_AGENT: "federico-shop/1.0 +https://www.federicoshop.de"
+      PAYPAL_ENVIRONMENT: "sandbox"
+      PAYPAL_CLIENT_ID: "placeholder"
+      PAYPAL_CLIENT_SECRET: "placeholder"
+      NEXT_PUBLIC_PAYPAL_ENABLED: "false"
+      TRACKING_PROVIDER: "ship24"
+      SHIP24_API_KEY: ""
+      SEVENTEENTRACK_API_KEY: ""
+      AFTERSHIP_API_KEY: ""
+      CRON_SECRET: "codex-cron-secret"
+      GOOGLE_SITE_VERIFICATION: ""
+      STORE_OWNER: "Federico Shop"
+      STORE_CONTACT_EMAIL: "orders@federicoshop.de"
+      STORE_EMERGENCY_EMAIL: "support@example.com"
+      STORE_EMERGENCY_EMAIL_NOTE: "Automation placeholder contact for local validation only."
+      STORE_ADDRESS_LINE1: "Okerstr"
+      STORE_ADDRESS_LINE2: ""
+      STORE_POSTAL_CODE: "12049"
+      STORE_CITY: "Neukolln Berlin"
+      STORE_COUNTRY: "Germany"
+      STORE_PHONE: ""
+      STORE_VAT_ID: ""
+      STORE_PICKUP_LABEL: "Berlin Neukolln : 12049"
+      STORE_PICKUP_NOTE: "Pickup is arranged by email after your order is placed."
+      SENTRY_DSN: ""
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Validate OpenRouter secret
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          test -n "$OPENROUTER_API_KEY" || (echo "::error::Missing GitHub secret OPENROUTER_API_KEY" && exit 1)
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Codex CLI
+        run: npm i -g @openai/codex@latest
+
+      - name: Configure Codex for OpenRouter
+        shell: bash
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          mkdir -p "$HOME/.codex"
+          cat > "$HOME/.codex/config.toml" <<'EOF'
+          model = "nvidia/nemotron-3-super-120b-a12b:free"
+          model_provider = "openrouter"
+          model_reasoning_effort = "high"
+
+          [model_providers.openrouter]
+          name = "OpenRouter"
+          base_url = "https://openrouter.ai/api/v1"
+          env_key = "OPENROUTER_API_KEY"
+          wire_api = "chat"
+          EOF
+
+      - name: Run Codex audit
+        id: run_codex
+        shell: bash
+        run: |
+          codex exec \
+            --sandbox workspace-write \
+            --json \
+            --output-last-message "${{ runner.temp }}/continuous-repo-check.json" \
+            "$(cat .github/codex/continuous-repo-check.md)"
+
+      - name: Validate Codex output exists
+        shell: bash
+        run: |
+          test -f "${{ runner.temp }}/continuous-repo-check.json" || (echo "::error::Codex output file missing" && exit 1)
+
+      - name: Parse Codex output
+        id: parse_codex
+        shell: bash
+        env:
+          CODEX_OUTPUT_PATH: ${{ runner.temp }}/continuous-repo-check.json
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+
+          const outputPath = process.env.CODEX_OUTPUT_PATH;
+          if (!outputPath || !fs.existsSync(outputPath)) {
+            throw new Error(`Missing Codex output file: ${outputPath || "(empty path)"}`);
+          }
+
+          const raw = fs.readFileSync(outputPath, "utf8").trim();
+          let data;
+          try {
+            data = JSON.parse(raw);
+          } catch {
+            throw new Error("Codex output is not valid JSON.");
+          }
+
+          const output = fs.createWriteStream(process.env.GITHUB_OUTPUT, { flags: "a" });
+          const setOutput = (name, value = "") => {
+            output.write(`${name}<<EOF\n${String(value)}\nEOF\n`);
+          };
+
+          setOutput("result", data.result ?? "");
+          setOutput("branch_topic", data.branch_topic ?? "");
+          setOutput("commit_message", data.commit_message ?? "");
+          setOutput("pr_title", data.pr_title ?? "");
+          setOutput("pr_body", data.pr_body ?? "");
+          setOutput("findings_summary", data.findings_summary ?? "");
+          setOutput("validation_summary", data.validation_summary ?? "");
+          setOutput("review_status", data.review_status ?? "");
+          output.end();
+          NODE
+
+      - name: Detect working tree changes
+        id: detect_changes
+        shell: bash
+        run: |
+          if [ -n "$(git status --porcelain --untracked-files=normal)" ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Capture changed files
+        if: steps.detect_changes.outputs.has_changes == 'true'
+        shell: bash
+        env:
+          CHANGED_FILES_PATH: ${{ runner.temp }}/continuous-repo-check-changes.txt
+        run: |
+          git status --short --untracked-files=normal > "$CHANGED_FILES_PATH"
+
+      - name: Derive branch name
+        id: branch
+        if: steps.detect_changes.outputs.has_changes == 'true'
+        shell: bash
+        env:
+          BRANCH_TOPIC: ${{ steps.parse_codex.outputs.branch_topic }}
+        run: |
+          topic="$(printf '%s' "${BRANCH_TOPIC:-repo-check}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g')"
+          if [ -z "$topic" ]; then
+            topic="repo-check"
+          fi
+          echo "branch=codex/security-audit-$topic" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push branch
+        if: steps.detect_changes.outputs.has_changes == 'true'
+        shell: bash
+        env:
+          BRANCH_NAME: ${{ steps.branch.outputs.branch }}
+          COMMIT_MESSAGE: ${{ steps.parse_codex.outputs.commit_message }}
+        run: |
+          git config user.name "codex[bot]"
+          git config user.email "codex[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH_NAME"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "Nothing staged after git add."
+            exit 0
+          fi
+
+          message="${COMMIT_MESSAGE:-Apply automated repository audit fix}"
+          git commit -m "$message"
+          git push --force-with-lease origin "$BRANCH_NAME"
+
+      - name: Create or update PR
+        id: pr
+        if: steps.detect_changes.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        env:
+          BRANCH_NAME: ${{ steps.branch.outputs.branch }}
+          PR_TITLE: ${{ steps.parse_codex.outputs.pr_title }}
+          PR_BODY: ${{ steps.parse_codex.outputs.pr_body }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const branch = process.env.BRANCH_NAME;
+            const title = process.env.PR_TITLE || "[codex] Continuous repo check";
+            const body = process.env.PR_BODY || "Automated repository audit fix.";
+            const base = context.payload.repository.default_branch;
+            const head = `${owner}:${branch}`;
+
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: "open",
+              head,
+              base,
+              per_page: 100,
+            });
+
+            let pullRequest;
+            let actionResult;
+
+            if (pulls.length > 0) {
+              pullRequest = (
+                await github.rest.pulls.update({
+                  owner,
+                  repo,
+                  pull_number: pulls[0].number,
+                  title,
+                  body,
+                  base,
+                })
+              ).data;
+              actionResult = "updated";
+            } else {
+              pullRequest = (
+                await github.rest.pulls.create({
+                  owner,
+                  repo,
+                  head: branch,
+                  base,
+                  title,
+                  body,
+                  draft: false,
+                })
+              ).data;
+              actionResult = "created";
+            }
+
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: pullRequest.number,
+              labels: ["codex", "codex-automation"],
+            });
+
+            let reviewStatus = "Reviewer request unavailable";
+
+            try {
+              await github.rest.pulls.requestReviewers({
+                owner,
+                repo,
+                pull_number: pullRequest.number,
+                reviewers: ["F1846"],
+              });
+              reviewStatus = "Review requested from F1846";
+            } catch (error) {
+              reviewStatus = `Direct assignment unavailable: ${error.status || "error"} ${error.message}`;
+            }
+
+            core.setOutput("pr_number", String(pullRequest.number));
+            core.setOutput("pr_url", pullRequest.html_url);
+            core.setOutput("pr_action", actionResult);
+            core.setOutput("review_status", reviewStatus);
+
+      - name: Write job summary
+        if: always()
+        shell: bash
+        env:
+          RESULT: ${{ steps.parse_codex.outputs.result }}
+          FINDINGS_SUMMARY: ${{ steps.parse_codex.outputs.findings_summary }}
+          VALIDATION_SUMMARY: ${{ steps.parse_codex.outputs.validation_summary }}
+          PARSED_REVIEW_STATUS: ${{ steps.parse_codex.outputs.review_status }}
+          PR_REVIEW_STATUS: ${{ steps.pr.outputs.review_status }}
+          PR_URL: ${{ steps.pr.outputs.pr_url }}
+          PR_ACTION: ${{ steps.pr.outputs.pr_action }}
+          CHANGED_FILES_PATH: ${{ runner.temp }}/continuous-repo-check-changes.txt
+        run: |
+          {
+            echo "## Continuous Repo Check"
+            echo
+            echo "- Result: ${RESULT:-unknown}"
+            if [ -n "$PR_URL" ]; then
+              echo "- Pull request: $PR_URL ($PR_ACTION)"
+            else
+              echo "- Pull request: none"
+            fi
+            echo "- Review status: ${PR_REVIEW_STATUS:-$PARSED_REVIEW_STATUS}"
+            echo
+            echo "### Findings"
+            echo
+            printf '%s\n' "${FINDINGS_SUMMARY:-No findings summary returned.}"
+            echo
+            echo "### Validation"
+            echo
+            printf '%s\n' "${VALIDATION_SUMMARY:-No validation summary returned.}"
+            echo
+            echo "### Changed Files"
+            echo
+            if [ -f "$CHANGED_FILES_PATH" ] && [ -s "$CHANGED_FILES_PATH" ]; then
+              echo '```'
+              cat "$CHANGED_FILES_PATH"
+              echo '```'
+            else
+              echo "No repository changes were recorded for this run."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
