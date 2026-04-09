@@ -177,15 +177,40 @@ async function rateLimitInDatabase(
   };
 }
 
+function cleanHeaderValue(value: string | null): string | null {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+function isTruthyEnvFlag(value: string | undefined): boolean {
+  return value?.trim().toLowerCase() === "true";
+}
+
+function trustProxyHeaders(request: NextRequest): boolean {
+  if (isTruthyEnvFlag(process.env.TRUST_PROXY_HEADERS)) {
+    return true;
+  }
+
+  return Boolean(
+    cleanHeaderValue(process.env.VERCEL) ||
+      cleanHeaderValue(process.env.VERCEL_ENV) ||
+      cleanHeaderValue(request.headers.get("x-vercel-id"))
+  );
+}
+
 export function getRequestIp(request: NextRequest): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (!trustProxyHeaders(request)) {
+    return "unknown";
+  }
+
+  const forwardedFor = cleanHeaderValue(request.headers.get("x-forwarded-for"));
   if (forwardedFor) {
     return forwardedFor.split(",")[0]?.trim() || "unknown";
   }
 
-  const realIp = request.headers.get("x-real-ip");
+  const realIp = cleanHeaderValue(request.headers.get("x-real-ip"));
   if (realIp) {
-    return realIp.trim();
+    return realIp;
   }
 
   return "unknown";
