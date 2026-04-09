@@ -7,8 +7,7 @@ export function LanguageSwitcher({ locale }: { locale: SupportedLocale }) {
   const [isPending, startTransition] = useTransition();
 
   return (
-    <label className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-muted">
-      <span>Lang</span>
+    <label className="inline-flex items-center">
       <select
         className="rounded-full border border-border bg-white px-3 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-foreground"
         value={locale}

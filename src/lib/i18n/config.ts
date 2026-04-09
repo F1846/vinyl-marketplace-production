@@ -7,8 +7,8 @@ export const LOCALE_COOKIE_NAME = "federico_shop_locale";
 
 export const LOCALE_LABELS: Record<SupportedLocale, string> = {
   en: "English",
-  de: "Deutsch",
-  it: "Italiano",
+  de: "German",
+  it: "Italian",
 };
 
 const COUNTRY_TO_LOCALE: Partial<Record<string, SupportedLocale>> = {
