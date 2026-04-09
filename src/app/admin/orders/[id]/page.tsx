@@ -84,7 +84,7 @@ export default async function AdminOrderDetailPage({
       : `Hi ${order.customerName},\n\nHere is an update about your order ${order.orderNumber}.\n\nBest,\n${siteConfig.name}`;
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="max-w-6xl space-y-6">
       {emailStatus === "sent" && (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-success">
           Customer email sent successfully.
@@ -120,7 +120,7 @@ export default async function AdminOrderDetailPage({
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_0.95fr]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)]">
         <div className="space-y-6">
           <div className="card space-y-4">
             <div className="flex items-center justify-between gap-3">
@@ -279,62 +279,6 @@ export default async function AdminOrderDetailPage({
             </p>
           </div>
 
-          <div className="card space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold text-foreground">Email customer</h2>
-              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-                Same shop mail layout
-              </span>
-            </div>
-
-            <form action={sendManualOrderEmail.bind(null, order.id)} className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
-                <div>
-                  <label htmlFor="sender" className="label">
-                    Send from
-                  </label>
-                  <select id="sender" name="sender" className="input" defaultValue="support">
-                    <option value="support">{siteConfig.supportEmail}</option>
-                    <option value="orders">{siteConfig.orderEmail}</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="subject" className="label">
-                    Subject
-                  </label>
-                  <input
-                    id="subject"
-                    name="subject"
-                    className="input"
-                    defaultValue={defaultManualSubject}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="message" className="label">
-                  Message
-                </label>
-                <textarea
-                  id="message"
-                  name="message"
-                  rows={8}
-                  className="input min-h-[220px]"
-                  defaultValue={defaultManualMessage}
-                />
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs leading-6 text-muted">
-                  Sends to {order.customerEmail} with the same font and mail style as the other customer emails.
-                </p>
-                <button type="submit" className="btn-primary">
-                  Send email
-                </button>
-              </div>
-            </form>
-          </div>
-
           <div className="card space-y-3">
             <h2 className="text-lg font-semibold text-foreground">
               {order.deliveryMethod === "pickup" ? "Pickup details" : "Shipping address"}
@@ -429,6 +373,64 @@ export default async function AdminOrderDetailPage({
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="card space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Email customer</h2>
+            <p className="mt-1 text-sm text-muted">
+              Sends to {order.customerEmail} using the same branded email style as the other customer emails.
+            </p>
+          </div>
+        </div>
+
+        <form action={sendManualOrderEmail.bind(null, order.id)} className="space-y-5">
+          <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+            <div>
+              <label htmlFor="sender" className="label">
+                Send from
+              </label>
+              <select id="sender" name="sender" className="input" defaultValue="support">
+                <option value="support">{siteConfig.supportEmail}</option>
+                <option value="orders">{siteConfig.orderEmail}</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="subject" className="label">
+                Subject
+              </label>
+              <input
+                id="subject"
+                name="subject"
+                className="input"
+                defaultValue={defaultManualSubject}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="message" className="label">
+              Message
+            </label>
+            <textarea
+              id="message"
+              name="message"
+              rows={10}
+              className="input min-h-[280px] w-full"
+              defaultValue={defaultManualMessage}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs leading-6 text-muted">
+              Review the message here and send it directly from the admin order page.
+            </p>
+            <button type="submit" className="btn-primary">
+              Send email
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
