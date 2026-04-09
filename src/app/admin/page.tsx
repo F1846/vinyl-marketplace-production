@@ -14,7 +14,12 @@ export default async function AdminDashboard() {
   const productCount = await d
     .select({ count: sql<number>`count(*)` })
     .from(schema.products)
-    .where(isNull(schema.products.deletedAt));
+    .where(
+      and(
+        isNull(schema.products.deletedAt),
+        gt(schema.products.stockQuantity, 0)
+      )
+    );
   const activeCount = await d
     .select({ count: sql<number>`count(*)` })
     .from(schema.products)
