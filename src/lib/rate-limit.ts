@@ -177,7 +177,7 @@ async function rateLimitInDatabase(
   };
 }
 
-function cleanHeaderValue(value: string | null): string | null {
+function cleanHeaderValue(value: string | null | undefined): string | null {
   const normalized = value?.trim();
   return normalized ? normalized : null;
 }
