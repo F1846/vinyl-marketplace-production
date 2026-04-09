@@ -348,7 +348,7 @@ const german: typeof english = {
     shippingAndPickup: "Versand und Abholung",
     shopByFormat: "Nach Format shoppen",
     startWith: "Starte mit {product}",
-    worthHaving: "Platten fuers Regal.",
+    worthHaving: "Schallplatten zum Sammeln",
     worthHavingBody:
       "Federico Shop ist ein Laden fur elektronische Musik mit gegradeten Vinyl-, Kassetten- und CD-Funden, fairen Euro-Preisen und sammlerfreundlichem Versand.",
   },
@@ -576,7 +576,7 @@ const italian: typeof english = {
     shippingAndPickup: "Spedizione e ritiro",
     shopByFormat: "Acquista per formato",
     startWith: "Inizia con {product}",
-    worthHaving: "Vinili da scaffale.",
+    worthHaving: "Vinili da collezione",
     worthHavingBody:
       "Federico Shop e un negozio di musica elettronica con vinili, cassette e CD selezionati e gradati, prezzi equi in euro e spedizioni pensate per i collezionisti.",
   },
