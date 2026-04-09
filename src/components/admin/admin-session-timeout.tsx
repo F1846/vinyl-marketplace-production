@@ -2,19 +2,17 @@
 
 import { useEffect, useRef } from "react";
 
-export function AdminSessionTimeout({
-  timeoutMs,
-  expiresAtMs,
-}: {
-  timeoutMs: number;
-  expiresAtMs: number | null;
-}) {
+const SESSION_REFRESH_INTERVAL_MS = 60 * 1000;
+const ACTIVITY_THROTTLE_MS = 750;
+
+export function AdminSessionTimeout({ timeoutMs }: { timeoutMs: number }) {
   const timerRef = useRef<number | null>(null);
   const loggingOutRef = useRef(false);
+  const refreshInFlightRef = useRef(false);
+  const lastActivityAtRef = useRef(Date.now());
+  const lastRefreshAtRef = useRef(Date.now());
 
   useEffect(() => {
-    const deadlineMs = expiresAtMs ?? Date.now() + timeoutMs;
-
     async function logout() {
       if (loggingOutRef.current) {
         return;
@@ -41,33 +39,104 @@ export function AdminSessionTimeout({
       }
     }
 
-    function ensureLogoutAtDeadline() {
-      const remainingMs = Math.max(deadlineMs - Date.now(), 0);
+    function scheduleLogoutFrom(lastActivityAt: number) {
       clearTimer();
       timerRef.current = window.setTimeout(() => {
         void logout();
-      }, remainingMs);
+      }, Math.max(timeoutMs - (Date.now() - lastActivityAt), 0));
     }
 
-    function enforceIfExpired() {
-      if (Date.now() >= deadlineMs) {
+    async function refreshSession(force = false) {
+      const now = Date.now();
+      if (!force && now - lastRefreshAtRef.current < SESSION_REFRESH_INTERVAL_MS) {
+        return;
+      }
+
+      if (refreshInFlightRef.current) {
+        return;
+      }
+
+      refreshInFlightRef.current = true;
+
+      try {
+        const response = await fetch("/api/admin/session/refresh", {
+          method: "POST",
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+
+        if (response.status === 401) {
+          void logout();
+          return;
+        }
+
+        if (response.ok) {
+          lastRefreshAtRef.current = now;
+        }
+      } catch {
+        // Ignore refresh failures and let the inactivity timer enforce logout.
+      } finally {
+        refreshInFlightRef.current = false;
+      }
+    }
+
+    function markActivity(forceRefresh = false) {
+      const now = Date.now();
+      if (!forceRefresh && now - lastActivityAtRef.current < ACTIVITY_THROTTLE_MS) {
+        return;
+      }
+
+      lastActivityAtRef.current = now;
+      scheduleLogoutFrom(now);
+      void refreshSession(forceRefresh);
+    }
+
+    function handlePotentialInactivity() {
+      if (Date.now() - lastActivityAtRef.current >= timeoutMs) {
         void logout();
         return;
       }
 
-      ensureLogoutAtDeadline();
+      markActivity(true);
     }
 
-    ensureLogoutAtDeadline();
-    document.addEventListener("visibilitychange", enforceIfExpired);
-    window.addEventListener("focus", enforceIfExpired);
+    function handleActivity() {
+      markActivity();
+    }
+
+    function handleVisibilityChange() {
+      if (!document.hidden) {
+        handlePotentialInactivity();
+      }
+    }
+
+    lastActivityAtRef.current = Date.now();
+    lastRefreshAtRef.current = Date.now();
+    scheduleLogoutFrom(lastActivityAtRef.current);
+
+    const activityEvents = [
+      "pointerdown",
+      "keydown",
+      "scroll",
+      "touchstart",
+    ] as const;
+
+    for (const eventName of activityEvents) {
+      window.addEventListener(eventName, handleActivity, { passive: true });
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handlePotentialInactivity);
 
     return () => {
       clearTimer();
-      document.removeEventListener("visibilitychange", enforceIfExpired);
-      window.removeEventListener("focus", enforceIfExpired);
+      for (const eventName of activityEvents) {
+        window.removeEventListener(eventName, handleActivity);
+      }
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handlePotentialInactivity);
     };
-  }, [expiresAtMs, timeoutMs]);
+  }, [timeoutMs]);
 
   return null;
 }

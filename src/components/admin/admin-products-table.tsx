@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowDown,
@@ -58,6 +58,7 @@ export function AdminProductsTable({
   updated,
 }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const lastSelectedIndexRef = useRef<number | null>(null);
   const visibleIds = useMemo(() => products.map((product) => product.id), [products]);
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const allVisibleSelected =
@@ -108,16 +109,54 @@ export function AdminProductsTable({
     );
   };
 
-  const toggleProduct = (productId: string) => {
-    setSelectedIds((current) =>
-      current.includes(productId)
-        ? current.filter((id) => id !== productId)
-        : [...current, productId]
-    );
+  const selectByStatuses = (statuses: ProductStatus[]) => {
+    const nextIds = products
+      .filter((product) => statuses.includes(product.status))
+      .map((product) => product.id);
+
+    setSelectedIds(nextIds);
+    lastSelectedIndexRef.current =
+      nextIds.length > 0
+        ? products.findIndex((product) => product.id === nextIds[nextIds.length - 1])
+        : null;
+  };
+
+  const toggleProduct = (
+    productId: string,
+    index: number,
+    checked: boolean,
+    withRange: boolean
+  ) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+
+      if (withRange && lastSelectedIndexRef.current !== null) {
+        const start = Math.min(lastSelectedIndexRef.current, index);
+        const end = Math.max(lastSelectedIndexRef.current, index);
+        const rangeIds = products.slice(start, end + 1).map((product) => product.id);
+
+        for (const id of rangeIds) {
+          if (checked) {
+            next.add(id);
+          } else {
+            next.delete(id);
+          }
+        }
+      } else if (checked) {
+        next.add(productId);
+      } else {
+        next.delete(productId);
+      }
+
+      return Array.from(next);
+    });
+
+    lastSelectedIndexRef.current = index;
   };
 
   const toggleAllProducts = () => {
     setSelectedIds(allVisibleSelected ? [] : visibleIds);
+    lastSelectedIndexRef.current = allVisibleSelected ? null : visibleIds.length - 1;
   };
 
   return (
@@ -153,6 +192,9 @@ export function AdminProductsTable({
             <span className="text-xs uppercase tracking-[0.16em] text-muted">
               {selectedIds.length} selected
             </span>
+            <span className="text-xs text-muted">
+              Tip: Shift-click another checkbox to select a range.
+            </span>
           </div>
 
           <form action={bulkUpdateProducts} className="flex flex-wrap gap-2">
@@ -170,6 +212,40 @@ export function AdminProductsTable({
               Delete selected
             </button>
           </form>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => selectByStatuses(["active"])}
+            className="btn-secondary text-sm"
+          >
+            Select active
+          </button>
+          <button
+            type="button"
+            onClick={() => selectByStatuses(["sold_out"])}
+            className="btn-secondary text-sm"
+          >
+            Select sold out
+          </button>
+          <button
+            type="button"
+            onClick={() => selectByStatuses(["archived"])}
+            className="btn-secondary text-sm"
+          >
+            Select archived
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedIds([]);
+              lastSelectedIndexRef.current = null;
+            }}
+            className="btn-secondary text-sm"
+          >
+            Clear selection
+          </button>
         </div>
       </div>
 
@@ -195,7 +271,7 @@ export function AdminProductsTable({
             </tr>
           </thead>
           <tbody>
-            {products.map((product) => (
+            {products.map((product, index) => (
               <tr
                 key={product.id}
                 className="border-b border-border last:border-0 hover:bg-surface-hover"
@@ -204,7 +280,14 @@ export function AdminProductsTable({
                   <input
                     type="checkbox"
                     checked={selectedIdSet.has(product.id)}
-                    onChange={() => toggleProduct(product.id)}
+                    onChange={(event) =>
+                      toggleProduct(
+                        product.id,
+                        index,
+                        event.currentTarget.checked,
+                        Boolean((event.nativeEvent as MouseEvent | undefined)?.shiftKey)
+                      )
+                    }
                     className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
                     aria-label={`Select ${product.artist} ${product.title}`}
                   />
