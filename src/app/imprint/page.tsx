@@ -17,9 +17,6 @@ export default async function ImprintPage() {
         <h1 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground sm:text-4xl">
           {dictionary.imprint.title}
         </h1>
-        <p className="max-w-2xl text-base leading-7 text-muted">
-          {dictionary.imprint.body}
-        </p>
       </div>
 
       <section className="card space-y-4">
