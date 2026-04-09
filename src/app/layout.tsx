@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Fraunces, Manrope } from "next/font/google";
+import Script from "next/script";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "@/styles/globals.css";
 import { Header } from "@/components/layout/header";
@@ -28,6 +29,8 @@ const serifFont = Fraunces({
   variable: "--font-serif",
   display: "swap",
 });
+
+const googleTagId = "AW-18075366550";
 
 export const metadata: Metadata = {
   title: {
@@ -171,6 +174,18 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body
         className={`${sansFont.variable} ${serifFont.variable} flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
       >
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${googleTagId}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-gtag" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${googleTagId}');
+          `}
+        </Script>
         <LocaleProvider locale={locale} dictionary={dictionary}>
           <JsonLd data={websiteStructuredData} />
           <Header />
