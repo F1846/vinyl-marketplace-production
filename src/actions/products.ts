@@ -210,3 +210,41 @@ export async function deleteProduct(id: string) {
   await deleteProductRecord(id);
   revalidateProductPaths(id);
 }
+
+export async function bulkUpdateProducts(formData: FormData) {
+  "use server";
+  await requireAuthenticatedAdmin();
+
+  const intent = String(formData.get("intent") ?? "").trim();
+  const returnToRaw = formData.get("returnTo");
+  const returnTo =
+    typeof returnToRaw === "string" && returnToRaw.startsWith("/admin/products")
+      ? returnToRaw
+      : "/admin/products";
+  const selectedIds = Array.from(
+    new Set(
+      formData
+        .getAll("selectedIds")
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => value.trim())
+        .filter(Boolean)
+    )
+  );
+
+  if (selectedIds.length === 0) {
+    redirect(returnTo);
+  }
+
+  if (intent === "hide") {
+    await Promise.all(selectedIds.map((id) => archiveProductRecord(id)));
+  } else if (intent === "relist") {
+    await Promise.all(selectedIds.map((id) => relistProductRecord(id)));
+  } else if (intent === "delete") {
+    await Promise.all(selectedIds.map((id) => deleteProductRecord(id)));
+  } else {
+    redirect(returnTo);
+  }
+
+  revalidateProductPaths();
+  redirect(returnTo);
+}
