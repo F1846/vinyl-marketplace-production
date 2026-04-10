@@ -235,7 +235,7 @@ export default async function HomePage() {
             </div>
           )}
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-2 lg:self-start">
           {heroPreviewProducts.map((product) => (
             <ProductCard key={product.id} product={product} size="mini" />
           ))}
