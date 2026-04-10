@@ -50,21 +50,21 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
   const paddingClass = isMini ? "p-2.5" : isCompact ? "p-2.5" : "p-[0.8125rem]";
   const bodyClass = "flex h-full flex-col";
   const artistClass = isMini
-    ? "h-[1.55rem] text-[8px] font-semibold uppercase tracking-[0.18em] text-muted"
-    : "h-[2.05rem] text-[9px] font-semibold uppercase tracking-[0.18em] text-muted";
+    ? "text-[8px] font-semibold uppercase tracking-[0.18em] text-muted"
+    : "text-[9px] font-semibold uppercase tracking-[0.18em] text-muted";
   const titleClass = isMini
-    ? "h-[2rem] text-[0.88rem]"
+    ? "text-[0.88rem]"
     : isCompact
-      ? "h-[2.15rem] text-[0.92rem]"
-      : "h-[2.35rem] text-[0.96rem]";
+      ? "text-[0.97rem]"
+      : "text-[1.05rem]";
   const priceClass = isMini
     ? "text-[0.88rem] font-semibold text-foreground"
     : isCompact
-      ? "text-[0.92rem] font-semibold text-foreground"
-      : "text-[0.96rem] font-semibold text-foreground";
+      ? "text-[0.93rem] font-semibold text-foreground"
+      : "text-[0.97rem] font-semibold text-foreground";
   const metaClass = isMini
-    ? "mt-2 grid min-h-[1rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 text-[8px] uppercase tracking-[0.16em] text-muted"
-    : "mt-2.5 grid min-h-[1.05rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 text-[9px] uppercase tracking-[0.17em] text-muted";
+    ? "mt-1.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 text-[8px] uppercase tracking-[0.16em] text-muted"
+    : "mt-1.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 text-[9px] uppercase tracking-[0.17em] text-muted";
 
   return (
     <Link
@@ -95,7 +95,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
       <div className={`${paddingClass} ${bodyClass}`}>
         <p className={`${artistClass} line-clamp-2`}>{product.artist}</p>
         <p
-          className={`mt-1.5 line-clamp-2 font-sans font-bold leading-tight tracking-[-0.04em] text-foreground ${titleClass}`}
+          className={`mt-1 line-clamp-2 font-sans font-bold leading-tight tracking-[-0.04em] text-foreground ${titleClass}`}
         >
           {product.title}
         </p>
