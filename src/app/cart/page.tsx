@@ -1057,9 +1057,13 @@ export default function CartPage() {
                       <div className="mt-3 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                            onClick={() =>
+                              item.quantity === 1
+                                ? removeItem(item.productId)
+                                : updateQuantity(item.productId, item.quantity - 1)
+                            }
                             className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-surface-hover"
-                            disabled={item.quantity <= 1}
+                            title={item.quantity === 1 ? "Remove item" : "Decrease quantity"}
                           >
                             -
                           </button>

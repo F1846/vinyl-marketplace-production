@@ -48,11 +48,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
       : "(max-width: 640px) 44vw, (max-width: 1024px) 26vw, 17vw";
   const imageAspect = isMini ? "aspect-[0.82]" : "aspect-square";
   const paddingClass = isMini ? "p-2.5" : isCompact ? "p-2.5" : "p-[0.8125rem]";
-  const bodyClass = isMini
-    ? "grid h-full grid-rows-[1.55rem_2rem_1fr_auto]"
-    : isCompact
-      ? "grid h-full grid-rows-[2.05rem_2.15rem_1fr_auto]"
-      : "grid h-full grid-rows-[2.05rem_2.35rem_1fr_auto]";
+  const bodyClass = "flex h-full flex-col";
   const artistClass = isMini
     ? "h-[1.55rem] text-[8px] font-semibold uppercase tracking-[0.18em] text-muted"
     : "h-[2.05rem] text-[9px] font-semibold uppercase tracking-[0.18em] text-muted";
@@ -103,8 +99,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
         >
           {product.title}
         </p>
-        <div />
-        <div className="pt-2.5">
+        <div className="mt-2">
           <div className="flex items-center justify-between gap-2.5">
             <span className={priceClass}>{formatEuroFromCents(product.priceCents)}</span>
             {product.conditionMedia && (

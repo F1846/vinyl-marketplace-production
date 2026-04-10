@@ -196,6 +196,18 @@ export async function putProductOnSaleRecord(
     return false;
   }
 
+  // Don't put on sale if a different identical copy is already active
+  const otherActiveCopy = await db().query.products.findFirst({
+    where: and(
+      buildProductIdentityWhere(product),
+      eq(schema.products.status, "active")
+    ),
+  });
+
+  if (otherActiveCopy && otherActiveCopy.id !== id) {
+    return false;
+  }
+
   const nextPriceCents =
     typeof explicitPriceCents === "number" && Number.isFinite(explicitPriceCents)
       ? Math.max(0, Math.round(explicitPriceCents))
