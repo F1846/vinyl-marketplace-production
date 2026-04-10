@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   issues: write
+  models: read
 
 concurrency:
   group: daily-security-audit-free
