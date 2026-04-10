@@ -124,6 +124,7 @@ jobs:
           node <<'NODE'
           const fs = require("fs");
 
+          (async () => {
           const snapshot = fs.readFileSync("/tmp/codebase-snapshot.txt", "utf8");
           const npmAudit = fs.readFileSync("/tmp/npm-audit.json", "utf8");
           const tsOutput = fs.existsSync("/tmp/typecheck.txt")
@@ -230,6 +231,7 @@ jobs:
 
           console.log("Severity:", parsed.severity_summary);
           console.log("Findings:", parsed.top_findings?.length ?? 0);
+          })();
           NODE
 
       - name: Create findings issue
