@@ -11,11 +11,13 @@ export const dynamic = "force-dynamic";
 function normalizeCatalogParams(params: {
   q?: string;
   format?: string;
-  genre?: string;
+  genre?: string | string[];
   sort?: string;
 }) {
   const q = params.q?.trim() ?? "";
-  const genre = params.genre?.trim() ?? "";
+  const genre = (Array.isArray(params.genre) ? params.genre : params.genre ? [params.genre] : [])
+    .map((value) => value.trim())
+    .filter(Boolean);
   const sort = catalogSortValues.includes(
     (params.sort ?? "") as (typeof catalogSortValues)[number],
   )
@@ -33,7 +35,7 @@ function normalizeCatalogParams(params: {
 function getCatalogSeoMeta(query: {
   q: string;
   format?: ProductFormat;
-  genre: string;
+  genre: string[];
 }) {
   const formatLabel =
     query.format === "vinyl"
@@ -44,29 +46,45 @@ function getCatalogSeoMeta(query: {
           ? "CDs"
           : "Records";
 
-  if (query.genre && query.format) {
+  if (query.genre.length === 1 && query.format) {
+    const primaryGenre = query.genre[0]!;
     return {
-      title: `${query.genre} ${formatLabel} Catalog`,
-      description: `Browse graded ${query.genre.toLowerCase()} ${query.format} copies from Federico Shop, the Berlin electronic music record shop for collector vinyl, cassette, and CD finds.`,
+      title: `${primaryGenre} ${formatLabel} Catalog`,
+      description: `Browse graded ${primaryGenre.toLowerCase()} ${query.format} copies from Federico Shop, the Berlin electronic music record shop for collector vinyl, cassette, and CD finds.`,
       keywords: [
-        `${query.genre} ${query.format}`,
-        `${query.genre} ${formatLabel.toLowerCase()}`,
-        `${query.genre} records`,
-        `Federico Shop ${query.genre}`,
+        `${primaryGenre} ${query.format}`,
+        `${primaryGenre} ${formatLabel.toLowerCase()}`,
+        `${primaryGenre} records`,
+        `Federico Shop ${primaryGenre}`,
       ],
-      canonical: buildCatalogUrl({ format: query.format, genre: query.genre }),
+      canonical: buildCatalogUrl({ format: query.format, genre: primaryGenre }),
     };
   }
 
-  if (query.genre) {
+  if (query.genre.length === 1) {
+    const primaryGenre = query.genre[0]!;
     return {
-      title: `${query.genre} Records Catalog`,
-      description: `Shop ${query.genre.toLowerCase()} records, vinyl, cassette, and CD listings from Federico Shop in Berlin.`,
+      title: `${primaryGenre} Records Catalog`,
+      description: `Shop ${primaryGenre.toLowerCase()} records, vinyl, cassette, and CD listings from Federico Shop in Berlin.`,
       keywords: [
-        `${query.genre} records`,
-        `${query.genre} vinyl`,
-        `${query.genre} catalog`,
-        `Federico Shop ${query.genre}`,
+        `${primaryGenre} records`,
+        `${primaryGenre} vinyl`,
+        `${primaryGenre} catalog`,
+        `Federico Shop ${primaryGenre}`,
+      ],
+      canonical: buildCatalogUrl({ genre: primaryGenre }),
+    };
+  }
+
+  if (query.genre.length > 1) {
+    const label = query.genre.join(", ");
+    return {
+      title: `${label} Records Catalog`,
+      description: `Browse ${label.toLowerCase()} records, vinyl, cassette, and CD listings from Federico Shop in Berlin.`,
+      keywords: [
+        ...query.genre.map((value) => `${value} records`),
+        ...query.genre.map((value) => `${value} vinyl`),
+        "Federico Shop catalog",
       ],
       canonical: buildCatalogUrl({ genre: query.genre }),
     };
@@ -120,7 +138,7 @@ function getCatalogSeoMeta(query: {
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; format?: string; genre?: string; sort?: string }>;
+  searchParams: Promise<{ q?: string; format?: string; genre?: string | string[]; sort?: string }>;
 }): Promise<Metadata> {
   const params = normalizeCatalogParams(await searchParams);
   const seo = getCatalogSeoMeta(params);
@@ -143,7 +161,7 @@ export async function generateMetadata({
 export default async function CatalogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; format?: string; genre?: string; sort?: string }>;
+  searchParams: Promise<{ q?: string; format?: string; genre?: string | string[]; sort?: string }>;
 }) {
   const { q, genre, sort, format } = normalizeCatalogParams(await searchParams);
   const seo = getCatalogSeoMeta({ q, genre, format });
@@ -167,8 +185,22 @@ export default async function CatalogPage({
         "@type": "ListItem",
         position: index + 1,
         url: siteUrl(`/products/${product.id}`),
-        name: `${product.artist} - ${product.title}`,
-        image: product.images[0]?.url,
+        item: {
+          "@type": "Product",
+          name: `${product.artist} - ${product.title}`,
+          image: product.images[0]?.url ? [product.images[0].url] : undefined,
+          category: [product.genre, product.format].filter(Boolean).join(" / "),
+          offers: {
+            "@type": "Offer",
+            priceCurrency: "EUR",
+            price: (product.priceCents / 100).toFixed(2),
+            availability:
+              product.stockQuantity > 0
+                ? "https://schema.org/InStock"
+                : "https://schema.org/OutOfStock",
+            url: siteUrl(`/products/${product.id}`),
+          },
+        },
       })),
     },
   };

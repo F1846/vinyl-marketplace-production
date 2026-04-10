@@ -8,7 +8,7 @@ function clean(value: string | undefined | null): string | null {
 export type CatalogLinkQuery = {
   q?: string;
   format?: ProductFormat;
-  genre?: string;
+  genre?: string | string[];
 };
 
 export const catalogFormatCollections: Array<{ label: string; format: ProductFormat }> = [
@@ -37,8 +37,9 @@ export function buildCatalogPath(query: CatalogLinkQuery = {}): string {
     params.set("format", query.format);
   }
 
-  if (query.genre?.trim()) {
-    params.set("genre", query.genre.trim());
+  const genres = Array.isArray(query.genre) ? query.genre : query.genre ? [query.genre] : [];
+  for (const genre of genres.map((value) => value.trim()).filter(Boolean)) {
+    params.append("genre", genre);
   }
 
   const search = params.toString();

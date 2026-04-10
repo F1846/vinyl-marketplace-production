@@ -33,7 +33,7 @@ export type CatalogProduct = {
 export type CatalogQuery = {
   q?: string;
   format?: ProductFormat;
-  genre?: string;
+  genre?: string | string[];
   sort?: CatalogSort;
   offset?: number;
   limit?: number;
@@ -48,6 +48,9 @@ export async function getCatalogPage({
   limit = 24,
 }: CatalogQuery) {
   const d = db();
+  const genres = (Array.isArray(genre) ? genre : genre ? [genre] : [])
+    .map((value) => value.trim())
+    .filter(Boolean);
   const whereConditions = [
     eq(schema.products.status, "active"),
     gt(schema.products.stockQuantity, 0),
@@ -58,8 +61,10 @@ export async function getCatalogPage({
     whereConditions.push(eq(schema.products.format, format));
   }
 
-  if (genre) {
-    whereConditions.push(eq(schema.products.genre, genre));
+  if (genres.length === 1) {
+    whereConditions.push(eq(schema.products.genre, genres[0]!));
+  } else if (genres.length > 1) {
+    whereConditions.push(or(...genres.map((value) => eq(schema.products.genre, value)))!);
   }
 
   if (q) {

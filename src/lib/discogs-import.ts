@@ -1,5 +1,6 @@
-import { and, eq, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
+﻿import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { buildProductIdentityWhere, resolveProductStatus } from "@/lib/product-admin";
 
 type ProductFormat = "vinyl" | "cassette" | "cd";
 type ProductStatus = "active" | "sold_out" | "archived";
@@ -66,7 +67,7 @@ const DISCOGS_API_BASE = "https://api.discogs.com";
 const DEFAULT_USER_AGENT =
   "vinyl-marketplace-production/1.0 +https://www.federicoshop.de";
 
-// All lowercase — matched against lowercased CSV headers
+// All lowercase â€” matched against lowercased CSV headers
 const REQUIRED_COLUMNS = [
   "listing_id",
   "artist",
@@ -77,7 +78,7 @@ const REQUIRED_COLUMNS = [
   "price",
 ] as const;
 
-// All lowercase — matched against lowercased CSV headers
+// All lowercase â€” matched against lowercased CSV headers
 const COLLECTION_REQUIRED_COLUMNS = [
   "artist",
   "title",
@@ -363,6 +364,168 @@ function imageUrlsFor(release: DiscogsRelease | null): string[] {
   return Array.from(new Set(urls)).slice(0, 4);
 }
 
+type InventoryProductDraft = {
+  id: string;
+  artist: string;
+  title: string;
+  format: ProductFormat;
+  genre: string;
+  priceCents: number;
+  stockQuantity: number;
+  conditionMedia: MediaCondition | null;
+  conditionSleeve: MediaCondition | null;
+  pressingLabel: string | null;
+  pressingYear: number | null;
+  pressingCatalogNumber: string | null;
+  discogsListingId: string | null;
+  discogsReleaseId: number;
+  description: string;
+  status: ProductStatus;
+};
+
+type InventoryImportGroup = {
+  key: string;
+  listingIds: string[];
+  imageUrls: string[];
+  product: InventoryProductDraft;
+};
+
+function normalizeIdentityValue(value: string | number | null | undefined): string {
+  if (value == null) {
+    return "";
+  }
+
+  return String(value).trim().toLowerCase();
+}
+
+function buildProductIdentityKey(input: {
+  artist: string;
+  title: string;
+  format: ProductFormat;
+  pressingYear: number | null;
+  pressingLabel: string | null;
+  pressingCatalogNumber: string | null;
+  conditionMedia: MediaCondition | null;
+  conditionSleeve: MediaCondition | null;
+}) {
+  return [
+    normalizeIdentityValue(input.artist),
+    normalizeIdentityValue(input.title),
+    normalizeIdentityValue(input.format),
+    normalizeIdentityValue(input.pressingYear),
+    normalizeIdentityValue(input.pressingLabel),
+    normalizeIdentityValue(input.pressingCatalogNumber),
+    normalizeIdentityValue(input.conditionMedia),
+    normalizeIdentityValue(input.conditionSleeve),
+  ].join("::");
+}
+
+function buildInventoryDraft(
+  row: InventoryRow,
+  release: DiscogsRelease | null,
+  targetStatus: "active" | "archived"
+): InventoryProductDraft {
+  return {
+    id: crypto.randomUUID(),
+    artist: row.artist.trim(),
+    title: row.title.trim(),
+    format: toFormat(row.format),
+    genre: toGenre(release),
+    priceCents: toCents(row.price),
+    stockQuantity: 1,
+    conditionMedia: toMediaCondition(row.media_condition),
+    conditionSleeve: toMediaCondition(row.sleeve_condition),
+    pressingLabel: firstNonEmpty(release?.labels?.[0]?.name, row.label),
+    pressingYear: safeYear(release?.year),
+    pressingCatalogNumber: firstNonEmpty(release?.labels?.[0]?.catno, row.catno),
+    discogsListingId: row.listing_id.trim() || null,
+    discogsReleaseId: Number.parseInt(row.release_id, 10),
+    description: descriptionFor(row, release),
+    status: targetStatus,
+  };
+}
+
+function productIdentityFromDraft(product: InventoryProductDraft) {
+  return buildProductIdentityKey(product);
+}
+
+function productIdentityFromRecord(product: {
+  artist: string;
+  title: string;
+  format: ProductFormat;
+  pressingYear: number | null;
+  pressingLabel: string | null;
+  pressingCatalogNumber: string | null;
+  conditionMedia: MediaCondition | null;
+  conditionSleeve: MediaCondition | null;
+}) {
+  return buildProductIdentityKey(product);
+}
+
+function buildProductMatchWhere(product: InventoryProductDraft) {
+  return buildProductIdentityWhere({
+    artist: product.artist,
+    title: product.title,
+    format: product.format,
+    pressingYear: product.pressingYear,
+    pressingLabel: product.pressingLabel,
+    pressingCatalogNumber: product.pressingCatalogNumber,
+    conditionMedia: product.conditionMedia,
+    conditionSleeve: product.conditionSleeve,
+  });
+}
+
+async function buildInventoryImportGroups(input: {
+  rows: InventoryRow[];
+  targetStatus: "active" | "archived";
+  discogsToken: string;
+  discogsUserAgent: string;
+}) {
+  const releaseCache = new Map<number, Promise<DiscogsRelease | null>>();
+  const groups = new Map<string, InventoryImportGroup>();
+
+  for (const row of input.rows) {
+    const listingId = row.listing_id.trim();
+    const releaseId = Number.parseInt(row.release_id, 10);
+    if (!listingId || !Number.isFinite(releaseId)) {
+      continue;
+    }
+
+    if (!releaseCache.has(releaseId)) {
+      releaseCache.set(
+        releaseId,
+        fetchDiscogsRelease(releaseId, input.discogsToken, input.discogsUserAgent).catch(
+          () => null
+        )
+      );
+    }
+
+    const release = await releaseCache.get(releaseId)!;
+    const product = buildInventoryDraft(row, release, input.targetStatus);
+    const key = productIdentityFromDraft(product);
+    const imageUrls = imageUrlsFor(release);
+    const existingGroup = groups.get(key);
+
+    if (existingGroup) {
+      existingGroup.product.stockQuantity += 1;
+      existingGroup.listingIds.push(listingId);
+      continue;
+    }
+
+    groups.set(key, {
+      key,
+      listingIds: [listingId],
+      imageUrls,
+      product,
+    });
+  }
+
+  return [...groups.values()].map((group) => ({
+    ...group,
+    listingIds: [...new Set(group.listingIds)].sort(),
+  }));
+}
+
 export function inspectDiscogsInventoryCsv(input: string): DiscogsImportInspection {
   const parsed = parseCsv(input);
   const rows = parsed.rows as unknown as InventoryRow[];
@@ -379,7 +542,10 @@ export function inspectDiscogsInventoryCsv(input: string): DiscogsImportInspecti
   };
 }
 
-export async function importDiscogsInventoryCsv(input: string): Promise<DiscogsImportSummary> {
+export async function importDiscogsInventoryCsv(
+  input: string,
+  targetStatus: "active" | "archived" = "active"
+): Promise<DiscogsImportSummary> {
   requireEnv("DATABASE_URL");
   const discogsToken = requireEnv("DISCOGS_USER_TOKEN");
   const discogsUserAgent =
@@ -400,132 +566,148 @@ export async function importDiscogsInventoryCsv(input: string): Promise<DiscogsI
   }
 
   const d = db();
-  const releaseCache = new Map<number, Promise<DiscogsRelease | null>>();
-  const importedListingIds: string[] = [];
+  const groups = await buildInventoryImportGroups({
+    rows: catalogRows,
+    targetStatus,
+    discogsToken,
+    discogsUserAgent,
+  });
+  const importedListingIds = groups.flatMap((group) => group.listingIds);
+  const importedKeys = new Set(groups.map((group) => group.key));
   let rowsWithImages = 0;
   let rowsWithoutImages = 0;
 
-  for (const row of catalogRows) {
-    const listingId = row.listing_id.trim();
-    const releaseId = Number.parseInt(row.release_id, 10);
+  for (const group of groups) {
+    const representativeListingId = group.listingIds[0] ?? null;
+    const [existingByListing, existingByIdentity] = await Promise.all([
+      representativeListingId
+        ? d.query.products.findFirst({
+            where: and(
+              eq(schema.products.discogsListingId, representativeListingId),
+              isNull(schema.products.deletedAt)
+            ),
+            columns: { id: true, discogsListingId: true },
+          })
+        : Promise.resolve(null),
+      d.query.products.findFirst({
+        where: buildProductMatchWhere(group.product),
+        columns: { id: true, discogsListingId: true },
+      }),
+    ]);
+    const existingProduct = existingByListing ?? existingByIdentity;
+    let productId = existingProduct?.id;
 
-    if (!listingId || !Number.isFinite(releaseId)) {
+    if (existingProduct) {
+      await d
+        .update(schema.products)
+        .set({
+          artist: group.product.artist,
+          title: group.product.title,
+          format: group.product.format,
+          genre: group.product.genre,
+          priceCents: group.product.priceCents,
+          stockQuantity: group.product.stockQuantity,
+          conditionMedia: group.product.conditionMedia,
+          conditionSleeve: group.product.conditionSleeve,
+          pressingLabel: group.product.pressingLabel,
+          pressingYear: group.product.pressingYear,
+          pressingCatalogNumber: group.product.pressingCatalogNumber,
+          discogsListingId: representativeListingId,
+          discogsReleaseId: group.product.discogsReleaseId,
+          description: group.product.description,
+          status: group.product.status,
+          version: sql`${schema.products.version} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.products.id, existingProduct.id));
+    } else {
+      const [createdProduct] = await d
+        .insert(schema.products)
+        .values({
+          ...group.product,
+          discogsListingId: representativeListingId,
+        })
+        .returning({ id: schema.products.id });
+      productId = createdProduct.id;
+    }
+
+    if (!productId) {
       continue;
     }
 
-    if (!releaseCache.has(releaseId)) {
-      releaseCache.set(
-        releaseId,
-        fetchDiscogsRelease(releaseId, discogsToken, discogsUserAgent).catch(() => null)
-      );
-    }
+    await d.delete(schema.productImages).where(eq(schema.productImages.productId, productId));
 
-    const release = await releaseCache.get(releaseId)!;
-    const imageUrls = imageUrlsFor(release);
-    const insertValues = {
-      id: crypto.randomUUID(),
-      artist: row.artist.trim(),
-      title: row.title.trim(),
-      format: toFormat(row.format),
-      genre: toGenre(release),
-      priceCents: toCents(row.price),
-      stockQuantity: 1,
-      conditionMedia: toMediaCondition(row.media_condition),
-      conditionSleeve: toMediaCondition(row.sleeve_condition),
-      pressingLabel: firstNonEmpty(release?.labels?.[0]?.name, row.label),
-      pressingYear: safeYear(release?.year),
-      pressingCatalogNumber: firstNonEmpty(release?.labels?.[0]?.catno, row.catno),
-      discogsListingId: listingId,
-      discogsReleaseId: releaseId,
-      description: descriptionFor(row, release),
-      status: "active" as const,
-    };
-
-    const updateValues = {
-      artist: insertValues.artist,
-      title: insertValues.title,
-      format: insertValues.format,
-      genre: insertValues.genre,
-      priceCents: insertValues.priceCents,
-      stockQuantity: insertValues.stockQuantity,
-      conditionMedia: insertValues.conditionMedia,
-      conditionSleeve: insertValues.conditionSleeve,
-      pressingLabel: insertValues.pressingLabel,
-      pressingYear: insertValues.pressingYear,
-      pressingCatalogNumber: insertValues.pressingCatalogNumber,
-      discogsReleaseId: insertValues.discogsReleaseId,
-      description: insertValues.description,
-      status: insertValues.status,
-      version: sql`${schema.products.version} + 1`,
-    };
-
-    const [product] = await d
-      .insert(schema.products)
-      .values(insertValues)
-      .onConflictDoUpdate({
-        target: schema.products.discogsListingId,
-        set: updateValues,
-      })
-      .returning({ id: schema.products.id });
-
-    await d
-      .delete(schema.productImages)
-      .where(eq(schema.productImages.productId, product.id));
-
-    if (imageUrls.length > 0) {
+    if (group.imageUrls.length > 0) {
       await d.insert(schema.productImages).values(
-        imageUrls.map((url, sortOrder) => ({
+        group.imageUrls.map((url, sortOrder) => ({
           id: crypto.randomUUID(),
-          productId: product.id,
+          productId,
           url,
           sortOrder,
         }))
       );
-    }
-
-    importedListingIds.push(listingId);
-
-    if (imageUrls.length > 0) {
       rowsWithImages += 1;
     } else {
       rowsWithoutImages += 1;
     }
   }
 
+  const importedProducts = await d.query.products.findMany({
+    where: and(isNull(schema.products.deletedAt), isNotNull(schema.products.discogsListingId)),
+    columns: {
+      id: true,
+      artist: true,
+      title: true,
+      format: true,
+      pressingYear: true,
+      pressingLabel: true,
+      pressingCatalogNumber: true,
+      conditionMedia: true,
+      conditionSleeve: true,
+      discogsListingId: true,
+    },
+  });
+  const staleIds = importedProducts
+    .filter((product) => {
+      const productKey = productIdentityFromRecord(product);
+      return (
+        product.discogsListingId != null &&
+        !importedListingIds.includes(product.discogsListingId) &&
+        !importedKeys.has(productKey)
+      );
+    })
+    .map((product) => product.id);
+
   const archivedProducts =
-    importedListingIds.length > 0
+    staleIds.length > 0
       ? await d
           .update(schema.products)
           .set({
             status: "archived",
             stockQuantity: 0,
             version: sql`${schema.products.version} + 1`,
+            updatedAt: new Date(),
           })
-          .where(
-            and(
-              isNotNull(schema.products.discogsListingId),
-              notInArray(schema.products.discogsListingId, importedListingIds)
-            )
-          )
+          .where(inArray(schema.products.id, staleIds))
           .returning({ id: schema.products.id })
       : [];
 
   return {
     ...inspection,
-    imported: importedListingIds.length,
+    imported: groups.length,
     rowsWithImages,
     rowsWithoutImages,
     archived: archivedProducts.length,
   };
 }
 
-// ──────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Discogs Collection CSV (export from profile/collection)
 // Columns: Catalog#, Artist, Title, Label, Format, Rating, Released,
 //          release_id, CollectionFolder, Date Added,
 //          Collection Media Condition, Collection Sleeve Condition,
 //          Collection Notes, Collection Price Paid
-// ──────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function isCollectionCsv(input: string): boolean {
   const firstLine = (input.split("\n")[0] ?? "").toLowerCase();
@@ -583,7 +765,10 @@ function descriptionForCollection(row: CollectionRow, release: DiscogsRelease | 
   return parts.join("\n\n") || `${row.artist.trim()} - ${row.title.trim()}`;
 }
 
-export async function importDiscogsCollectionCsv(input: string): Promise<DiscogsImportSummary> {
+export async function importDiscogsCollectionCsv(
+  input: string,
+  targetStatus: "active" | "archived" = "archived"
+): Promise<DiscogsImportSummary> {
   requireEnv("DATABASE_URL");
   const discogsToken = requireEnv("DISCOGS_USER_TOKEN");
   const discogsUserAgent = process.env.DISCOGS_USER_AGENT?.trim() || DEFAULT_USER_AGENT;
@@ -643,34 +828,36 @@ export async function importDiscogsCollectionCsv(input: string): Promise<Discogs
       discogsListingId: null,
       discogsReleaseId: releaseId,
       description: descriptionForCollection(row, release),
-      status: "archived" as const, // In collection = not for sale until explicitly put on sale
+      status: targetStatus,
     };
 
-    const yearConditionSync =
-      insertValues.pressingYear != null
-        ? eq(schema.products.pressingYear, insertValues.pressingYear)
-        : isNull(schema.products.pressingYear);
-    const labelConditionSync =
-      insertValues.pressingLabel != null
-        ? eq(schema.products.pressingLabel, insertValues.pressingLabel)
-        : isNull(schema.products.pressingLabel);
-
     const existing = await d.query.products.findFirst({
-      where: and(
-        eq(schema.products.artist, insertValues.artist),
-        eq(schema.products.title, insertValues.title),
-        eq(schema.products.format, insertValues.format),
-        yearConditionSync,
-        labelConditionSync,
-        isNull(schema.products.deletedAt)
-      ),
-      columns: { id: true, stockQuantity: true },
+      where: buildProductIdentityWhere({
+        artist: insertValues.artist,
+        title: insertValues.title,
+        format: insertValues.format,
+        pressingYear: insertValues.pressingYear,
+        pressingLabel: insertValues.pressingLabel,
+        pressingCatalogNumber: insertValues.pressingCatalogNumber,
+        conditionMedia: insertValues.conditionMedia,
+        conditionSleeve: insertValues.conditionSleeve,
+      }),
+      columns: { id: true, stockQuantity: true, status: true, version: true },
     });
 
     if (existing) {
+      const nextStockQuantity = existing.stockQuantity + 1;
       await d
         .update(schema.products)
-        .set({ stockQuantity: existing.stockQuantity + 1, updatedAt: new Date() })
+        .set({
+          stockQuantity: nextStockQuantity,
+          status: resolveProductStatus({
+            status: existing.status,
+            stockQuantity: nextStockQuantity,
+          }),
+          updatedAt: new Date(),
+          version: existing.version + 1,
+        })
         .where(eq(schema.products.id, existing.id));
     } else {
       const [product] = await d
@@ -705,9 +892,9 @@ export async function importDiscogsCollectionCsv(input: string): Promise<Discogs
   };
 }
 
-// ──────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Streaming / generator variants (used by SSE API route for live progress)
-// ──────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type ImportProgressEvent =
   | { type: "start"; total: number; csvType: "inventory" | "collection" }
@@ -742,76 +929,136 @@ export async function* importDiscogsInventoryCsvGenerator(
   yield { type: "start", total: catalogRows.length, csvType: "inventory" };
 
   const d = db();
-  const releaseCache = new Map<number, Promise<DiscogsRelease | null>>();
-  const importedListingIds: string[] = [];
+  const groups = await buildInventoryImportGroups({
+    rows: catalogRows,
+    targetStatus,
+    discogsToken,
+    discogsUserAgent,
+  });
+  const importedListingIds = groups.flatMap((group) => group.listingIds);
+  const importedKeys = new Set(groups.map((group) => group.key));
   let rowsWithImages = 0;
   let rowsWithoutImages = 0;
 
-  for (let i = 0; i < catalogRows.length; i++) {
+  for (let i = 0; i < groups.length; i++) {
     if (signal?.aborted) break;
 
-    const row = catalogRows[i];
-    yield { type: "progress", processed: i, total: catalogRows.length, current: `${row.artist.trim()} – ${row.title.trim()}` };
-
-    const listingId = row.listing_id.trim();
-    const releaseId = Number.parseInt(row.release_id, 10);
-    if (!listingId || !Number.isFinite(releaseId)) continue;
-
-    if (!releaseCache.has(releaseId)) {
-      releaseCache.set(releaseId, fetchDiscogsRelease(releaseId, discogsToken, discogsUserAgent).catch(() => null));
-    }
-
-    const release = await releaseCache.get(releaseId)!;
-    const imageUrls = imageUrlsFor(release);
-    const insertValues = {
-      id: crypto.randomUUID(),
-      artist: row.artist.trim(),
-      title: row.title.trim(),
-      format: toFormat(row.format),
-      genre: toGenre(release),
-      priceCents: toCents(row.price),
-      stockQuantity: 1,
-      conditionMedia: toMediaCondition(row.media_condition),
-      conditionSleeve: toMediaCondition(row.sleeve_condition),
-      pressingLabel: firstNonEmpty(release?.labels?.[0]?.name, row.label),
-      pressingYear: safeYear(release?.year),
-      pressingCatalogNumber: firstNonEmpty(release?.labels?.[0]?.catno, row.catno),
-      discogsListingId: listingId,
-      discogsReleaseId: releaseId,
-      description: descriptionFor(row, release),
-      status: targetStatus,
+    const group = groups[i]!;
+    yield {
+      type: "progress",
+      processed: i + 1,
+      total: groups.length,
+      current: `${group.product.artist} – ${group.product.title}`,
     };
 
-    const [product] = await d
-      .insert(schema.products)
-      .values(insertValues)
-      .onConflictDoUpdate({
-        target: schema.products.discogsListingId,
-        set: {
-          ...insertValues,
-          version: sql`${schema.products.version} + 1`,
-        },
-      })
-      .returning({ id: schema.products.id });
+    const representativeListingId = group.listingIds[0] ?? null;
+    const [existingByListing, existingByIdentity] = await Promise.all([
+      representativeListingId
+        ? d.query.products.findFirst({
+            where: and(
+              eq(schema.products.discogsListingId, representativeListingId),
+              isNull(schema.products.deletedAt)
+            ),
+            columns: { id: true, discogsListingId: true },
+          })
+        : Promise.resolve(null),
+      d.query.products.findFirst({
+        where: buildProductMatchWhere(group.product),
+        columns: { id: true, discogsListingId: true },
+      }),
+    ]);
+    const existingProduct = existingByListing ?? existingByIdentity;
+    let productId = existingProduct?.id;
 
-    await d.delete(schema.productImages).where(eq(schema.productImages.productId, product.id));
-    if (imageUrls.length > 0) {
+    if (existingProduct) {
+      await d
+        .update(schema.products)
+        .set({
+          artist: group.product.artist,
+          title: group.product.title,
+          format: group.product.format,
+          genre: group.product.genre,
+          priceCents: group.product.priceCents,
+          stockQuantity: group.product.stockQuantity,
+          conditionMedia: group.product.conditionMedia,
+          conditionSleeve: group.product.conditionSleeve,
+          pressingLabel: group.product.pressingLabel,
+          pressingYear: group.product.pressingYear,
+          pressingCatalogNumber: group.product.pressingCatalogNumber,
+          discogsListingId: representativeListingId,
+          discogsReleaseId: group.product.discogsReleaseId,
+          description: group.product.description,
+          status: group.product.status,
+          version: sql`${schema.products.version} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.products.id, existingProduct.id));
+    } else {
+      const [createdProduct] = await d
+        .insert(schema.products)
+        .values({
+          ...group.product,
+          discogsListingId: representativeListingId,
+        })
+        .returning({ id: schema.products.id });
+      productId = createdProduct.id;
+    }
+
+    if (!productId) continue;
+
+    await d.delete(schema.productImages).where(eq(schema.productImages.productId, productId));
+    if (group.imageUrls.length > 0) {
       await d.insert(schema.productImages).values(
-        imageUrls.map((url, sortOrder) => ({ id: crypto.randomUUID(), productId: product.id, url, sortOrder }))
+        group.imageUrls.map((url, sortOrder) => ({
+          id: crypto.randomUUID(),
+          productId,
+          url,
+          sortOrder,
+        }))
       );
       rowsWithImages += 1;
     } else {
       rowsWithoutImages += 1;
     }
-    importedListingIds.push(listingId);
   }
 
+  const importedProducts = await d.query.products.findMany({
+    where: and(isNull(schema.products.deletedAt), isNotNull(schema.products.discogsListingId)),
+    columns: {
+      id: true,
+      artist: true,
+      title: true,
+      format: true,
+      pressingYear: true,
+      pressingLabel: true,
+      pressingCatalogNumber: true,
+      conditionMedia: true,
+      conditionSleeve: true,
+      discogsListingId: true,
+    },
+  });
+  const staleIds = importedProducts
+    .filter((product) => {
+      const productKey = productIdentityFromRecord(product);
+      return (
+        product.discogsListingId != null &&
+        !importedListingIds.includes(product.discogsListingId) &&
+        !importedKeys.has(productKey)
+      );
+    })
+    .map((product) => product.id);
+
   const archivedProducts =
-    importedListingIds.length > 0
+    staleIds.length > 0
       ? await d
           .update(schema.products)
-          .set({ status: "archived", stockQuantity: 0, version: sql`${schema.products.version} + 1` })
-          .where(and(isNotNull(schema.products.discogsListingId), notInArray(schema.products.discogsListingId, importedListingIds)))
+          .set({
+            status: "archived",
+            stockQuantity: 0,
+            version: sql`${schema.products.version} + 1`,
+            updatedAt: new Date(),
+          })
+          .where(inArray(schema.products.id, staleIds))
           .returning({ id: schema.products.id })
       : [];
 
@@ -819,7 +1066,7 @@ export async function* importDiscogsInventoryCsvGenerator(
     type: "complete",
     summary: {
       ...inspection,
-      imported: importedListingIds.length,
+      imported: groups.length,
       rowsWithImages,
       rowsWithoutImages,
       archived: archivedProducts.length,
@@ -832,10 +1079,6 @@ export async function* importDiscogsCollectionCsvGenerator(
   signal?: AbortSignal,
   targetStatus: "active" | "archived" = "archived"
 ): AsyncGenerator<ImportProgressEvent> {
-  requireEnv("DATABASE_URL");
-  const discogsToken = requireEnv("DISCOGS_USER_TOKEN");
-  const discogsUserAgent = process.env.DISCOGS_USER_AGENT?.trim() || DEFAULT_USER_AGENT;
-
   const inspection = inspectDiscogsCollectionCsv(input);
 
   if (inspection.requiredColumns.some((c) => !c.found)) {
@@ -843,104 +1086,22 @@ export async function* importDiscogsCollectionCsvGenerator(
     return;
   }
 
-  const parsed = parseCsv(input);
-  const rows = parsed.rows as unknown as CollectionRow[];
-
-  if (rows.length === 0) {
+  if (inspection.totalRows === 0) {
     yield { type: "error", message: "No rows found in the collection CSV." };
     return;
   }
 
-  yield { type: "start", total: rows.length, csvType: "collection" };
+  yield { type: "start", total: inspection.totalRows, csvType: "collection" };
 
-  const d = db();
-  const releaseCache = new Map<number, Promise<DiscogsRelease | null>>();
-  let imported = 0;
-  let rowsWithImages = 0;
-  let rowsWithoutImages = 0;
-
-  for (let i = 0; i < rows.length; i++) {
-    if (signal?.aborted) break;
-
-    const row = rows[i];
-    yield { type: "progress", processed: i, total: rows.length, current: `${row.artist.trim()} – ${row.title.trim()}` };
-
-    const releaseId = Number.parseInt(row.release_id, 10);
-    if (!Number.isFinite(releaseId)) continue;
-
-    if (!releaseCache.has(releaseId)) {
-      releaseCache.set(releaseId, fetchDiscogsRelease(releaseId, discogsToken, discogsUserAgent).catch(() => null));
-    }
-
-    const release = await releaseCache.get(releaseId)!;
-    const imageUrls = imageUrlsFor(release);
-    const pricePaid = row["collection price paid"].trim();
-
-    const insertValues = {
-      id: crypto.randomUUID(),
-      artist: row.artist.trim(),
-      title: row.title.trim(),
-      format: toFormat(row.format),
-      genre: toGenre(release),
-      priceCents: pricePaid ? toCents(pricePaid) : 0,
-      stockQuantity: 1,
-      conditionMedia: toMediaCondition(row["collection media condition"]),
-      conditionSleeve: toMediaCondition(row["collection sleeve condition"]),
-      pressingLabel: firstNonEmpty(release?.labels?.[0]?.name, row.label),
-      pressingYear: safeYear(release?.year) ?? (row.released ? Number.parseInt(row.released, 10) : null),
-      pressingCatalogNumber: firstNonEmpty(release?.labels?.[0]?.catno, row["catalog#"]),
-      discogsListingId: null,
-      discogsReleaseId: releaseId,
-      description: descriptionForCollection(row, release),
-      status: targetStatus,
-    };
-
-    const yearCondition =
-      insertValues.pressingYear != null
-        ? eq(schema.products.pressingYear, insertValues.pressingYear)
-        : isNull(schema.products.pressingYear);
-    const labelCondition =
-      insertValues.pressingLabel != null
-        ? eq(schema.products.pressingLabel, insertValues.pressingLabel)
-        : isNull(schema.products.pressingLabel);
-
-    const existing = await d.query.products.findFirst({
-      where: and(
-        eq(schema.products.artist, insertValues.artist),
-        eq(schema.products.title, insertValues.title),
-        eq(schema.products.format, insertValues.format),
-        yearCondition,
-        labelCondition,
-        isNull(schema.products.deletedAt)
-      ),
-      columns: { id: true, stockQuantity: true },
-    });
-
-    if (existing) {
-      await d
-        .update(schema.products)
-        .set({ stockQuantity: existing.stockQuantity + 1, updatedAt: new Date() })
-        .where(eq(schema.products.id, existing.id));
-    } else {
-      const [product] = await d
-        .insert(schema.products)
-        .values(insertValues)
-        .returning({ id: schema.products.id });
-
-      if (imageUrls.length > 0) {
-        await d.insert(schema.productImages).values(
-          imageUrls.map((url, sortOrder) => ({ id: crypto.randomUUID(), productId: product.id, url, sortOrder }))
-        );
-        rowsWithImages += 1;
-      } else {
-        rowsWithoutImages += 1;
-      }
-    }
-    imported += 1;
+  if (signal?.aborted) {
+    return;
   }
+
+  const summary = await importDiscogsCollectionCsv(input, targetStatus);
 
   yield {
     type: "complete",
-    summary: { ...inspection, imported, rowsWithImages, rowsWithoutImages, archived: 0 },
+    summary,
   };
 }
+

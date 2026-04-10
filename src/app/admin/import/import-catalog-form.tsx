@@ -1,11 +1,10 @@
 "use client";
 
-import React, { ChangeEvent, useRef, useState } from "react";
+import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle, Loader2, StopCircle, X } from "lucide-react";
+import { CheckCircle, Loader2, X } from "lucide-react";
 import type {
   DiscogsImportSummary,
-  ImportProgressEvent,
 } from "@/lib/discogs-import";
 
 const INVENTORY_REQUIRED_COLUMNS = [
@@ -75,17 +74,32 @@ type ImportState =
   | { phase: "idle" }
   | {
       phase: "importing";
+      jobId: string;
       processed: number;
       total: number;
       current: string;
       csvType: "inventory" | "collection";
+      destination: "active" | "archived";
     }
   | {
       phase: "done";
+      destination: "active" | "archived";
       summary: DiscogsImportSummary;
       csvType: "inventory" | "collection";
     }
   | { phase: "error"; message: string };
+
+type ImportJobStatusResponse = {
+  id: string;
+  csvType: "inventory" | "collection";
+  destination: "active" | "archived";
+  status: "queued" | "running" | "completed" | "failed";
+  processedRows: number;
+  totalRows: number;
+  currentItem: string | null;
+  summary: DiscogsImportSummary | null;
+  error: string | null;
+};
 
 export function ImportCatalogForm() {
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
@@ -93,7 +107,6 @@ export function ImportCatalogForm() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [importState, setImportState] = useState<ImportState>({ phase: "idle" });
   const [destination, setDestination] = useState<"auto" | "active" | "archived">("auto");
-  const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const detectedType = detectCsvType(previewHeaders);
@@ -129,23 +142,87 @@ export function ImportCatalogForm() {
     }
   }
 
+  useEffect(() => {
+    if (importState.phase !== "importing") {
+      return;
+    }
+
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const response = await fetch(`/api/admin/import/${importState.jobId}`, {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("Could not read import progress.");
+        }
+
+        const job = (await response.json()) as ImportJobStatusResponse;
+        if (cancelled) {
+          return;
+        }
+
+        if (job.status === "completed" && job.summary) {
+          setImportState({
+            phase: "done",
+            summary: job.summary,
+            csvType: job.csvType,
+            destination: job.destination,
+          });
+          return;
+        }
+
+        if (job.status === "failed") {
+          setImportState({
+            phase: "error",
+            message: job.error ?? "Import failed unexpectedly.",
+          });
+          return;
+        }
+
+        setImportState((previous) => {
+          if (previous.phase !== "importing" || previous.jobId !== job.id) {
+            return previous;
+          }
+
+          return {
+            ...previous,
+            processed: job.processedRows,
+            total: job.totalRows,
+            current:
+              job.currentItem ??
+              (job.status === "queued" ? "Queued in background..." : "Preparing import..."),
+          };
+        });
+      } catch (error) {
+        if (!cancelled) {
+          setImportState({
+            phase: "error",
+            message: error instanceof Error ? error.message : "Could not track import progress.",
+          });
+        }
+      }
+    };
+
+    void poll();
+    const timer = setInterval(() => {
+      void poll();
+    }, 1500);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [importState]);
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const fileInput = form.elements.namedItem("csvFile") as HTMLInputElement;
     const file = fileInput.files?.[0];
     if (!file) return;
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setImportState({
-      phase: "importing",
-      processed: 0,
-      total: 0,
-      current: "Starting...",
-      csvType: detectedType === "collection" ? "collection" : "inventory",
-    });
 
     try {
       const formData = new FormData();
@@ -155,10 +232,9 @@ export function ImportCatalogForm() {
       const response = await fetch("/api/admin/import", {
         method: "POST",
         body: formData,
-        signal: controller.signal,
       });
 
-      if (!response.ok || !response.body) {
+      if (!response.ok) {
         const body = await response
           .json()
           .catch(() => ({ error: "Import request failed." }));
@@ -169,79 +245,28 @@ export function ImportCatalogForm() {
         return;
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+      const body = (await response.json()) as {
+        jobId: string;
+        csvType: "inventory" | "collection";
+        destination: "active" | "archived";
+        totalRows: number;
+      };
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop() ?? "";
-
-        for (const part of parts) {
-          const line = part.trim();
-          if (!line.startsWith("data: ")) continue;
-
-          let nextEvent: ImportProgressEvent;
-          try {
-            nextEvent = JSON.parse(line.slice(6)) as ImportProgressEvent;
-          } catch {
-            continue;
-          }
-
-          if (nextEvent.type === "start") {
-            setImportState({
-              phase: "importing",
-              processed: 0,
-              total: nextEvent.total,
-              current: "Preparing import...",
-              csvType: nextEvent.csvType,
-            });
-          } else if (nextEvent.type === "progress") {
-            setImportState((previous) => ({
-              ...previous,
-              phase: "importing" as const,
-              processed: nextEvent.processed,
-              total: nextEvent.total,
-              current: nextEvent.current,
-              csvType:
-                previous.phase === "importing" ? previous.csvType : "inventory",
-            }));
-          } else if (nextEvent.type === "complete") {
-            setImportState({
-              phase: "done",
-              summary: nextEvent.summary,
-              csvType: nextEvent.summary.requiredColumns.some(
-                (column) => column.name === "collection media condition"
-              )
-                ? "collection"
-                : "inventory",
-            });
-          } else if (nextEvent.type === "error") {
-            setImportState({ phase: "error", message: nextEvent.message });
-          }
-        }
-      }
+      setImportState({
+        phase: "importing",
+        jobId: body.jobId,
+        processed: 0,
+        total: body.totalRows,
+        current: "Queued in background...",
+        csvType: body.csvType,
+        destination: body.destination,
+      });
     } catch (error) {
-      if ((error as Error).name === "AbortError") {
-        setImportState({ phase: "idle" });
-      } else {
-        setImportState({
-          phase: "error",
-          message: (error as Error).message ?? "Unexpected error.",
-        });
-      }
-    } finally {
-      abortRef.current = null;
+      setImportState({
+        phase: "error",
+        message: (error as Error).message ?? "Unexpected error.",
+      });
     }
-  }
-
-  function handleStop() {
-    abortRef.current?.abort();
-    setImportState({ phase: "idle" });
   }
 
   function resetForm() {
@@ -448,14 +473,9 @@ export function ImportCatalogForm() {
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleStop}
-              className="inline-flex items-center gap-1.5 rounded-full border border-danger px-3 py-1.5 text-xs font-semibold text-danger transition-colors hover:bg-red-50"
-            >
-              <StopCircle className="h-3.5 w-3.5" />
-              Stop import
-            </button>
+            <span className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+              Background job
+            </span>
           </div>
 
           {importState.total > 0 && (
@@ -471,6 +491,10 @@ export function ImportCatalogForm() {
               </p>
             </>
           )}
+
+          <p className="text-xs text-muted">
+            This import keeps running in the background even if you leave or close the tab.
+          </p>
         </div>
       )}
 
@@ -483,7 +507,7 @@ export function ImportCatalogForm() {
                 <div>
                   <h2 className="text-lg font-bold text-foreground">Import complete</h2>
                   <p className="text-sm text-muted">
-                    {effectiveDestination === "archived"
+                    {importState.destination === "archived"
                       ? "Items were added to Inventory. Set prices and publish them when ready."
                       : "Imported items are now live in the public catalog."}
                   </p>
@@ -522,7 +546,7 @@ export function ImportCatalogForm() {
               <button type="button" onClick={resetForm} className="btn-secondary">
                 Import another file
               </button>
-              {effectiveDestination === "archived" ? (
+              {importState.destination === "archived" ? (
                 <Link href="/admin/inventory" className="btn-primary">
                   Go to Inventory
                 </Link>

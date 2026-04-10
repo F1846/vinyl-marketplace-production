@@ -1,14 +1,60 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
-import type { ProductStatus } from "@/types/product";
+import type { MediaCondition, ProductFormat, ProductStatus } from "@/types/product";
 
 type ProductRecord = typeof schema.products.$inferSelect;
 const DISCOGS_API_BASE = "https://api.discogs.com";
 const DEFAULT_USER_AGENT =
   "vinyl-marketplace-production/1.0 +https://www.federicoshop.de";
 
+export type ProductIdentityInput = {
+  artist: string;
+  title: string;
+  format: ProductFormat;
+  pressingYear: number | null;
+  pressingLabel: string | null;
+  pressingCatalogNumber: string | null;
+  conditionMedia: MediaCondition | null;
+  conditionSleeve: MediaCondition | null;
+};
+
 function visibleProductWhere(id: string) {
   return and(eq(schema.products.id, id), isNull(schema.products.deletedAt));
+}
+
+export function buildProductIdentityWhere(input: ProductIdentityInput) {
+  const yearCondition =
+    input.pressingYear != null
+      ? eq(schema.products.pressingYear, input.pressingYear)
+      : isNull(schema.products.pressingYear);
+  const labelCondition =
+    input.pressingLabel != null
+      ? eq(schema.products.pressingLabel, input.pressingLabel)
+      : isNull(schema.products.pressingLabel);
+  const catalogNumberCondition =
+    input.pressingCatalogNumber != null
+      ? eq(schema.products.pressingCatalogNumber, input.pressingCatalogNumber)
+      : isNull(schema.products.pressingCatalogNumber);
+  const mediaCondition =
+    input.conditionMedia != null
+      ? eq(schema.products.conditionMedia, input.conditionMedia)
+      : isNull(schema.products.conditionMedia);
+  const sleeveCondition =
+    input.conditionSleeve != null
+      ? eq(schema.products.conditionSleeve, input.conditionSleeve)
+      : isNull(schema.products.conditionSleeve);
+
+  return and(
+    eq(schema.products.artist, input.artist),
+    eq(schema.products.title, input.title),
+    eq(schema.products.format, input.format),
+    yearCondition,
+    labelCondition,
+    catalogNumberCondition,
+    mediaCondition,
+    sleeveCondition,
+    isNull(schema.products.deletedAt)
+  );
 }
 
 export function resolveProductStatus(input: {
@@ -184,6 +230,33 @@ export async function deleteProductRecord(id: string): Promise<boolean> {
       status: "archived",
       stockQuantity: 0,
       discogsListingId: null,
+      updatedAt: new Date(),
+      version: product.version + 1,
+    })
+    .where(visibleProductWhere(id));
+
+  return true;
+}
+
+export async function updateProductStockRecord(
+  id: string,
+  stockQuantity: number
+): Promise<boolean> {
+  const product = await getVisibleProductById(id);
+  if (!product) {
+    return false;
+  }
+
+  const nextStockQuantity = Math.max(0, Math.round(stockQuantity));
+
+  await db()
+    .update(schema.products)
+    .set({
+      stockQuantity: nextStockQuantity,
+      status: resolveProductStatus({
+        status: product.status,
+        stockQuantity: nextStockQuantity,
+      }),
       updatedAt: new Date(),
       version: product.version + 1,
     })

@@ -16,7 +16,7 @@ type CatalogBrowserProps = {
   initialQuery: {
     q: string;
     format?: ProductFormat;
-    genre: string;
+    genre: string[];
     sort: CatalogSort;
   };
   filters: {
@@ -118,8 +118,8 @@ export function CatalogBrowser({
     if (query.q) {
       return formatMessage(dictionary.catalog.activeResultsFor, { query: query.q });
     }
-    if (query.genre) {
-      return query.genre;
+    if (query.genre.length > 0) {
+      return query.genre.join(", ");
     }
     if (query.format) {
       return query.format;
@@ -131,7 +131,7 @@ export function CatalogBrowser({
     const params = new URLSearchParams();
     if (nextQuery.q) params.set("q", nextQuery.q);
     if (nextQuery.format) params.set("format", nextQuery.format);
-    if (nextQuery.genre) params.set("genre", nextQuery.genre);
+    for (const genre of nextQuery.genre) params.append("genre", genre);
     if (nextQuery.sort !== "newest") params.set("sort", nextQuery.sort);
     params.set("offset", String(offset));
     params.set("limit", String(PAGE_SIZE));
@@ -150,7 +150,7 @@ export function CatalogBrowser({
     const params = new URLSearchParams();
     if (nextQuery.q) params.set("q", nextQuery.q);
     if (nextQuery.format) params.set("format", nextQuery.format);
-    if (nextQuery.genre) params.set("genre", nextQuery.genre);
+    for (const genre of nextQuery.genre) params.append("genre", genre);
     if (nextQuery.sort !== "newest") params.set("sort", nextQuery.sort);
     const nextUrl = params.toString() ? `/catalog?${params.toString()}` : "/catalog";
     window.history.replaceState({}, "", nextUrl);
@@ -218,9 +218,6 @@ export function CatalogBrowser({
             <h1 className="font-sans text-[2rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[2.15rem]">
               {dictionary.catalog.shopArchive}
             </h1>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              {dictionary.catalog.browseWithoutReload}
-            </p>
           </div>
           <div className="rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
             {activeLabel}
@@ -275,8 +272,8 @@ export function CatalogBrowser({
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => void applyQuery({ ...query, genre: "" })}
-                  className={getFilterButtonClass(!query.genre)}
+                  onClick={() => void applyQuery({ ...query, genre: [] })}
+                  className={getFilterButtonClass(query.genre.length === 0)}
                 >
                   {dictionary.common.all}
                 </button>
@@ -284,8 +281,15 @@ export function CatalogBrowser({
                   <button
                     key={genre}
                     type="button"
-                    onClick={() => void applyQuery({ ...query, genre })}
-                    className={getFilterButtonClass(query.genre === genre)}
+                    onClick={() =>
+                      void applyQuery({
+                        ...query,
+                        genre: query.genre.includes(genre)
+                          ? query.genre.filter((value) => value !== genre)
+                          : [...query.genre, genre],
+                      })
+                    }
+                    className={getFilterButtonClass(query.genre.includes(genre))}
                   >
                     {genre}
                   </button>

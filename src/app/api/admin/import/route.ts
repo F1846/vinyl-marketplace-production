@@ -1,10 +1,11 @@
-import { type NextRequest } from "next/server";
+import { after, type NextRequest } from "next/server";
 import { requireAuthenticatedAdmin } from "@/lib/auth";
 import {
+  inspectDiscogsCollectionCsv,
+  inspectDiscogsInventoryCsv,
   isCollectionCsv,
-  importDiscogsInventoryCsvGenerator,
-  importDiscogsCollectionCsvGenerator,
 } from "@/lib/discogs-import";
+import { createImportJob, runImportJob } from "@/lib/import-jobs";
 
 // Allow up to 5 minutes for large collection imports
 export const maxDuration = 300;
@@ -13,6 +14,7 @@ export async function POST(request: NextRequest) {
   await requireAuthenticatedAdmin();
 
   let text: string;
+  let fileName = "import.csv";
   let targetStatus: "active" | "archived" = "active";
   try {
     const formData = await request.formData();
@@ -20,6 +22,7 @@ export async function POST(request: NextRequest) {
     if (!(file instanceof File) || file.size === 0) {
       return Response.json({ error: "No CSV file provided." }, { status: 400 });
     }
+    fileName = file.name;
     text = await file.text();
     const dest = formData.get("destination");
     if (dest === "archived") targetStatus = "archived";
@@ -29,47 +32,32 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Failed to read uploaded file." }, { status: 400 });
   }
 
-  const encoder = new TextEncoder();
+  const csvType = isCollectionCsv(text) ? "collection" : "inventory";
+  const inspection =
+    csvType === "collection"
+      ? inspectDiscogsCollectionCsv(text)
+      : inspectDiscogsInventoryCsv(text);
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      const send = (data: object) => {
-        try {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-        } catch {
-          // Client disconnected
-        }
-      };
-
-      try {
-        const generator = isCollectionCsv(text)
-          ? importDiscogsCollectionCsvGenerator(text, request.signal, targetStatus)
-          : importDiscogsInventoryCsvGenerator(text, request.signal, targetStatus);
-
-        for await (const event of generator) {
-          if (request.signal.aborted) break;
-          send(event);
-        }
-      } catch (err) {
-        send({
-          type: "error",
-          message: err instanceof Error ? err.message : "Import failed unexpectedly.",
-        });
-      } finally {
-        try {
-          controller.close();
-        } catch {
-          // Already closed
-        }
-      }
-    },
+  const job = await createImportJob({
+    fileName,
+    csvType,
+    destination: targetStatus,
+    totalRows: inspection.totalRows,
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "X-Accel-Buffering": "no",
-    },
+  after(async () => {
+    await runImportJob({
+      jobId: job.id,
+      text,
+      csvType,
+      destination: targetStatus,
+    });
+  });
+
+  return Response.json({
+    jobId: job.id,
+    csvType,
+    destination: targetStatus,
+    totalRows: inspection.totalRows,
   });
 }

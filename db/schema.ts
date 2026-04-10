@@ -33,6 +33,13 @@ export const orderStatusEnum = pgEnum("order_status", [
 export const paymentMethodEnum = pgEnum("payment_method", ["card", "paypal", "pickup"]);
 
 export const deliveryMethodEnum = pgEnum("delivery_method", ["shipping", "pickup"]);
+export const importJobStatusEnum = pgEnum("import_job_status", [
+  "queued",
+  "running",
+  "completed",
+  "failed",
+]);
+export const importCsvTypeEnum = pgEnum("import_csv_type", ["inventory", "collection"]);
 
 // ──────────────────────────────────────────────
 // Products
@@ -178,4 +185,21 @@ export const adminLoginLogs = pgTable("admin_login_logs", {
   userAgent: varchar("user_agent", { length: 512 }),
   result: varchar("result", { length: 32 }).notNull(), // success | invalid_password | rate_limited | missing_password
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const importJobs = pgTable("import_jobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  csvType: importCsvTypeEnum("csv_type").notNull(),
+  destination: productStatusEnum("destination").notNull(),
+  status: importJobStatusEnum("status").notNull().default("queued"),
+  processedRows: integer("processed_rows").notNull().default(0),
+  totalRows: integer("total_rows").notNull().default(0),
+  currentItem: varchar("current_item", { length: 512 }),
+  summary: jsonb("summary"),
+  error: text("error"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

@@ -7,9 +7,12 @@ import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import {
   archiveProductRecord,
+  buildProductIdentityWhere,
   deleteProductRecord,
   putProductOnSaleRecord,
   relistProductRecord,
+  resolveProductStatus,
+  updateProductStockRecord,
 } from "@/lib/product-admin";
 import type { MediaCondition, ProductStatus } from "@/types/product";
 
@@ -79,31 +82,33 @@ export async function addProductFormAction(
   const description = String(formData.get("description"));
 
   try {
-    const yearCondition =
-      pressingYear != null
-        ? eq(schema.products.pressingYear, pressingYear)
-        : isNull(schema.products.pressingYear);
-    const labelCondition =
-      pressingLabel != null
-        ? eq(schema.products.pressingLabel, pressingLabel)
-        : isNull(schema.products.pressingLabel);
-
     const existingProduct = await d.query.products.findFirst({
-      where: and(
-        eq(schema.products.artist, artist),
-        eq(schema.products.title, title),
-        eq(schema.products.format, format),
-        yearCondition,
-        labelCondition,
-        isNull(schema.products.deletedAt)
-      ),
-      columns: { id: true, stockQuantity: true },
+      where: buildProductIdentityWhere({
+        artist,
+        title,
+        format,
+        pressingYear,
+        pressingLabel,
+        pressingCatalogNumber,
+        conditionMedia,
+        conditionSleeve,
+      }),
+      columns: { id: true, stockQuantity: true, status: true, version: true },
     });
 
     if (existingProduct) {
+      const nextStockQuantity = existingProduct.stockQuantity + 1;
       await d
         .update(schema.products)
-        .set({ stockQuantity: existingProduct.stockQuantity + 1, updatedAt: new Date() })
+        .set({
+          stockQuantity: nextStockQuantity,
+          status: resolveProductStatus({
+            status: existingProduct.status,
+            stockQuantity: nextStockQuantity,
+          }),
+          updatedAt: new Date(),
+          version: existingProduct.version + 1,
+        })
         .where(eq(schema.products.id, existingProduct.id));
       revalidateProductPaths(existingProduct.id);
       return { error: null, success: true };
@@ -256,6 +261,28 @@ export async function putItemOnSale(formData: FormData) {
   await putProductOnSaleRecord(id, priceCents);
 
   revalidateProductPaths(id);
+}
+
+export async function updateProductStock(formData: FormData) {
+  "use server";
+  await requireAuthenticatedAdmin();
+
+  const id = String(formData.get("id") ?? "").trim();
+  const stockRaw = String(formData.get("stockQuantity") ?? "0").trim();
+  const returnToRaw = formData.get("returnTo");
+  const returnTo =
+    typeof returnToRaw === "string" && returnToRaw.startsWith("/admin/")
+      ? returnToRaw
+      : "/admin/products";
+  const stockQuantity = Math.round(Number(stockRaw));
+
+  if (!id || !Number.isFinite(stockQuantity) || stockQuantity < 0) {
+    redirect(returnTo);
+  }
+
+  await updateProductStockRecord(id, stockQuantity);
+  revalidateProductPaths(id);
+  redirect(returnTo);
 }
 
 export async function bulkUpdateProducts(formData: FormData) {

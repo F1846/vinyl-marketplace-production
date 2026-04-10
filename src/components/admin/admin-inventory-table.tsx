@@ -19,6 +19,7 @@ import {
   putItemOnSale,
   relistProduct,
 } from "@/actions/products";
+import { AdminStockForm } from "@/components/admin/admin-stock-form";
 import type { MediaCondition, ProductFormat, ProductStatus } from "@/types/product";
 import { formatEuroFromCents } from "@/lib/money";
 
@@ -40,7 +41,7 @@ type Props = {
   items: InventoryRow[];
 };
 
-type InventorySortKey = "artist" | "price" | "status";
+type InventorySortKey = "stock" | "price" | "status";
 type InventorySortDirection = "asc" | "desc";
 
 const STATUS_ORDER: Record<ProductStatus, number> = {
@@ -120,11 +121,12 @@ export function AdminInventoryTable({ items }: Props) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | ProductStatus>("all");
   const [formatFilter, setFormatFilter] = useState<"all" | ProductFormat>("all");
-  const [sortKey, setSortKey] = useState<InventorySortKey>("artist");
-  const [sortDir, setSortDir] = useState<InventorySortDirection>("asc");
+  const [sortKey, setSortKey] = useState<InventorySortKey>("stock");
+  const [sortDir, setSortDir] = useState<InventorySortDirection>("desc");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const lastSelectedIndexRef = useRef<number | null>(null);
   const checkboxRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const returnTo = "/admin/inventory";
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -151,6 +153,13 @@ export function AdminInventoryTable({ items }: Props) {
         );
       })
       .sort((left, right) => {
+        if (sortKey === "stock") {
+          const delta = left.stockQuantity - right.stockQuantity;
+          if (delta !== 0) {
+            return sortDir === "asc" ? delta : -delta;
+          }
+        }
+
         if (sortKey === "price") {
           const delta = left.priceCents - right.priceCents;
           return sortDir === "asc" ? delta : -delta;
@@ -255,7 +264,7 @@ export function AdminInventoryTable({ items }: Props) {
     }
 
     setSortKey(nextSortKey);
-    setSortDir(nextSortKey === "price" ? "desc" : "asc");
+    setSortDir(nextSortKey === "price" || nextSortKey === "stock" ? "desc" : "asc");
   };
 
   const renderSortHeader = (label: string, column: InventorySortKey) => {
@@ -279,10 +288,6 @@ export function AdminInventoryTable({ items }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-foreground">Inventory ({items.length})</h1>
-          <p className="mt-1 text-sm text-muted">
-            Collection stock and not-for-sale items. Use this page to price items,
-            put them on sale, or remove them from sale.
-          </p>
         </div>
         <Link href="/admin/import" className="btn-secondary flex items-center gap-2 text-sm">
           <Upload className="h-4 w-4" />
@@ -465,7 +470,7 @@ export function AdminInventoryTable({ items }: Props) {
                 <span className="sr-only">Select</span>
               </th>
               <th className="px-4 py-3 text-left font-medium text-foreground">
-                {renderSortHeader("Item", "artist")}
+                Item
               </th>
               <th className="hidden px-4 py-3 text-left font-medium text-foreground sm:table-cell">
                 Format
@@ -474,7 +479,7 @@ export function AdminInventoryTable({ items }: Props) {
                 {renderSortHeader("Price", "price")}
               </th>
               <th className="hidden px-4 py-3 text-left font-medium text-foreground md:table-cell">
-                Stock
+                {renderSortHeader("Stock", "stock")}
               </th>
               <th className="px-4 py-3 text-left font-medium text-foreground">
                 {renderSortHeader("Status", "status")}
@@ -549,7 +554,14 @@ export function AdminInventoryTable({ items }: Props) {
                       <span className="text-xs text-muted">
                         {formatEuroFromCents(item.priceCents)}
                       </span>
-                      <span className="text-xs text-muted">Qty: {item.stockQuantity}</span>
+                      <div className="w-full">
+                        <AdminStockForm
+                          id={item.id}
+                          stockQuantity={item.stockQuantity}
+                          returnTo={returnTo}
+                          compact
+                        />
+                      </div>
                     </div>
                   </td>
                   <td className="hidden px-4 py-3 sm:table-cell">
@@ -559,7 +571,12 @@ export function AdminInventoryTable({ items }: Props) {
                     {formatEuroFromCents(item.priceCents)}
                   </td>
                   <td className="hidden px-4 py-3 text-foreground md:table-cell">
-                    {item.stockQuantity}
+                    <AdminStockForm
+                      id={item.id}
+                      stockQuantity={item.stockQuantity}
+                      returnTo={returnTo}
+                      compact
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={item.status} id={item.id} />

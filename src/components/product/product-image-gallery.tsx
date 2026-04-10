@@ -31,14 +31,16 @@ export function ProductImageGallery({
     <div className="space-y-2.5">
       <div className="relative aspect-[0.86] overflow-hidden rounded-[1.25rem] border border-border bg-white shadow-soft">
         {selectedImage?.url ? (
-          <Image
-            src={selectedImage.url}
-            alt={`${artist} - ${title}`}
-            fill
-            className="object-cover"
-            sizes="(max-width: 1024px) 100vw, 42vw"
-            priority
-          />
+          <div className="absolute inset-[5%]">
+            <Image
+              src={selectedImage.url}
+              alt={`${artist} - ${title}`}
+              fill
+              className="object-contain"
+              sizes="(max-width: 1024px) 100vw, 42vw"
+              priority
+            />
+          </div>
         ) : (
           <div className="flex h-full w-full items-center justify-center text-base text-muted">
             No image available
@@ -63,13 +65,15 @@ export function ProductImageGallery({
                 aria-label={`Show image ${index + 1} for ${artist} - ${title}`}
                 aria-pressed={isSelected}
               >
-                <Image
-                  src={image.url}
-                  alt=""
-                  fill
-                  className="object-cover"
-                  sizes="6rem"
-                />
+                <div className="absolute inset-[9%]">
+                  <Image
+                    src={image.url}
+                    alt=""
+                    fill
+                    className="object-contain"
+                    sizes="6rem"
+                  />
+                </div>
               </button>
             );
           })}

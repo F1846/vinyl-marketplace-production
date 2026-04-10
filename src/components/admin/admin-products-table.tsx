@@ -18,6 +18,7 @@ import {
   deleteProduct,
   relistProduct,
 } from "@/actions/products";
+import { AdminStockForm } from "@/components/admin/admin-stock-form";
 import type { ProductFormat, ProductStatus } from "@/types/product";
 import { formatEuroFromCents } from "@/lib/money";
 
@@ -360,7 +361,14 @@ export function AdminProductsTable({
                 <td className="px-4 py-3 text-foreground">
                   {formatEuroFromCents(product.priceCents)}
                 </td>
-                <td className="px-4 py-3 text-foreground">{product.stockQuantity}</td>
+                <td className="px-4 py-3 text-foreground">
+                  <AdminStockForm
+                    id={product.id}
+                    stockQuantity={product.stockQuantity}
+                    returnTo={returnTo}
+                    compact
+                  />
+                </td>
                 <td className="px-4 py-3">{statusBadge(product.status, product.id)}</td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end flex-wrap gap-2">
