@@ -25,7 +25,7 @@ export async function importCatalogCsvAction(
   const file = formData.get("csvFile");
   if (!(file instanceof File) || file.size === 0) {
     return {
-      error: "Please upload a Discogs inventory or collection CSV file.",
+      error: "Please upload a CSV file.",
       success: false,
       summary: null,
     };

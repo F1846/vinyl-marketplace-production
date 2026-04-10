@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
   await requireAuthenticatedAdmin();
 
   let text: string;
+  let targetStatus: "active" | "archived" = "active";
   try {
     const formData = await request.formData();
     const file = formData.get("csvFile");
@@ -20,6 +21,10 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "No CSV file provided." }, { status: 400 });
     }
     text = await file.text();
+    const dest = formData.get("destination");
+    if (dest === "archived") targetStatus = "archived";
+    else if (dest === "active") targetStatus = "active";
+    else targetStatus = isCollectionCsv(text) ? "archived" : "active";
   } catch {
     return Response.json({ error: "Failed to read uploaded file." }, { status: 400 });
   }
@@ -38,8 +43,8 @@ export async function POST(request: NextRequest) {
 
       try {
         const generator = isCollectionCsv(text)
-          ? importDiscogsCollectionCsvGenerator(text, request.signal)
-          : importDiscogsInventoryCsvGenerator(text, request.signal);
+          ? importDiscogsCollectionCsvGenerator(text, request.signal, targetStatus)
+          : importDiscogsInventoryCsvGenerator(text, request.signal, targetStatus);
 
         for await (const event of generator) {
           if (request.signal.aborted) break;

@@ -3,13 +3,29 @@
 import React, { ChangeEvent, useRef, useState } from "react";
 import Link from "next/link";
 import { CheckCircle, Loader2, StopCircle, X } from "lucide-react";
-import type { DiscogsImportSummary, ImportProgressEvent } from "@/lib/discogs-import";
+import type {
+  DiscogsImportSummary,
+  ImportProgressEvent,
+} from "@/lib/discogs-import";
 
-const INVENTORY_REQUIRED_COLUMNS = ["listing_id", "artist", "title", "format", "release_id", "status", "price"] as const;
-const COLLECTION_REQUIRED_COLUMNS = ["artist", "title", "release_id", "collection media condition"] as const;
+const INVENTORY_REQUIRED_COLUMNS = [
+  "listing_id",
+  "artist",
+  "title",
+  "format",
+  "release_id",
+  "status",
+  "price",
+] as const;
+const COLLECTION_REQUIRED_COLUMNS = [
+  "artist",
+  "title",
+  "release_id",
+  "collection media condition",
+] as const;
 
 function detectCsvType(headers: string[]): "inventory" | "collection" | "unknown" {
-  const normalized = headers.map((h) => h.toLowerCase().trim());
+  const normalized = headers.map((header) => header.toLowerCase().trim());
   if (normalized.includes("collection media condition")) return "collection";
   if (normalized.includes("listing_id")) return "inventory";
   return "unknown";
@@ -35,27 +51,40 @@ function parseCsvHeaders(input: string): string[] {
       }
       continue;
     }
+
     if (char === "," && !inQuotes) {
       headers.push(currentField);
       currentField = "";
       continue;
     }
+
     if (char === "\n" && !inQuotes) {
       headers.push(currentField);
       break;
     }
+
     currentField += char;
   }
 
   if (headers.length === 0 && currentField) headers.push(currentField);
   if (headers.length > 0) headers[0] = headers[0].replace(/^\uFEFF/, "");
-  return headers.map((h) => h.trim()).filter(Boolean);
+  return headers.map((header) => header.trim()).filter(Boolean);
 }
 
 type ImportState =
   | { phase: "idle" }
-  | { phase: "importing"; processed: number; total: number; current: string; csvType: "inventory" | "collection" }
-  | { phase: "done"; summary: DiscogsImportSummary; csvType: "inventory" | "collection" }
+  | {
+      phase: "importing";
+      processed: number;
+      total: number;
+      current: string;
+      csvType: "inventory" | "collection";
+    }
+  | {
+      phase: "done";
+      summary: DiscogsImportSummary;
+      csvType: "inventory" | "collection";
+    }
   | { phase: "error"; message: string };
 
 export function ImportCatalogForm() {
@@ -63,19 +92,33 @@ export function ImportCatalogForm() {
   const [previewHeaders, setPreviewHeaders] = useState<string[]>([]);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [importState, setImportState] = useState<ImportState>({ phase: "idle" });
+  const [destination, setDestination] = useState<"auto" | "active" | "archived">("auto");
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const detectedType = detectCsvType(previewHeaders);
+  const effectiveDestination: "active" | "archived" =
+    destination !== "auto"
+      ? destination
+      : detectedType === "collection"
+        ? "archived"
+        : "active";
+  const destinationSummary =
+    effectiveDestination === "archived"
+      ? "Inventory = collection, not on sale."
+      : "Catalog = directly on sale.";
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     setPreviewError(null);
+    setDestination("auto");
+
     if (!file) {
       setSelectedFileName(null);
       setPreviewHeaders([]);
       return;
     }
+
     setSelectedFileName(file.name);
     try {
       const text = await file.text();
@@ -93,24 +136,36 @@ export function ImportCatalogForm() {
     const file = fileInput.files?.[0];
     if (!file) return;
 
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-    setImportState({ phase: "importing", processed: 0, total: 0, current: "Starting…", csvType: detectedType === "collection" ? "collection" : "inventory" });
+    setImportState({
+      phase: "importing",
+      processed: 0,
+      total: 0,
+      current: "Starting...",
+      csvType: detectedType === "collection" ? "collection" : "inventory",
+    });
 
     try {
       const formData = new FormData();
       formData.append("csvFile", file);
+      formData.append("destination", effectiveDestination);
 
       const response = await fetch("/api/admin/import", {
         method: "POST",
         body: formData,
-        signal: ctrl.signal,
+        signal: controller.signal,
       });
 
       if (!response.ok || !response.body) {
-        const body = await response.json().catch(() => ({ error: "Import request failed." }));
-        setImportState({ phase: "error", message: (body as { error?: string }).error ?? "Import failed." });
+        const body = await response
+          .json()
+          .catch(() => ({ error: "Import request failed." }));
+        setImportState({
+          phase: "error",
+          message: (body as { error?: string }).error ?? "Import failed.",
+        });
         return;
       }
 
@@ -121,6 +176,7 @@ export function ImportCatalogForm() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+
         buffer += decoder.decode(value, { stream: true });
         const parts = buffer.split("\n\n");
         buffer = parts.pop() ?? "";
@@ -128,42 +184,55 @@ export function ImportCatalogForm() {
         for (const part of parts) {
           const line = part.trim();
           if (!line.startsWith("data: ")) continue;
-          let event: ImportProgressEvent;
+
+          let nextEvent: ImportProgressEvent;
           try {
-            event = JSON.parse(line.slice(6)) as ImportProgressEvent;
+            nextEvent = JSON.parse(line.slice(6)) as ImportProgressEvent;
           } catch {
             continue;
           }
 
-          if (event.type === "start") {
-            setImportState({ phase: "importing", processed: 0, total: event.total, current: "Connecting to Discogs…", csvType: event.csvType });
-          } else if (event.type === "progress") {
-            setImportState((prev) => ({
-              ...prev,
+          if (nextEvent.type === "start") {
+            setImportState({
+              phase: "importing",
+              processed: 0,
+              total: nextEvent.total,
+              current: "Preparing import...",
+              csvType: nextEvent.csvType,
+            });
+          } else if (nextEvent.type === "progress") {
+            setImportState((previous) => ({
+              ...previous,
               phase: "importing" as const,
-              processed: event.processed,
-              total: event.total,
-              current: event.current,
-              csvType: prev.phase === "importing" ? prev.csvType : "inventory",
+              processed: nextEvent.processed,
+              total: nextEvent.total,
+              current: nextEvent.current,
+              csvType:
+                previous.phase === "importing" ? previous.csvType : "inventory",
             }));
-          } else if (event.type === "complete") {
+          } else if (nextEvent.type === "complete") {
             setImportState({
               phase: "done",
-              summary: event.summary,
-              csvType: event.summary.requiredColumns.some((c) => c.name === "collection media condition")
+              summary: nextEvent.summary,
+              csvType: nextEvent.summary.requiredColumns.some(
+                (column) => column.name === "collection media condition"
+              )
                 ? "collection"
                 : "inventory",
             });
-          } else if (event.type === "error") {
-            setImportState({ phase: "error", message: event.message });
+          } else if (nextEvent.type === "error") {
+            setImportState({ phase: "error", message: nextEvent.message });
           }
         }
       }
-    } catch (err) {
-      if ((err as Error).name === "AbortError") {
+    } catch (error) {
+      if ((error as Error).name === "AbortError") {
         setImportState({ phase: "idle" });
       } else {
-        setImportState({ phase: "error", message: (err as Error).message ?? "Unexpected error." });
+        setImportState({
+          phase: "error",
+          message: (error as Error).message ?? "Unexpected error.",
+        });
       }
     } finally {
       abortRef.current = null;
@@ -183,28 +252,27 @@ export function ImportCatalogForm() {
   }
 
   const isImporting = importState.phase === "importing";
-  const progress = isImporting && importState.total > 0
-    ? Math.round((importState.processed / importState.total) * 100)
-    : 0;
+  const progress =
+    isImporting && importState.total > 0
+      ? Math.round((importState.processed / importState.total) * 100)
+      : 0;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Bulk import catalog</h1>
-          <p className="mt-1 text-sm text-muted">
-            <strong>Inventory CSV</strong> — items go live in the public catalog immediately as active listings.<br />
-            <strong>Collection CSV</strong> — items land in Inventory as &ldquo;not for sale&rdquo;. Use the Inventory page to set prices and publish them.
+          <h1 className="text-2xl font-bold text-foreground">CSV import</h1>
+          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-muted">
+            {destinationSummary}
           </p>
         </div>
-        <Link href="/admin/products" className="btn-secondary">
+        <Link href="/admin/products" className="btn-secondary shrink-0">
           Back to products
         </Link>
       </div>
 
-      {/* Import form */}
-      {importState.phase === "idle" || importState.phase === "error" ? (
-        <form onSubmit={(e) => void handleSubmit(e)} className="card space-y-4">
+      {(importState.phase === "idle" || importState.phase === "error") && (
+        <form onSubmit={(event) => void handleSubmit(event)} className="card space-y-4">
           {importState.phase === "error" && (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-danger">
               {importState.message}
@@ -212,7 +280,9 @@ export function ImportCatalogForm() {
           )}
 
           <div>
-            <label htmlFor="csvFile" className="label">Discogs inventory or collection CSV</label>
+            <label htmlFor="csvFile" className="label">
+              CSV file
+            </label>
             <input
               id="csvFile"
               name="csvFile"
@@ -233,15 +303,25 @@ export function ImportCatalogForm() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h2 className="text-sm font-semibold text-foreground">Column scan</h2>
-                  <p className="mt-1 text-xs text-muted">Browser preview — the server re-validates before importing.</p>
+                  <p className="mt-1 text-xs text-muted">
+                    Browser preview - the server re-validates before importing.
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs uppercase tracking-[0.18em] text-muted">{previewHeaders.length} columns</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted">
+                    {previewHeaders.length} columns
+                  </p>
                   {detectedType !== "unknown" && (
-                    <p className={`mt-0.5 text-xs font-semibold ${detectedType === "collection" ? "text-blue-600" : "text-emerald-600"}`}>
+                    <p
+                      className={`mt-0.5 text-xs font-semibold ${
+                        detectedType === "collection"
+                          ? "text-blue-600"
+                          : "text-emerald-600"
+                      }`}
+                    >
                       {detectedType === "collection"
-                        ? "Collection CSV — goes to Inventory (not for sale)"
-                        : "Inventory CSV — goes live in catalog immediately"}
+                        ? "Collection file - goes to Inventory (not for sale)"
+                        : "Catalog file - goes live in catalog immediately"}
                     </p>
                   )}
                 </div>
@@ -253,14 +333,22 @@ export function ImportCatalogForm() {
                 <>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {previewHeaders.map((header) => (
-                      <span key={header} className="rounded-full border border-border px-3 py-1 text-xs text-muted">
+                      <span
+                        key={header}
+                        className="rounded-full border border-border px-3 py-1 text-xs text-muted"
+                      >
                         {header}
                       </span>
                     ))}
                   </div>
                   <div className="mt-4 grid gap-2 md:grid-cols-2">
-                    {(detectedType === "collection" ? COLLECTION_REQUIRED_COLUMNS : INVENTORY_REQUIRED_COLUMNS).map((column) => {
-                      const found = previewHeaders.some((h) => h.toLowerCase().trim() === column.toLowerCase());
+                    {(detectedType === "collection"
+                      ? COLLECTION_REQUIRED_COLUMNS
+                      : INVENTORY_REQUIRED_COLUMNS
+                    ).map((column) => {
+                      const found = previewHeaders.some(
+                        (header) => header.toLowerCase().trim() === column.toLowerCase()
+                      );
                       return (
                         <p key={column} className="text-sm text-muted">
                           {column}:{" "}
@@ -276,15 +364,76 @@ export function ImportCatalogForm() {
             </div>
           )}
 
+          <div className="rounded-[1.5rem] border border-border bg-white p-4 text-sm text-muted">
+            <p className="font-semibold text-foreground">Import rules</p>
+            <p className="mt-2">Inventory = collection, not on sale.</p>
+            <p className="mt-1">Catalog = directly on sale.</p>
+            <p className="mt-2">
+              Pick the destination below if you want to override the file type.
+            </p>
+          </div>
+
+          <div className="rounded-[1.5rem] border-2 border-accent/20 bg-accent/5 p-4 space-y-3">
+            <p className="text-sm font-semibold text-foreground">
+              Where should these items go?
+            </p>
+            <div className="flex flex-col gap-2">
+              {([
+                {
+                  value: "archived" as const,
+                  label: "Inventory only - not for sale",
+                  desc: "Items land in the Inventory page. Set prices and publish individually.",
+                  recommended: detectedType === "collection",
+                },
+                {
+                  value: "active" as const,
+                  label: "Catalog - live on sale immediately",
+                  desc: "Items go live in the public catalog straight away.",
+                  recommended: detectedType === "inventory",
+                },
+              ] as const).map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                    effectiveDestination === option.value
+                      ? "border-accent bg-white"
+                      : "border-border bg-surface hover:border-foreground/20"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="destinationChoice"
+                    value={option.value}
+                    checked={effectiveDestination === option.value}
+                    onChange={() => setDestination(option.value)}
+                    className="mt-0.5 h-4 w-4 text-accent"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {option.label}
+                      {option.recommended && detectedType !== "unknown" && (
+                        <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                          recommended
+                        </span>
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted">{option.desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="flex justify-end">
             <button type="submit" className="btn-primary">
-              Import catalog
+              {effectiveDestination === "archived"
+                ? "Import to inventory"
+                : "Import to catalog"}
             </button>
           </div>
         </form>
-      ) : null}
+      )}
 
-      {/* Progress overlay */}
       {isImporting && (
         <div className="card space-y-4">
           <div className="flex items-center justify-between">
@@ -292,9 +441,11 @@ export function ImportCatalogForm() {
               <Loader2 className="h-5 w-5 animate-spin text-accent" />
               <div>
                 <p className="text-sm font-semibold text-foreground">
-                  Importing {importState.csvType === "collection" ? "collection" : "inventory"}…
+                  Importing {importState.csvType === "collection" ? "collection" : "catalog"}...
                 </p>
-                <p className="mt-0.5 text-xs text-muted truncate max-w-xs">{importState.current}</p>
+                <p className="mt-0.5 max-w-xs truncate text-xs text-muted">
+                  {importState.current}
+                </p>
               </div>
             </div>
             <button
@@ -323,7 +474,6 @@ export function ImportCatalogForm() {
         </div>
       )}
 
-      {/* Success modal */}
       {importState.phase === "done" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl space-y-4">
@@ -333,13 +483,18 @@ export function ImportCatalogForm() {
                 <div>
                   <h2 className="text-lg font-bold text-foreground">Import complete</h2>
                   <p className="text-sm text-muted">
-                    {importState.csvType === "collection"
-                      ? "Items added to Inventory — go to Inventory to put them on sale."
-                      : "Active listings are now live in the public catalog."}
+                    {effectiveDestination === "archived"
+                      ? "Items were added to Inventory. Set prices and publish them when ready."
+                      : "Imported items are now live in the public catalog."}
                   </p>
                 </div>
               </div>
-              <button type="button" onClick={resetForm} aria-label="Close" className="text-muted hover:text-foreground">
+              <button
+                type="button"
+                onClick={resetForm}
+                aria-label="Close"
+                className="text-muted hover:text-foreground"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -353,7 +508,10 @@ export function ImportCatalogForm() {
                 { label: "Auto-archived", value: importState.summary.archived },
                 { label: "Active rows", value: importState.summary.activeRows },
               ].map((stat) => (
-                <div key={stat.label} className="rounded-xl border border-border bg-background p-3 text-center">
+                <div
+                  key={stat.label}
+                  className="rounded-xl border border-border bg-background p-3 text-center"
+                >
                   <p className="text-2xl font-bold text-foreground">{stat.value}</p>
                   <p className="mt-0.5 text-xs text-muted">{stat.label}</p>
                 </div>
@@ -364,7 +522,7 @@ export function ImportCatalogForm() {
               <button type="button" onClick={resetForm} className="btn-secondary">
                 Import another file
               </button>
-              {importState.csvType === "collection" ? (
+              {effectiveDestination === "archived" ? (
                 <Link href="/admin/inventory" className="btn-primary">
                   Go to Inventory
                 </Link>

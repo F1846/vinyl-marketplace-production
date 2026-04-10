@@ -218,7 +218,7 @@ async function fetchDiscogsRelease(
     }
 
     throw new Error(
-      `Discogs lookup failed for release ${releaseId}: ${response.status} ${response.statusText}`
+      `Image lookup failed for release ${releaseId}: ${response.status} ${response.statusText}`
     );
   }
 
@@ -269,7 +269,8 @@ function toProductStatus(value: string): ProductStatus {
 }
 
 function toCents(value: string): number {
-  return Math.round(Number.parseFloat(value || "0") * 100);
+  const n = Math.round(Number.parseFloat(value || "0") * 100);
+  return Number.isFinite(n) ? n : 0;
 }
 
 function safeYear(value: number | undefined): number | null {
@@ -395,7 +396,7 @@ export async function importDiscogsInventoryCsv(input: string): Promise<DiscogsI
   }
 
   if (inspection.requiredColumns.some((column) => !column.found)) {
-    throw new Error("The uploaded CSV is missing one or more required Discogs columns.");
+    throw new Error("The uploaded CSV is missing one or more required columns.");
   }
 
   const d = db();
@@ -688,7 +689,8 @@ export type ImportProgressEvent =
 
 export async function* importDiscogsInventoryCsvGenerator(
   input: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  targetStatus: "active" | "archived" = "active"
 ): AsyncGenerator<ImportProgressEvent> {
   requireEnv("DATABASE_URL");
   const discogsToken = requireEnv("DISCOGS_USER_TOKEN");
@@ -701,7 +703,7 @@ export async function* importDiscogsInventoryCsvGenerator(
   );
 
   if (inspection.requiredColumns.some((c) => !c.found)) {
-    yield { type: "error", message: "The CSV is missing one or more required Discogs columns." };
+    yield { type: "error", message: "The CSV is missing one or more required columns." };
     return;
   }
   if (catalogRows.length === 0) {
@@ -749,7 +751,7 @@ export async function* importDiscogsInventoryCsvGenerator(
       discogsListingId: listingId,
       discogsReleaseId: releaseId,
       description: descriptionFor(row, release),
-      status: "active" as const,
+      status: targetStatus,
     };
 
     const [product] = await d
@@ -799,7 +801,8 @@ export async function* importDiscogsInventoryCsvGenerator(
 
 export async function* importDiscogsCollectionCsvGenerator(
   input: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  targetStatus: "active" | "archived" = "archived"
 ): AsyncGenerator<ImportProgressEvent> {
   requireEnv("DATABASE_URL");
   const discogsToken = requireEnv("DISCOGS_USER_TOKEN");
@@ -861,7 +864,7 @@ export async function* importDiscogsCollectionCsvGenerator(
       discogsListingId: null,
       discogsReleaseId: releaseId,
       description: descriptionForCollection(row, release),
-      status: "archived" as const,
+      status: targetStatus,
     };
 
     const [product] = await d

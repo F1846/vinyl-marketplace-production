@@ -189,7 +189,7 @@ export function AdminProductsTable({
         <h1 className="text-xl font-bold text-foreground">Products ({productCountLabel})</h1>
         <div className="flex gap-2">
           <Link href="/admin/import" className="btn-secondary text-sm">
-            Import CSV
+            CSV import
           </Link>
           <Link href="/admin/products/new" className="btn-primary text-sm">
             Add Product

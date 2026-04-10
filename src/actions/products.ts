@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import {
   archiveProductRecord,
   deleteProductRecord,
+  putProductOnSaleRecord,
   relistProductRecord,
 } from "@/lib/product-admin";
 import type { MediaCondition, ProductStatus } from "@/types/product";
@@ -222,63 +223,7 @@ export async function putItemOnSale(formData: FormData) {
   if (!id) return;
   if (!Number.isFinite(priceCents) || priceCents < 0) return;
 
-  const d = db();
-
-  // Fetch product to get discogsReleaseId
-  const [product] = await d
-    .select({
-      id: schema.products.id,
-      discogsReleaseId: schema.products.discogsReleaseId,
-    })
-    .from(schema.products)
-    .where(and(eq(schema.products.id, id), isNull(schema.products.deletedAt)));
-
-  if (!product) return;
-
-  // Fetch Discogs images if the product has a release ID and no images yet
-  if (product.discogsReleaseId) {
-    const existingImages = await d
-      .select({ id: schema.productImages.id })
-      .from(schema.productImages)
-      .where(eq(schema.productImages.productId, id))
-      .limit(1);
-
-    if (existingImages.length === 0) {
-      try {
-        const token = process.env.DISCOGS_USER_TOKEN?.trim();
-        const userAgent = process.env.DISCOGS_USER_AGENT?.trim() || "vinyl-marketplace-production/1.0";
-        if (token) {
-          const res = await fetch(
-            `https://api.discogs.com/releases/${product.discogsReleaseId}`,
-            { headers: { Authorization: `Discogs token=${token}`, "User-Agent": userAgent }, cache: "no-store" }
-          );
-          if (res.ok) {
-            const release = await res.json() as { images?: Array<{ type?: string; uri?: string; uri150?: string }> };
-            const ordered = (release.images ?? []).sort((a, b) => {
-              if (a.type === "primary" && b.type !== "primary") return -1;
-              if (a.type !== "primary" && b.type === "primary") return 1;
-              return 0;
-            });
-            const urls = Array.from(new Set(
-              ordered.map((img) => img.uri?.trim() ?? img.uri150?.trim() ?? "").filter(Boolean)
-            )).slice(0, 4);
-            if (urls.length > 0) {
-              await d.insert(schema.productImages).values(
-                urls.map((url, sortOrder) => ({ id: crypto.randomUUID(), productId: id, url, sortOrder }))
-              );
-            }
-          }
-        }
-      } catch {
-        // Image fetch failure should not block putting item on sale
-      }
-    }
-  }
-
-  await d
-    .update(schema.products)
-    .set({ priceCents, status: "active", stockQuantity: 1, updatedAt: new Date() })
-    .where(and(eq(schema.products.id, id), isNull(schema.products.deletedAt)));
+  await putProductOnSaleRecord(id, priceCents);
 
   revalidateProductPaths(id);
 }
@@ -311,6 +256,8 @@ export async function bulkUpdateProducts(formData: FormData) {
     await Promise.all(selectedIds.map((id) => archiveProductRecord(id)));
   } else if (intent === "relist") {
     await Promise.all(selectedIds.map((id) => relistProductRecord(id)));
+  } else if (intent === "put-on-sale") {
+    await Promise.all(selectedIds.map((id) => putProductOnSaleRecord(id)));
   } else if (intent === "delete") {
     await Promise.all(selectedIds.map((id) => deleteProductRecord(id)));
   } else {

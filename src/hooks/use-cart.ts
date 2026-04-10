@@ -13,7 +13,13 @@ export interface CartItemType {
 }
 
 const CART_KEY = "federico_shop_cart";
-const CART_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+const CART_COOKIE_MAX_AGE_SECONDS = 60 * 10;
+const CART_TTL_MS = 10 * 60 * 1000;
+
+type StoredCartPayload = {
+  items: CartItemType[];
+  expiresAt: number;
+};
 
 let cartCache: CartItemType[] = [];
 const listeners = new Set<() => void>();
@@ -69,11 +75,25 @@ function readCartFromStorage(): CartItemType[] {
     }
 
     const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed)) {
+
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map(normalizeCartItem)
+        .filter((item): item is CartItemType => item !== null);
+    }
+
+    const payload = parsed as Partial<StoredCartPayload>;
+
+    if (!payload || typeof payload !== "object" || !Array.isArray(payload.items)) {
       return [];
     }
 
-    return parsed
+    if (typeof payload.expiresAt !== "number" || payload.expiresAt <= Date.now()) {
+      localStorage.removeItem(CART_KEY);
+      return [];
+    }
+
+    return payload.items
       .map(normalizeCartItem)
       .filter((item): item is CartItemType => item !== null);
   } catch {
@@ -88,7 +108,11 @@ function notifyListeners() {
 }
 
 function persistCart(items: CartItemType[]) {
-  localStorage.setItem(CART_KEY, JSON.stringify(items));
+  const payload: StoredCartPayload = {
+    items,
+    expiresAt: Date.now() + CART_TTL_MS,
+  };
+  localStorage.setItem(CART_KEY, JSON.stringify(payload));
   const compactItems = items.map(({ productId, quantity }) => ({ productId, quantity }));
   document.cookie = `${CART_KEY}=${encodeURIComponent(JSON.stringify(compactItems))}; path=/; max-age=${CART_COOKIE_MAX_AGE_SECONDS}; samesite=lax`;
 }
@@ -130,9 +154,18 @@ export function useCart() {
 
     window.addEventListener("storage", handleStorage);
 
+    const expirationInterval = window.setInterval(() => {
+      const nextCart = readCartFromStorage();
+      const didExpire = cartCache.length > 0 && nextCart.length === 0;
+      if (didExpire) {
+        clearPersistedCart();
+      }
+    }, 30_000);
+
     return () => {
       listeners.delete(syncFromCache);
       window.removeEventListener("storage", handleStorage);
+      window.clearInterval(expirationInterval);
     };
   }, []);
 

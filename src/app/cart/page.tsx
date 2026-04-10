@@ -366,8 +366,13 @@ export default function CartPage() {
 
     void refreshCartSnapshot();
 
+    const refreshInterval = window.setInterval(() => {
+      void refreshCartSnapshot();
+    }, 60_000);
+
     return () => {
       cancelled = true;
+      window.clearInterval(refreshInterval);
     };
   }, [isLoaded, items, replaceItems]);
 
