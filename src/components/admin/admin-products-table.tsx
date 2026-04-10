@@ -8,6 +8,7 @@ import {
   EyeOff,
   Pencil,
   RotateCcw,
+  Search,
   Trash2,
 } from "lucide-react";
 import {
@@ -57,9 +58,21 @@ export function AdminProductsTable({
   dir,
   updated,
 }: Props) {
+  const [query, setQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const lastSelectedIndexRef = useRef<number | null>(null);
-  const visibleIds = useMemo(() => products.map((product) => product.id), [products]);
+
+  const filteredProducts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter(
+      (p) =>
+        p.artist.toLowerCase().includes(q) ||
+        p.title.toLowerCase().includes(q)
+    );
+  }, [products, query]);
+
+  const visibleIds = useMemo(() => filteredProducts.map((product) => product.id), [filteredProducts]);
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const allVisibleSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIdSet.has(id));
@@ -173,6 +186,19 @@ export function AdminProductsTable({
         </div>
       </div>
 
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted pointer-events-none" />
+        <input
+          type="search"
+          placeholder="Search by artist or title…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="input pl-10"
+          aria-label="Search products"
+        />
+      </div>
+
       <div className="card space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -271,7 +297,14 @@ export function AdminProductsTable({
             </tr>
           </thead>
           <tbody>
-            {products.map((product, index) => (
+            {filteredProducts.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted">
+                  No products match &ldquo;{query}&rdquo;.
+                </td>
+              </tr>
+            )}
+            {filteredProducts.map((product, index) => (
               <tr
                 key={product.id}
                 className="border-b border-border last:border-0 hover:bg-surface-hover"

@@ -72,11 +72,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate OpenAI secret
+      - name: Validate Anthropic API key
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          test -n "$OPENAI_API_KEY" || (echo "::error::Missing GitHub secret OPENAI_API_KEY" && exit 1)
+          test -n "$ANTHROPIC_API_KEY" || (echo "::error::Missing GitHub secret ANTHROPIC_API_KEY" && exit 1)
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -87,48 +87,74 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run Codex audit
-        id: run_codex
-        uses: openai/codex-action@v1
-        with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          prompt-file: .github/codex/continuous-repo-check.md
-          output-file: ${{ runner.temp }}/continuous-repo-check.json
-          output-schema-file: .github/codex/continuous-repo-check.schema.json
-          sandbox: workspace-write
-          safety-strategy: drop-sudo
-          model: gpt-5.4
-          effort: xhigh
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code@latest
 
-      - name: Parse Codex output
+      - name: Run Claude Code audit
+        id: run_claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude --print \
+            --model claude-sonnet-4-6 \
+            --output-format json \
+            "$(cat .github/codex/continuous-repo-check.md)" \
+            > "${{ runner.temp }}/claude-raw.json"
+
+      - name: Parse Claude output
         id: parse_codex
         shell: bash
         env:
+          CLAUDE_RAW_PATH: ${{ runner.temp }}/claude-raw.json
           CODEX_OUTPUT_PATH: ${{ runner.temp }}/continuous-repo-check.json
         run: |
           node <<'NODE'
           const fs = require("fs");
 
+          const rawPath = process.env.CLAUDE_RAW_PATH;
           const outputPath = process.env.CODEX_OUTPUT_PATH;
-          if (!outputPath || !fs.existsSync(outputPath)) {
-            throw new Error(`Missing Codex output file: ${outputPath || "(empty path)"}`);
+
+          if (!rawPath || !fs.existsSync(rawPath)) {
+            throw new Error(`Missing Claude output file: ${rawPath || "(empty path)"}`);
           }
 
-          const data = JSON.parse(fs.readFileSync(outputPath, "utf8"));
-          const output = fs.createWriteStream(process.env.GITHUB_OUTPUT, { flags: "a" });
+          const raw = JSON.parse(fs.readFileSync(rawPath, "utf8"));
+          // claude --output-format json puts the final assistant text in `result`
+          const text = raw.result ?? "";
 
+          // Extract JSON from the response (may be wrapped in a markdown code block)
+          let parsed;
+          const jsonBlock = text.match(/```json\s*([\s\S]*?)\s*```/);
+          try {
+            parsed = JSON.parse(jsonBlock ? jsonBlock[1] : text.trim());
+          } catch {
+            parsed = {
+              result: "report_only",
+              branch_topic: "",
+              commit_message: "",
+              pr_title: "[claude] Continuous repo check",
+              pr_body: text.substring(0, 5000),
+              findings_summary: text.substring(0, 1000) || "No findings summary returned.",
+              validation_summary: "Claude output could not be parsed as structured JSON.",
+              review_status: "Needs review from F1846",
+            };
+          }
+
+          fs.writeFileSync(outputPath, JSON.stringify(parsed, null, 2));
+
+          const output = fs.createWriteStream(process.env.GITHUB_OUTPUT, { flags: "a" });
           const setOutput = (name, value = "") => {
             output.write(`${name}<<EOF\n${String(value)}\nEOF\n`);
           };
 
-          setOutput("result", data.result ?? "");
-          setOutput("branch_topic", data.branch_topic ?? "");
-          setOutput("commit_message", data.commit_message ?? "");
-          setOutput("pr_title", data.pr_title ?? "");
-          setOutput("pr_body", data.pr_body ?? "");
-          setOutput("findings_summary", data.findings_summary ?? "");
-          setOutput("validation_summary", data.validation_summary ?? "");
-          setOutput("review_status", data.review_status ?? "");
+          setOutput("result", parsed.result ?? "");
+          setOutput("branch_topic", parsed.branch_topic ?? "");
+          setOutput("commit_message", parsed.commit_message ?? "");
+          setOutput("pr_title", parsed.pr_title ?? "");
+          setOutput("pr_body", parsed.pr_body ?? "");
+          setOutput("findings_summary", parsed.findings_summary ?? "");
+          setOutput("validation_summary", parsed.validation_summary ?? "");
+          setOutput("review_status", parsed.review_status ?? "");
           output.end();
           NODE
 
@@ -161,7 +187,7 @@ jobs:
           if [ -z "$topic" ]; then
             topic="repo-check"
           fi
-          echo "branch=codex/security-audit-$topic" >> "$GITHUB_OUTPUT"
+          echo "branch=claude/security-audit-$topic" >> "$GITHUB_OUTPUT"
 
       - name: Commit and push branch
         if: steps.detect_changes.outputs.has_changes == 'true'
@@ -170,8 +196,8 @@ jobs:
           BRANCH_NAME: ${{ steps.branch.outputs.branch }}
           COMMIT_MESSAGE: ${{ steps.parse_codex.outputs.commit_message }}
         run: |
-          git config user.name "codex[bot]"
-          git config user.email "codex[bot]@users.noreply.github.com"
+          git config user.name "claude[bot]"
+          git config user.email "claude[bot]@users.noreply.github.com"
           git checkout -B "$BRANCH_NAME"
           git add -A
 
@@ -198,7 +224,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const branch = process.env.BRANCH_NAME;
-            const title = process.env.PR_TITLE || "[codex] Continuous repo check";
+            const title = process.env.PR_TITLE || "[claude] Continuous repo check";
             const body = process.env.PR_BODY || "Automated repository audit fix.";
             const base = context.payload.repository.default_branch;
             const head = `${owner}:${branch}`;
@@ -246,7 +272,7 @@ jobs:
               owner,
               repo,
               issue_number: pullRequest.number,
-              labels: ["codex", "codex-automation"],
+              labels: ["claude", "claude-automation"],
             });
 
             let reviewStatus = "Reviewer request unavailable";
@@ -282,7 +308,7 @@ jobs:
           CHANGED_FILES_PATH: ${{ runner.temp }}/continuous-repo-check-changes.txt
         run: |
           {
-            echo "## Continuous Repo Check"
+            echo "## Continuous Repo Check (Claude Code)"
             echo
             echo "- Result: ${RESULT:-unknown}"
             if [ -n "$PR_URL" ]; then

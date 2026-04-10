@@ -21,9 +21,12 @@ Production codebase for Federico Shop, an editorial storefront for electronic mu
 - Live tracking support with Ship24, plus 17TRACK or AfterShip fallback
 - Admin order tools for status updates, tracking numbers, VAT, invoice download, and pickup handling
 - Admin product tools for edit, hide, soft-delete removal, archive, and sold-out relist
+- Inventory / Collection page (admin-only) with search, on-sale toggle, and bulk CSV import
+- Mobile-responsive admin panel with hamburger navigation drawer
 - Discogs CSV import workflow with Discogs image lookup
 - SEO support with sitemap, robots, structured data, and Google verification tag support
 - GitHub Actions CI and Vercel production deploy
+- Hourly automated Claude Code security audit with auto-PR on findings
 
 ## Tech Stack
 
@@ -154,10 +157,11 @@ This is backup-only and does not change the live app runtime, which still uses a
 
 ## Admin Features
 
-The admin area is designed for a single-shop workflow.
+The admin area is designed for a single-shop workflow. The UI is fully mobile-responsive with a collapsible navigation drawer on small screens.
 
 - Dashboard with product and order totals
-- Product list with sort controls for price, stock, and status
+- Product list with sort controls for price, stock, and status; client-side search by artist/title
+- **Inventory / Collection page** (`/admin/inventory`): view your full collection with On Sale / Not for Sale / Sold Out labels, per-item sale toggle, search bar, and inline bulk CSV import. Invisible to customers.
 - Product actions for edit, hide, relist, and soft-delete removal from admin/storefront
 - Shipping rules editor
 - Order detail page with:
@@ -260,6 +264,16 @@ with the `CRON_SECRET` header or query value expected by the route.
 - `db/` - schema, migrations, and seed data
 - `scripts/` - one-off maintenance, email, shipping, and import scripts
 - `.github/workflows/` - CI, deploy, and CodeQL workflows
+
+## Continuous Repo Check (CI Automation)
+
+The workflow `.github/workflows/continuous-repo-check.yml` runs hourly using the Claude Code CLI (`claude-sonnet-4-6`). It audits the repo for security, privacy, and code-quality issues, applies a single safe fix if found, and opens a pull request for review.
+
+**Required GitHub secret:**
+
+- `ANTHROPIC_API_KEY` — your Anthropic API key. Add it at `Settings → Secrets and variables → Actions`.
+
+The workflow replaces the previous OpenAI Codex automation.
 
 ## Security and Ops
 
