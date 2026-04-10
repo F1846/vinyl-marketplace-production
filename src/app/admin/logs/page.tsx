@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { db, schema } from "@/../db";
 import { desc } from "drizzle-orm";
-import { ShieldAlert, ShieldCheck, ShieldX, Clock } from "lucide-react";
+import { Download, ShieldAlert, ShieldCheck, ShieldX, Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -29,9 +30,19 @@ export default async function AdminLogsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Login Logs</h1>
-        <p className="mt-1 text-sm text-muted">Last 200 login attempts</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Login Logs</h1>
+          <p className="mt-1 text-sm text-muted">Last 200 login attempts</p>
+        </div>
+        <Link
+          href="/api/admin/logs"
+          className="btn-secondary inline-flex items-center gap-2 text-sm"
+          download
+        >
+          <Download className="h-4 w-4" />
+          Download CSV
+        </Link>
       </div>
 
       <div className="grid grid-cols-3 gap-4">

@@ -330,12 +330,9 @@ export function AdminInventoryTable({ items }: Props) {
                         }
                         if (event.shiftKey && event.key === "ArrowUp" && index > 0) {
                           event.preventDefault();
-                          if (!selectedIdSet.has(item.id)) {
-                            toggleItem(item.id, index, true, false);
-                          }
-                          const prevIndex = index - 1;
-                          toggleItem(filtered[prevIndex].id, prevIndex, true, false);
-                          checkboxRefs.current[prevIndex]?.focus();
+                          // Deselect current item and move focus up (contracts selection)
+                          toggleItem(item.id, index, false, false);
+                          checkboxRefs.current[index - 1]?.focus();
                         }
                       }}
                       className="h-4 w-4 rounded border-border text-accent focus:ring-accent"

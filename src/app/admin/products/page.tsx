@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { asc, desc, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, isNull, ne, sql } from "drizzle-orm";
 import { schema } from "@/db";
 import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { resolveProductStatus } from "@/lib/product-admin";
@@ -55,8 +55,12 @@ export default async function AdminProductsPage({
         : sort === "status"
           ? [dir === "asc" ? asc(statusOrder) : desc(statusOrder), desc(schema.products.createdAt)]
           : [desc(schema.products.createdAt)];
+  // Products page shows only active/sold_out items — archived (collection imports) live in Inventory
   const products = await d.query.products.findMany({
-    where: isNull(schema.products.deletedAt),
+    where: and(
+      isNull(schema.products.deletedAt),
+      ne(schema.products.status, "archived")
+    ),
     orderBy,
   });
   const productRows = products.map((product) => ({

@@ -675,3 +675,213 @@ export async function importDiscogsCollectionCsv(input: string): Promise<Discogs
     archived: 0,
   };
 }
+
+// ──────────────────────────────────────────────
+// Streaming / generator variants (used by SSE API route for live progress)
+// ──────────────────────────────────────────────
+
+export type ImportProgressEvent =
+  | { type: "start"; total: number; csvType: "inventory" | "collection" }
+  | { type: "progress"; processed: number; total: number; current: string }
+  | { type: "complete"; summary: DiscogsImportSummary }
+  | { type: "error"; message: string };
+
+export async function* importDiscogsInventoryCsvGenerator(
+  input: string,
+  signal?: AbortSignal
+): AsyncGenerator<ImportProgressEvent> {
+  requireEnv("DATABASE_URL");
+  const discogsToken = requireEnv("DISCOGS_USER_TOKEN");
+  const discogsUserAgent = process.env.DISCOGS_USER_AGENT?.trim() || DEFAULT_USER_AGENT;
+
+  const inspection = inspectDiscogsInventoryCsv(input);
+  const parsed = parseCsv(input);
+  const catalogRows = (parsed.rows as unknown as InventoryRow[]).filter(
+    (row) => toProductStatus(row.status) === "active"
+  );
+
+  if (inspection.requiredColumns.some((c) => !c.found)) {
+    yield { type: "error", message: "The CSV is missing one or more required Discogs columns." };
+    return;
+  }
+  if (catalogRows.length === 0) {
+    yield { type: "error", message: "No 'For Sale' rows were found in the uploaded CSV." };
+    return;
+  }
+
+  yield { type: "start", total: catalogRows.length, csvType: "inventory" };
+
+  const d = db();
+  const releaseCache = new Map<number, Promise<DiscogsRelease | null>>();
+  const importedListingIds: string[] = [];
+  let rowsWithImages = 0;
+  let rowsWithoutImages = 0;
+
+  for (let i = 0; i < catalogRows.length; i++) {
+    if (signal?.aborted) break;
+
+    const row = catalogRows[i];
+    yield { type: "progress", processed: i, total: catalogRows.length, current: `${row.artist.trim()} – ${row.title.trim()}` };
+
+    const listingId = row.listing_id.trim();
+    const releaseId = Number.parseInt(row.release_id, 10);
+    if (!listingId || !Number.isFinite(releaseId)) continue;
+
+    if (!releaseCache.has(releaseId)) {
+      releaseCache.set(releaseId, fetchDiscogsRelease(releaseId, discogsToken, discogsUserAgent).catch(() => null));
+    }
+
+    const release = await releaseCache.get(releaseId)!;
+    const imageUrls = imageUrlsFor(release);
+    const insertValues = {
+      id: crypto.randomUUID(),
+      artist: row.artist.trim(),
+      title: row.title.trim(),
+      format: toFormat(row.format),
+      genre: toGenre(release),
+      priceCents: toCents(row.price),
+      stockQuantity: 1,
+      conditionMedia: toMediaCondition(row.media_condition),
+      conditionSleeve: toMediaCondition(row.sleeve_condition),
+      pressingLabel: firstNonEmpty(release?.labels?.[0]?.name, row.label),
+      pressingYear: safeYear(release?.year),
+      pressingCatalogNumber: firstNonEmpty(release?.labels?.[0]?.catno, row.catno),
+      discogsListingId: listingId,
+      discogsReleaseId: releaseId,
+      description: descriptionFor(row, release),
+      status: "active" as const,
+    };
+
+    const [product] = await d
+      .insert(schema.products)
+      .values(insertValues)
+      .onConflictDoUpdate({
+        target: schema.products.discogsListingId,
+        set: {
+          ...insertValues,
+          version: sql`${schema.products.version} + 1`,
+        },
+      })
+      .returning({ id: schema.products.id });
+
+    await d.delete(schema.productImages).where(eq(schema.productImages.productId, product.id));
+    if (imageUrls.length > 0) {
+      await d.insert(schema.productImages).values(
+        imageUrls.map((url, sortOrder) => ({ id: crypto.randomUUID(), productId: product.id, url, sortOrder }))
+      );
+      rowsWithImages += 1;
+    } else {
+      rowsWithoutImages += 1;
+    }
+    importedListingIds.push(listingId);
+  }
+
+  const archivedProducts =
+    importedListingIds.length > 0
+      ? await d
+          .update(schema.products)
+          .set({ status: "archived", stockQuantity: 0, version: sql`${schema.products.version} + 1` })
+          .where(and(isNotNull(schema.products.discogsListingId), notInArray(schema.products.discogsListingId, importedListingIds)))
+          .returning({ id: schema.products.id })
+      : [];
+
+  yield {
+    type: "complete",
+    summary: {
+      ...inspection,
+      imported: importedListingIds.length,
+      rowsWithImages,
+      rowsWithoutImages,
+      archived: archivedProducts.length,
+    },
+  };
+}
+
+export async function* importDiscogsCollectionCsvGenerator(
+  input: string,
+  signal?: AbortSignal
+): AsyncGenerator<ImportProgressEvent> {
+  requireEnv("DATABASE_URL");
+  const discogsToken = requireEnv("DISCOGS_USER_TOKEN");
+  const discogsUserAgent = process.env.DISCOGS_USER_AGENT?.trim() || DEFAULT_USER_AGENT;
+
+  const inspection = inspectDiscogsCollectionCsv(input);
+
+  if (inspection.requiredColumns.some((c) => !c.found)) {
+    yield { type: "error", message: "The CSV is missing one or more required collection columns." };
+    return;
+  }
+
+  const parsed = parseCsv(input);
+  const rows = parsed.rows as unknown as CollectionRow[];
+
+  if (rows.length === 0) {
+    yield { type: "error", message: "No rows found in the collection CSV." };
+    return;
+  }
+
+  yield { type: "start", total: rows.length, csvType: "collection" };
+
+  const d = db();
+  const releaseCache = new Map<number, Promise<DiscogsRelease | null>>();
+  let imported = 0;
+  let rowsWithImages = 0;
+  let rowsWithoutImages = 0;
+
+  for (let i = 0; i < rows.length; i++) {
+    if (signal?.aborted) break;
+
+    const row = rows[i];
+    yield { type: "progress", processed: i, total: rows.length, current: `${row.artist.trim()} – ${row.title.trim()}` };
+
+    const releaseId = Number.parseInt(row.release_id, 10);
+    if (!Number.isFinite(releaseId)) continue;
+
+    if (!releaseCache.has(releaseId)) {
+      releaseCache.set(releaseId, fetchDiscogsRelease(releaseId, discogsToken, discogsUserAgent).catch(() => null));
+    }
+
+    const release = await releaseCache.get(releaseId)!;
+    const imageUrls = imageUrlsFor(release);
+    const pricePaid = row["collection price paid"].trim();
+
+    const insertValues = {
+      id: crypto.randomUUID(),
+      artist: row.artist.trim(),
+      title: row.title.trim(),
+      format: toFormat(row.format),
+      genre: toGenre(release),
+      priceCents: pricePaid ? toCents(pricePaid) : 0,
+      stockQuantity: 1,
+      conditionMedia: toMediaCondition(row["collection media condition"]),
+      conditionSleeve: toMediaCondition(row["collection sleeve condition"]),
+      pressingLabel: firstNonEmpty(release?.labels?.[0]?.name, row.label),
+      pressingYear: safeYear(release?.year) ?? (row.released ? Number.parseInt(row.released, 10) : null),
+      pressingCatalogNumber: firstNonEmpty(release?.labels?.[0]?.catno, row["catalog#"]),
+      discogsListingId: null,
+      discogsReleaseId: releaseId,
+      description: descriptionForCollection(row, release),
+      status: "archived" as const,
+    };
+
+    const [product] = await d
+      .insert(schema.products)
+      .values(insertValues)
+      .returning({ id: schema.products.id });
+
+    if (imageUrls.length > 0) {
+      await d.insert(schema.productImages).values(
+        imageUrls.map((url, sortOrder) => ({ id: crypto.randomUUID(), productId: product.id, url, sortOrder }))
+      );
+      rowsWithImages += 1;
+    } else {
+      rowsWithoutImages += 1;
+    }
+    imported += 1;
+  }
+
+  yield {
+    type: "complete",
+    summary: { ...inspection, imported, rowsWithImages, rowsWithoutImages, archived: 0 },
+  };
+}

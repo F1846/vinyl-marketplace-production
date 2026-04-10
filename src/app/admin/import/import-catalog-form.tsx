@@ -1,8 +1,9 @@
 "use client";
 
-import { ChangeEvent, useActionState, useState } from "react";
+import { ChangeEvent, useRef, useState } from "react";
 import Link from "next/link";
-import { importCatalogCsvAction } from "@/actions/import";
+import { CheckCircle, Loader2, StopCircle, X } from "lucide-react";
+import type { DiscogsImportSummary, ImportProgressEvent } from "@/lib/discogs-import";
 
 const INVENTORY_REQUIRED_COLUMNS = ["listing_id", "artist", "title", "format", "release_id", "status", "price"] as const;
 const COLLECTION_REQUIRED_COLUMNS = ["artist", "title", "release_id", "collection media condition"] as const;
@@ -34,56 +35,48 @@ function parseCsvHeaders(input: string): string[] {
       }
       continue;
     }
-
     if (char === "," && !inQuotes) {
       headers.push(currentField);
       currentField = "";
       continue;
     }
-
     if (char === "\n" && !inQuotes) {
       headers.push(currentField);
       break;
     }
-
     currentField += char;
   }
 
-  if (headers.length === 0 && currentField) {
-    headers.push(currentField);
-  }
-
-  if (headers.length > 0) {
-    headers[0] = headers[0].replace(/^\uFEFF/, "");
-  }
-
-  return headers.map((header) => header.trim()).filter(Boolean);
+  if (headers.length === 0 && currentField) headers.push(currentField);
+  if (headers.length > 0) headers[0] = headers[0].replace(/^\uFEFF/, "");
+  return headers.map((h) => h.trim()).filter(Boolean);
 }
 
+type ImportState =
+  | { phase: "idle" }
+  | { phase: "importing"; processed: number; total: number; current: string; csvType: "inventory" | "collection" }
+  | { phase: "done"; summary: DiscogsImportSummary; csvType: "inventory" | "collection" }
+  | { phase: "error"; message: string };
+
 export function ImportCatalogForm() {
-  const [state, formAction] = useActionState(importCatalogCsvAction, {
-    error: null,
-    success: false,
-    summary: null,
-    csvType: undefined as "inventory" | "collection" | undefined,
-  });
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [previewHeaders, setPreviewHeaders] = useState<string[]>([]);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [importState, setImportState] = useState<ImportState>({ phase: "idle" });
+  const abortRef = useRef<AbortController | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const detectedType = detectCsvType(previewHeaders);
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     setPreviewError(null);
-
     if (!file) {
       setSelectedFileName(null);
       setPreviewHeaders([]);
       return;
     }
-
     setSelectedFileName(file.name);
-
     try {
       const text = await file.text();
       setPreviewHeaders(parseCsvHeaders(text));
@@ -93,15 +86,115 @@ export function ImportCatalogForm() {
     }
   }
 
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const fileInput = form.elements.namedItem("csvFile") as HTMLInputElement;
+    const file = fileInput.files?.[0];
+    if (!file) return;
+
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
+    setImportState({ phase: "importing", processed: 0, total: 0, current: "Starting…", csvType: detectedType === "collection" ? "collection" : "inventory" });
+
+    try {
+      const formData = new FormData();
+      formData.append("csvFile", file);
+
+      const response = await fetch("/api/admin/import", {
+        method: "POST",
+        body: formData,
+        signal: ctrl.signal,
+      });
+
+      if (!response.ok || !response.body) {
+        const body = await response.json().catch(() => ({ error: "Import request failed." }));
+        setImportState({ phase: "error", message: (body as { error?: string }).error ?? "Import failed." });
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith("data: ")) continue;
+          let event: ImportProgressEvent;
+          try {
+            event = JSON.parse(line.slice(6)) as ImportProgressEvent;
+          } catch {
+            continue;
+          }
+
+          if (event.type === "start") {
+            setImportState({ phase: "importing", processed: 0, total: event.total, current: "Connecting to Discogs…", csvType: event.csvType });
+          } else if (event.type === "progress") {
+            setImportState((prev) => ({
+              ...prev,
+              phase: "importing" as const,
+              processed: event.processed,
+              total: event.total,
+              current: event.current,
+              csvType: prev.phase === "importing" ? prev.csvType : "inventory",
+            }));
+          } else if (event.type === "complete") {
+            setImportState({
+              phase: "done",
+              summary: event.summary,
+              csvType: event.summary.requiredColumns.some((c) => c.name === "collection media condition")
+                ? "collection"
+                : "inventory",
+            });
+          } else if (event.type === "error") {
+            setImportState({ phase: "error", message: event.message });
+          }
+        }
+      }
+    } catch (err) {
+      if ((err as Error).name === "AbortError") {
+        setImportState({ phase: "idle" });
+      } else {
+        setImportState({ phase: "error", message: (err as Error).message ?? "Unexpected error." });
+      }
+    } finally {
+      abortRef.current = null;
+    }
+  }
+
+  function handleStop() {
+    abortRef.current?.abort();
+    setImportState({ phase: "idle" });
+  }
+
+  function resetForm() {
+    setImportState({ phase: "idle" });
+    setSelectedFileName(null);
+    setPreviewHeaders([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  const isImporting = importState.phase === "importing";
+  const progress = isImporting && importState.total > 0
+    ? Math.round((importState.processed / importState.total) * 100)
+    : 0;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Bulk import catalog</h1>
-          <p className="mt-2 text-sm text-muted">
-            Upload a Discogs <strong>inventory</strong> CSV (for-sale items → imported as active) or a
-            Discogs <strong>collection</strong> CSV (your full collection → imported to inventory, not for sale).
-            Cover art is fetched from Discogs automatically.
+          <p className="mt-1 text-sm text-muted">
+            <strong>Inventory CSV</strong> — items go live in the public catalog immediately as active listings.<br />
+            <strong>Collection CSV</strong> — items land in Inventory as "not for sale". Use the Inventory page to set prices and publish them.
           </p>
         </div>
         <Link href="/admin/products" className="btn-secondary">
@@ -109,148 +202,177 @@ export function ImportCatalogForm() {
         </Link>
       </div>
 
-      <form action={formAction} className="card space-y-4">
-        {state.error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-danger">
-            {state.error}
-          </div>
-        )}
-
-        <div>
-          <label htmlFor="csvFile" className="label">Discogs inventory or collection CSV</label>
-          <input
-            id="csvFile"
-            name="csvFile"
-            type="file"
-            accept=".csv,text/csv"
-            className="input"
-            onChange={(event) => void handleFileChange(event)}
-            required
-          />
-          {selectedFileName && (
-            <p className="mt-2 text-xs text-muted">Selected file: {selectedFileName}</p>
-          )}
-        </div>
-
-        {(previewHeaders.length > 0 || previewError) && (
-          <div className="rounded-[1.5rem] border border-border bg-background p-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">Column scan</h2>
-                <p className="mt-1 text-xs text-muted">
-                  This preview runs in the browser. The server will scan the file again before import.
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted">{previewHeaders.length} columns</p>
-                {detectedType !== "unknown" && (
-                  <p className={`mt-0.5 text-xs font-semibold ${detectedType === "collection" ? "text-blue-600" : "text-emerald-600"}`}>
-                    {detectedType === "collection" ? "Collection CSV — will import as inventory (not for sale)" : "Inventory CSV — will import as active listings"}
-                  </p>
-                )}
-              </div>
+      {/* Import form */}
+      {importState.phase === "idle" || importState.phase === "error" ? (
+        <form onSubmit={(e) => void handleSubmit(e)} className="card space-y-4">
+          {importState.phase === "error" && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-danger">
+              {importState.message}
             </div>
+          )}
 
-            {previewError ? (
-              <p className="mt-3 text-sm text-danger">{previewError}</p>
-            ) : (
-              <>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {previewHeaders.map((header) => (
-                    <span key={header} className="rounded-full border border-border px-3 py-1 text-xs text-muted">
-                      {header}
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-4 grid gap-2 md:grid-cols-2">
-                  {(detectedType === "collection" ? COLLECTION_REQUIRED_COLUMNS : INVENTORY_REQUIRED_COLUMNS).map((column) => {
-                    const found = previewHeaders.some((h) => h.toLowerCase().trim() === column.toLowerCase());
-                    return (
-                      <p key={column} className="text-sm text-muted">
-                        {column}:{" "}
-                        <span className={found ? "text-success" : "text-danger"}>
-                          {found ? "found" : "missing"}
-                        </span>
-                      </p>
-                    );
-                  })}
-                </div>
-              </>
+          <div>
+            <label htmlFor="csvFile" className="label">Discogs inventory or collection CSV</label>
+            <input
+              id="csvFile"
+              name="csvFile"
+              type="file"
+              accept=".csv,text/csv"
+              className="input"
+              ref={fileInputRef}
+              onChange={(event) => void handleFileChange(event)}
+              required
+            />
+            {selectedFileName && (
+              <p className="mt-2 text-xs text-muted">Selected: {selectedFileName}</p>
             )}
           </div>
-        )}
 
-        <div className="flex justify-end">
-          <button type="submit" className="btn-primary">
-            Import catalog
-          </button>
+          {(previewHeaders.length > 0 || previewError) && (
+            <div className="rounded-[1.5rem] border border-border bg-background p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-foreground">Column scan</h2>
+                  <p className="mt-1 text-xs text-muted">Browser preview — the server re-validates before importing.</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted">{previewHeaders.length} columns</p>
+                  {detectedType !== "unknown" && (
+                    <p className={`mt-0.5 text-xs font-semibold ${detectedType === "collection" ? "text-blue-600" : "text-emerald-600"}`}>
+                      {detectedType === "collection"
+                        ? "Collection CSV — goes to Inventory (not for sale)"
+                        : "Inventory CSV — goes live in catalog immediately"}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {previewError ? (
+                <p className="mt-3 text-sm text-danger">{previewError}</p>
+              ) : (
+                <>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {previewHeaders.map((header) => (
+                      <span key={header} className="rounded-full border border-border px-3 py-1 text-xs text-muted">
+                        {header}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-4 grid gap-2 md:grid-cols-2">
+                    {(detectedType === "collection" ? COLLECTION_REQUIRED_COLUMNS : INVENTORY_REQUIRED_COLUMNS).map((column) => {
+                      const found = previewHeaders.some((h) => h.toLowerCase().trim() === column.toLowerCase());
+                      return (
+                        <p key={column} className="text-sm text-muted">
+                          {column}:{" "}
+                          <span className={found ? "text-success" : "text-danger"}>
+                            {found ? "found" : "missing"}
+                          </span>
+                        </p>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <button type="submit" className="btn-primary">
+              Import catalog
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      {/* Progress overlay */}
+      {isImporting && (
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-accent" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  Importing {importState.csvType === "collection" ? "collection" : "inventory"}…
+                </p>
+                <p className="mt-0.5 text-xs text-muted truncate max-w-xs">{importState.current}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleStop}
+              className="inline-flex items-center gap-1.5 rounded-full border border-danger px-3 py-1.5 text-xs font-semibold text-danger transition-colors hover:bg-red-50"
+            >
+              <StopCircle className="h-3.5 w-3.5" />
+              Stop import
+            </button>
+          </div>
+
+          {importState.total > 0 && (
+            <>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-surface-hover">
+                <div
+                  className="h-full rounded-full bg-accent transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted">
+                {importState.processed} / {importState.total} items processed ({progress}%)
+              </p>
+            </>
+          )}
         </div>
-      </form>
+      )}
 
-      {state.summary && (
-        <div className="card space-y-5">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Import summary</h2>
-            <p className="text-sm text-muted">
-              {state.csvType === "collection"
-                ? "Collection imported to inventory. Items are not for sale — go to Inventory to set prices and put them on sale."
-                : "Inventory CSV imported. Active listings are now live in the catalog."}
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-[1.5rem] border border-border bg-background p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">Rows scanned</p>
-              <p className="mt-2 text-3xl font-semibold text-foreground">{state.summary.totalRows}</p>
-            </div>
-            <div className="rounded-[1.5rem] border border-border bg-background p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">Active rows</p>
-              <p className="mt-2 text-3xl font-semibold text-foreground">{state.summary.activeRows}</p>
-            </div>
-            <div className="rounded-[1.5rem] border border-border bg-background p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">Imported</p>
-              <p className="mt-2 text-3xl font-semibold text-foreground">{state.summary.imported}</p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">Detected columns</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {state.summary.headers.map((header) => (
-                  <span key={header} className="rounded-full border border-border px-3 py-1 text-xs text-muted">
-                    {header}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">Required columns</h3>
-              <div className="mt-3 space-y-2">
-                {state.summary.requiredColumns.map((column) => (
-                  <p key={column.name} className="text-sm text-muted">
-                    {column.name}:{" "}
-                    <span className={column.found ? "text-success" : "text-danger"}>
-                      {column.found ? "found" : "missing"}
-                    </span>
+      {/* Success modal */}
+      {importState.phase === "done" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-6 w-6 shrink-0 text-success" />
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">Import complete</h2>
+                  <p className="text-sm text-muted">
+                    {importState.csvType === "collection"
+                      ? "Items added to Inventory — go to Inventory to put them on sale."
+                      : "Active listings are now live in the public catalog."}
                   </p>
-                ))}
+                </div>
               </div>
+              <button type="button" onClick={resetForm} aria-label="Close" className="text-muted hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
             </div>
-          </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-[1.5rem] border border-border bg-background p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">With images</p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">{state.summary.rowsWithImages}</p>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: "Rows scanned", value: importState.summary.totalRows },
+                { label: "Imported", value: importState.summary.imported },
+                { label: "With images", value: importState.summary.rowsWithImages },
+                { label: "No images", value: importState.summary.rowsWithoutImages },
+                { label: "Auto-archived", value: importState.summary.archived },
+                { label: "Active rows", value: importState.summary.activeRows },
+              ].map((stat) => (
+                <div key={stat.label} className="rounded-xl border border-border bg-background p-3 text-center">
+                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                  <p className="mt-0.5 text-xs text-muted">{stat.label}</p>
+                </div>
+              ))}
             </div>
-            <div className="rounded-[1.5rem] border border-border bg-background p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">Without images</p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">{state.summary.rowsWithoutImages}</p>
-            </div>
-            <div className="rounded-[1.5rem] border border-border bg-background p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">Archived</p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">{state.summary.archived}</p>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button type="button" onClick={resetForm} className="btn-secondary">
+                Import another file
+              </button>
+              {importState.csvType === "collection" ? (
+                <Link href="/admin/inventory" className="btn-primary">
+                  Go to Inventory
+                </Link>
+              ) : (
+                <Link href="/admin/products" className="btn-primary">
+                  Go to Products
+                </Link>
+              )}
             </div>
           </div>
         </div>

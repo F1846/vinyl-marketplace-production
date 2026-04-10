@@ -345,12 +345,9 @@ export function AdminProductsTable({
                       }
                       if (event.shiftKey && event.key === "ArrowUp" && index > 0) {
                         event.preventDefault();
-                        if (!selectedIdSet.has(product.id)) {
-                          toggleProduct(product.id, index, true, false);
-                        }
-                        const prevIndex = index - 1;
-                        toggleProduct(filteredProducts[prevIndex].id, prevIndex, true, false);
-                        checkboxRefs.current[prevIndex]?.focus();
+                        // Deselect current item and move focus up (contracts selection)
+                        toggleProduct(product.id, index, false, false);
+                        checkboxRefs.current[index - 1]?.focus();
                       }
                     }}
                     className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
