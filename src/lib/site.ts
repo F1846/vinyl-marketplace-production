@@ -5,6 +5,16 @@ function clean(value: string | undefined | null): string | null {
   return normalized ? normalized : null;
 }
 
+function normalizePickupLabel(value: string | null): string {
+  const fallback = "Berlin Neukolln : 12049";
+
+  if (!value) {
+    return fallback;
+  }
+
+  return /studio/i.test(value) ? fallback : value;
+}
+
 export type CatalogLinkQuery = {
   q?: string;
   format?: ProductFormat;
@@ -98,8 +108,7 @@ export const siteConfig = {
   supportEmail: configuredSupportEmail ?? fallbackSupportEmail,
   baseUrl:
     clean(process.env.NEXT_PUBLIC_SITE_URL) ?? "https://www.federicoshop.de",
-  pickupLabel:
-    clean(process.env.STORE_PICKUP_LABEL) ?? "Berlin Neukolln : 12049",
+  pickupLabel: normalizePickupLabel(clean(process.env.STORE_PICKUP_LABEL)),
   pickupNote:
     clean(process.env.STORE_PICKUP_NOTE) ??
     "Pickup is arranged by email after your order is placed.",
