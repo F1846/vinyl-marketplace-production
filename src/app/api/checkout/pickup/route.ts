@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPickupAddress, finalizeOrder } from "@/lib/checkout";
+import { enforceCheckoutRateLimit } from "@/lib/checkout-rate-limit";
 import { pickupCheckoutSchema } from "@/validations/checkout";
 
 export async function POST(req: NextRequest) {
@@ -10,18 +11,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const checkoutRateLimit = await enforceCheckoutRateLimit(req);
+  if (checkoutRateLimit.response) {
+    return checkoutRateLimit.response;
+  }
+
   let body: unknown;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: { code: "INVALID_JSON" } }, { status: 400 });
+    return NextResponse.json(
+      { error: { code: "INVALID_JSON" } },
+      { status: 400, headers: checkoutRateLimit.headers }
+    );
   }
 
   const parsed = pickupCheckoutSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: { code: "VALIDATION_FAILED", details: parsed.error.flatten() } },
-      { status: 400 }
+      { status: 400, headers: checkoutRateLimit.headers }
     );
   }
 
@@ -36,7 +45,10 @@ export async function POST(req: NextRequest) {
       status: "pending",
     });
 
-    return NextResponse.json({ orderNumber: order.orderNumber });
+    return NextResponse.json(
+      { orderNumber: order.orderNumber },
+      { headers: checkoutRateLimit.headers }
+    );
   } catch (error) {
     return NextResponse.json(
       {
@@ -45,7 +57,7 @@ export async function POST(req: NextRequest) {
           message: error instanceof Error ? error.message : "Pickup checkout failed.",
         },
       },
-      { status: 409 }
+      { status: 409, headers: checkoutRateLimit.headers }
     );
   }
 }
