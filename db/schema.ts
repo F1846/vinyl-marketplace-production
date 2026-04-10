@@ -167,3 +167,15 @@ export const rateLimits = pgTable("rate_limits", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+// ──────────────────────────────────────────────
+// Admin Login Logs
+// ──────────────────────────────────────────────
+
+export const adminLoginLogs = pgTable("admin_login_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ip: varchar("ip", { length: 64 }),
+  userAgent: varchar("user_agent", { length: 512 }),
+  result: varchar("result", { length: 32 }).notNull(), // success | invalid_password | rate_limited | missing_password
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
