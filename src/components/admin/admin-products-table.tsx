@@ -134,18 +134,6 @@ export function AdminProductsTable({
     );
   };
 
-  const selectByStatuses = (statuses: ProductStatus[]) => {
-    const nextIds = products
-      .filter((product) => statuses.includes(product.status))
-      .map((product) => product.id);
-
-    setSelectedIds(nextIds);
-    lastSelectedIndexRef.current =
-      nextIds.length > 0
-        ? products.findIndex((product) => product.id === nextIds[nextIds.length - 1])
-        : null;
-  };
-
   const toggleProduct = (
     productId: string,
     index: number,

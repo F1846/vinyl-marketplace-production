@@ -1221,6 +1221,7 @@ export async function* importDiscogsCollectionCsvGenerator(
       imported,
       rowsWithImages,
       rowsWithoutImages,
+      archived: 0,
     },
   };
 }

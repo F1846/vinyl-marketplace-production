@@ -74,9 +74,11 @@ export function CatalogBrowser({
   const [loadingMore, setLoadingMore] = useState(false);
   const [autoLoadBurstCount, setAutoLoadBurstCount] = useState(0);
   const autoLoadRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const autoLoadEnabled = hasMore && autoLoadBurstCount < AUTO_LOAD_BURST_LIMIT;
   // Keep a ref to avoid stale closures in the debounce effect
   const queryRef = useRef(query);
+  const searchHadFocusRef = useRef(false);
 
   // Keep queryRef current so debounce effect always uses the latest query
   queryRef.current = query;
@@ -100,6 +102,15 @@ export function CatalogBrowser({
     initialQuery.sort,
     initialTotalCount,
   ]);
+
+  useEffect(() => {
+    if (!loading && searchHadFocusRef.current && searchInputRef.current) {
+      const input = searchInputRef.current;
+      const cursor = input.value.length;
+      input.focus();
+      input.setSelectionRange(cursor, cursor);
+    }
+  }, [loading, products]);
 
   // Live search: fire applyQuery 350 ms after the user stops typing
   useEffect(() => {
@@ -305,9 +316,19 @@ export function CatalogBrowser({
               <Search className="absolute left-4 top-3.5 h-4 w-4 text-muted" />
               <input
                 id="catalog-search"
+                ref={searchInputRef}
                 className="input pl-10"
                 value={draftQuery}
-                onChange={(event) => setDraftQuery(event.target.value)}
+                onChange={(event) => {
+                  searchHadFocusRef.current = true;
+                  setDraftQuery(event.target.value);
+                }}
+                onFocus={() => {
+                  searchHadFocusRef.current = true;
+                }}
+                onBlur={() => {
+                  searchHadFocusRef.current = false;
+                }}
                 placeholder={dictionary.catalog.artistTitleLabel}
                 aria-label={dictionary.catalog.search}
                 autoComplete="off"

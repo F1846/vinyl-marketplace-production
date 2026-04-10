@@ -128,8 +128,6 @@ export function AdminInventoryTable({ items }: Props) {
   const [savingStock, setSavingStock] = useState(false);
   const lastSelectedIndexRef = useRef<number | null>(null);
   const checkboxRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const returnTo = "/admin/inventory";
-
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
