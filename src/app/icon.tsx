@@ -8,8 +8,6 @@ export const size = {
 export const contentType = "image/png";
 
 export default function Icon() {
-  const stroke = "#111111";
-
   return new ImageResponse(
     (
       <div
@@ -19,17 +17,18 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#ffffff",
+          background: "#111111",
+          borderRadius: "80px",
         }}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          width="360"
-          height="360"
+          width="340"
+          height="340"
           viewBox="0 0 24 24"
           fill="none"
-          stroke={stroke}
-          strokeWidth="2"
+          stroke="#ffffff"
+          strokeWidth="1.5"
           strokeLinecap="round"
           strokeLinejoin="round"
         >

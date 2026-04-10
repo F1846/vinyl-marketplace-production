@@ -63,10 +63,16 @@ vinyl-marketplace/
     │   │           └── route.ts  # Public order lookup API (POST)
     │   │
     │   └── admin/
-    │       ├── layout.tsx        # Admin layout (auth gate, sidebar nav)
+    │       ├── layout.tsx        # Admin layout (auth gate, mobile tab nav + desktop sidebar)
     │       ├── page.tsx          # Admin dashboard overview
     │       ├── login/
     │       │   └── page.tsx      # Admin login page
+    │       ├── logs/
+    │       │   └── page.tsx      # Login logs — IP, UA, result, timestamp (last 200)
+    │       ├── inventory/
+    │       │   └── page.tsx      # Full collection view: search, filter, put-on-sale, price editor
+    │       ├── import/
+    │       │   └── page.tsx      # Discogs CSV import (inventory CSV or collection CSV)
     │       ├── products/
     │       │   ├── page.tsx      # Product list with search + status filter
     │       │   ├── new/
@@ -74,6 +80,8 @@ vinyl-marketplace/
     │       │   └── [id]/
     │       │       └── edit/
     │       │           └── page.tsx  # Edit product form
+    │       ├── shipping/
+    │       │   └── page.tsx      # Shipping rates admin
     │       └── orders/
     │           ├── page.tsx      # Order list with status filter
     │           └── [id]/
@@ -106,9 +114,11 @@ vinyl-marketplace/
     │   └── cart.ts               # Cart item and session types
     │
     ├── actions/
-    │   ├── products.ts           # Server Actions: create, update, archive, fetch products
+    │   ├── products.ts           # Server Actions: create, update, archive, relist, putItemOnSale
+    │   ├── import.ts             # Server Action: CSV import (auto-detects inventory vs collection)
     │   ├── orders.ts             # Server Actions: update order status, add tracking
-    │   └── cart.ts               # Server Actions: cart mutations (if needed)
+    │   ├── auth.ts               # Server Actions: admin login, logout
+    │   └── cart.ts               # Server Actions: cart mutations
     │
     ├── validations/
     │   ├── product.ts            # Zod schemas for product form input
@@ -133,7 +143,17 @@ vinyl-marketplace/
 ## Directory Rationales
 
 ### `db/`
-Database-first source of truth. `schema.ts` contains Drizzle ORM table definitions that map one-to-one with the PostgreSQL migration files. The Drizzle client is exported from `db/index.ts` and imported wherever queries are needed.
+Database-first source of truth. `schema.ts` contains Drizzle ORM table definitions. The Drizzle client is exported from `db/index.ts` and imported wherever queries are needed.
+
+**Tables:** `products`, `product_images`, `orders`, `order_items`, `shipping_rates`, `rate_limits`, `admin_login_logs`
+
+**Migrations:**
+- `001_initial.sql` — products, orders, order_items, product_images
+- `002_discogs_catalog_sync.sql` — discogs sync columns
+- `003_shipping_rates.sql` — country+format shipping rates
+- `004_rate_limits.sql` — DB-backed rate limiting
+- `005_products_deleted_at.sql` — soft delete for products
+- `006_admin_login_logs.sql` — admin login attempt log (IP, UA, result)
 
 ### `src/app/`
 Next.js App Router file-based routing. Server Components by default; Client Components marked with `"use client"` at the top. Each public route corresponds to a user story in the PRD. The `/api/` namespace holds webhook and lookup endpoints. The `/admin/` namespace is protected by route-level auth middleware.

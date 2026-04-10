@@ -4,15 +4,14 @@ import { ChangeEvent, useActionState, useState } from "react";
 import Link from "next/link";
 import { importCatalogCsvAction } from "@/actions/import";
 
-const REQUIRED_COLUMNS = [
-  "listing_id",
-  "artist",
-  "title",
-  "format",
-  "release_id",
-  "status",
-  "price",
-] as const;
+const INVENTORY_REQUIRED_COLUMNS = ["listing_id", "artist", "title", "format", "release_id", "status", "price"] as const;
+const COLLECTION_REQUIRED_COLUMNS = ["artist", "title", "release_id", "Collection Media Condition"] as const;
+
+function detectCsvType(headers: string[]): "inventory" | "collection" | "unknown" {
+  if (headers.includes("Collection Media Condition")) return "collection";
+  if (headers.includes("listing_id")) return "inventory";
+  return "unknown";
+}
 
 function parseCsvHeaders(input: string): string[] {
   const headers: string[] = [];
@@ -65,10 +64,12 @@ export function ImportCatalogForm() {
     error: null,
     success: false,
     summary: null,
+    csvType: undefined as "inventory" | "collection" | undefined,
   });
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [previewHeaders, setPreviewHeaders] = useState<string[]>([]);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const detectedType = detectCsvType(previewHeaders);
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -97,8 +98,9 @@ export function ImportCatalogForm() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Bulk import catalog</h1>
           <p className="mt-2 text-sm text-muted">
-            Upload a Discogs inventory CSV. The importer scans the columns,
-            pulls cover art from Discogs, and syncs the active catalog.
+            Upload a Discogs <strong>inventory</strong> CSV (for-sale items → imported as active) or a
+            Discogs <strong>collection</strong> CSV (your full collection → imported to inventory, not for sale).
+            Cover art is fetched from Discogs automatically.
           </p>
         </div>
         <Link href="/admin/products" className="btn-secondary">
@@ -114,7 +116,7 @@ export function ImportCatalogForm() {
         )}
 
         <div>
-          <label htmlFor="csvFile" className="label">Discogs CSV file</label>
+          <label htmlFor="csvFile" className="label">Discogs inventory or collection CSV</label>
           <input
             id="csvFile"
             name="csvFile"
@@ -138,9 +140,14 @@ export function ImportCatalogForm() {
                   This preview runs in the browser. The server will scan the file again before import.
                 </p>
               </div>
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">
-                {previewHeaders.length} detected
-              </p>
+              <div className="text-right">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted">{previewHeaders.length} columns</p>
+                {detectedType !== "unknown" && (
+                  <p className={`mt-0.5 text-xs font-semibold ${detectedType === "collection" ? "text-blue-600" : "text-emerald-600"}`}>
+                    {detectedType === "collection" ? "Collection CSV — will import as inventory (not for sale)" : "Inventory CSV — will import as active listings"}
+                  </p>
+                )}
+              </div>
             </div>
 
             {previewError ? (
@@ -155,9 +162,8 @@ export function ImportCatalogForm() {
                   ))}
                 </div>
                 <div className="mt-4 grid gap-2 md:grid-cols-2">
-                  {REQUIRED_COLUMNS.map((column) => {
+                  {(detectedType === "collection" ? COLLECTION_REQUIRED_COLUMNS : INVENTORY_REQUIRED_COLUMNS).map((column) => {
                     const found = previewHeaders.includes(column);
-
                     return (
                       <p key={column} className="text-sm text-muted">
                         {column}:{" "}
@@ -185,7 +191,9 @@ export function ImportCatalogForm() {
           <div>
             <h2 className="text-lg font-semibold text-foreground">Import summary</h2>
             <p className="text-sm text-muted">
-              The uploaded file was scanned and imported successfully.
+              {state.csvType === "collection"
+                ? "Collection imported to inventory. Items are not for sale — go to Inventory to set prices and put them on sale."
+                : "Inventory CSV imported. Active listings are now live in the catalog."}
             </p>
           </div>
 

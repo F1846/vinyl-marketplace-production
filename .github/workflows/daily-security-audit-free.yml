@@ -120,15 +120,16 @@ jobs:
 
           const findings = staticFindings.substring(0, 1200);
 
-          const prompt = `Security audit of vinyl-marketplace-production (Next.js, Stripe, PostgreSQL/Drizzle).
-
-Scan: npm critical=${process.env.NPM_CRITICAL} high=${process.env.NPM_HIGH} moderate=${process.env.NPM_MODERATE}, TS errors=${process.env.TS_ERRORS}
-Packages: ${advisories || "none"}
-Static findings:
-${findings}
-
-Return ONLY this JSON:
-{"severity_summary":"CRITICAL/HIGH/MEDIUM/LOW — one sentence","top_findings":[{"id":"F1","severity":"HIGH","title":"..","file":"..","description":"..","recommendation":".."}],"quick_wins":[".."],"dependencies_at_risk":[".."],"no_issues_found":[".."],"priority_action":".."}`;
+          const prompt = [
+            "Security audit of vinyl-marketplace-production (Next.js, Stripe, PostgreSQL/Drizzle).",
+            "",
+            "Scan: npm critical=" + process.env.NPM_CRITICAL + " high=" + process.env.NPM_HIGH + " moderate=" + process.env.NPM_MODERATE + ", TS errors=" + process.env.TS_ERRORS,
+            "Packages: " + (advisories || "none"),
+            "Static findings:",
+            findings,
+            "",
+            'Return ONLY this JSON: {"severity_summary":"CRITICAL/HIGH/MEDIUM/LOW - one sentence","top_findings":[{"id":"F1","severity":"HIGH","title":"..","file":"..","description":"..","recommendation":".."}],"quick_wins":[".."],"dependencies_at_risk":[".."],"no_issues_found":[".."],"priority_action":".."}',
+          ].join("\n");
 
           const response = await fetch("https://models.inference.ai.azure.com/chat/completions", {
             method: "POST",
@@ -158,7 +159,7 @@ Return ONLY this JSON:
             parsed = JSON.parse(text);
           } catch {
             parsed = {
-              severity_summary: "UNKNOWN — parse error",
+              severity_summary: "UNKNOWN - parse error",
               top_findings: [],
               quick_wins: [],
               dependencies_at_risk: [],

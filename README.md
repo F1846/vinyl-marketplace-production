@@ -21,12 +21,17 @@ Production codebase for Federico Shop, an editorial storefront for electronic mu
 - Live tracking support with Ship24, plus 17TRACK or AfterShip fallback
 - Admin order tools for status updates, tracking numbers, VAT, invoice download, and pickup handling
 - Admin product tools for edit, hide, soft-delete removal, archive, and sold-out relist
-- Inventory / Collection page (admin-only) with search, on-sale toggle, and bulk CSV import
-- Mobile-responsive admin panel with hamburger navigation drawer
+- Inventory / Collection page (admin-only) with search, status filter, price editor, and per-item put-on-sale
+- Bulk CSV import supporting both Discogs **inventory** CSV (active listings) and **collection** CSV (full collection as archived inventory)
+- Inline "Put on Sale" flow: set price → status becomes active → Discogs images fetched automatically
+- Mobile-responsive admin with horizontal scrollable tab nav (Dashboard, Products, Inventory, Import, Orders, Shipping, Logs)
+- Admin Login Logs page with IP, User-Agent, timestamp and result for every login attempt
+- Black favicon and Apple touch icon generated via Next.js ImageResponse
 - Discogs CSV import workflow with Discogs image lookup
 - SEO support with sitemap, robots, structured data, and Google verification tag support
 - GitHub Actions CI and Vercel production deploy
-- Hourly automated Claude Code security audit with auto-PR on findings
+- Daily free security audit (GitHub Models, no API key) + daily Claude Code audit (ANTHROPIC_API_KEY) with auto-PR on findings
+- Admin login logs stored in DB (table `admin_login_logs`)
 
 ## Tech Stack
 

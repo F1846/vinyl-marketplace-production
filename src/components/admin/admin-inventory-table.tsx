@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, RotateCcw, EyeOff, Trash2, Upload, ChevronDown, ChevronUp } from "lucide-react";
-import { archiveProduct, deleteProduct, relistProduct } from "@/actions/products";
+import { Search, RotateCcw, EyeOff, Trash2, Upload, ChevronDown, ChevronUp, Tag } from "lucide-react";
+import { archiveProduct, deleteProduct, relistProduct, putItemOnSale } from "@/actions/products";
 import type { MediaCondition, ProductFormat, ProductStatus } from "@/types/product";
 import { formatEuroFromCents } from "@/lib/money";
 import { ImportCatalogForm } from "@/app/admin/import/import-catalog-form";
@@ -34,6 +34,40 @@ function StatusBadge({ status }: { status: ProductStatus }) {
     return <span className="badge bg-orange-100 text-orange-700">Sold Out</span>;
   }
   return <span className="badge bg-zinc-100 text-zinc-500">Not for Sale</span>;
+}
+
+function PutOnSaleForm({ id, currentPriceCents }: { id: string; currentPriceCents: number }) {
+  const [euros, setEuros] = useState(
+    currentPriceCents > 0 ? (currentPriceCents / 100).toFixed(2) : ""
+  );
+
+  return (
+    <form action={putItemOnSale} className="flex items-center gap-1">
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="priceCents" value={Math.round(Number(euros || "0") * 100)} />
+      <div className="flex items-center">
+        <span className="rounded-l-md border border-r-0 border-border bg-surface px-2 py-1 text-xs text-muted">€</span>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={euros}
+          onChange={(e) => setEuros(e.target.value)}
+          placeholder="0.00"
+          className="w-20 rounded-none border border-border px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent"
+          aria-label="Sale price in euros"
+        />
+      </div>
+      <button
+        type="submit"
+        title="Set price and put on sale (fetches Discogs images automatically)"
+        className="inline-flex items-center gap-1 rounded-r-md border border-border px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted transition-colors hover:border-success hover:bg-emerald-50 hover:text-success"
+      >
+        <Tag className="h-3 w-3" />
+        Put on Sale
+      </button>
+    </form>
+  );
 }
 
 export function AdminInventoryTable({ items }: Props) {
@@ -203,15 +237,17 @@ export function AdminInventoryTable({ items }: Props) {
                       >
                         Edit
                       </Link>
-                      {item.status !== "active" ? (
+                      {item.status === "archived" ? (
+                        <PutOnSaleForm id={item.id} currentPriceCents={item.priceCents} />
+                      ) : item.status === "sold_out" ? (
                         <form action={relistProduct.bind(null, item.id)}>
                           <button
                             type="submit"
-                            title="Put on sale (set to active)"
+                            title="Relist (set back to active)"
                             className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted transition-colors hover:border-success hover:text-success"
                           >
                             <RotateCcw className="h-3 w-3" />
-                            On Sale
+                            Relist
                           </button>
                         </form>
                       ) : (
@@ -222,7 +258,7 @@ export function AdminInventoryTable({ items }: Props) {
                             className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted transition-colors hover:border-amber-500 hover:text-amber-600"
                           >
                             <EyeOff className="h-3 w-3" />
-                            Not for Sale
+                            Remove
                           </button>
                         </form>
                       )}

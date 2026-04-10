@@ -13,5 +13,9 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#f4f3ef",
     categories: ["shopping", "music"],
     lang: "en",
+    icons: [
+      { src: "/icon", sizes: "48x48", type: "image/png" },
+      { src: "/apple-icon", sizes: "180x180", type: "image/png" },
+    ],
   };
 }

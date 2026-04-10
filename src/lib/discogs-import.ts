@@ -479,3 +479,180 @@ export async function importDiscogsInventoryCsv(input: string): Promise<DiscogsI
     archived: archivedProducts.length,
   };
 }
+
+// ──────────────────────────────────────────────
+// Discogs Collection CSV (export from profile/collection)
+// Columns: Catalog#, artist, title, Label, format, Rating, Released,
+//          release_id, CollectionFolder, Date Added,
+//          Collection Media Condition, Collection Sleeve Condition,
+//          Collection Notes, Collection Price Paid
+// ──────────────────────────────────────────────
+
+const COLLECTION_REQUIRED_COLUMNS = [
+  "artist",
+  "title",
+  "release_id",
+  "Collection Media Condition",
+] as const;
+
+interface CollectionRow {
+  "Catalog#": string;
+  artist: string;
+  title: string;
+  Label: string;
+  format: string;
+  Rating: string;
+  Released: string;
+  release_id: string;
+  CollectionFolder: string;
+  "Date Added": string;
+  "Collection Media Condition": string;
+  "Collection Sleeve Condition": string;
+  "Collection Notes": string;
+  "Collection Price Paid": string;
+}
+
+export function isCollectionCsv(input: string): boolean {
+  const firstLine = input.split("\n")[0] ?? "";
+  return firstLine.includes("Collection Media Condition");
+}
+
+export function inspectDiscogsCollectionCsv(input: string): DiscogsImportInspection {
+  const parsed = parseCsv(input);
+  return {
+    headers: parsed.headers,
+    requiredColumns: COLLECTION_REQUIRED_COLUMNS.map((name) => ({
+      name,
+      found: parsed.headers.includes(name),
+    })),
+    totalRows: parsed.rows.length,
+    activeRows: parsed.rows.length,
+  };
+}
+
+function descriptionForCollection(row: CollectionRow, release: DiscogsRelease | null): string {
+  const parts: string[] = [];
+
+  const releaseLine = [
+    firstNonEmpty(release?.labels?.[0]?.name, row.Label),
+    firstNonEmpty(release?.labels?.[0]?.catno, row["Catalog#"]),
+    row.format.trim(),
+  ]
+    .filter(Boolean)
+    .join(" / ");
+
+  if (releaseLine) parts.push(releaseLine);
+
+  const genres = [...(release?.genres ?? []), ...(release?.styles ?? [])]
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+  if (genres.length > 0) parts.push(`Genres: ${Array.from(new Set(genres)).join(", ")}`);
+
+  const conditions = [
+    row["Collection Media Condition"].trim() ? `Media: ${row["Collection Media Condition"].trim()}` : null,
+    row["Collection Sleeve Condition"].trim() && row["Collection Sleeve Condition"].trim() !== "Generic"
+      ? `Sleeve: ${row["Collection Sleeve Condition"].trim()}`
+      : null,
+  ].filter(Boolean);
+
+  if (conditions.length > 0) parts.push(conditions.join(" | "));
+
+  const notes = row["Collection Notes"].trim();
+  if (notes) parts.push(notes);
+  else if (release?.notes?.trim()) parts.push(release.notes.trim().replace(/\s+/g, " ").slice(0, 500));
+
+  return parts.join("\n\n") || `${row.artist.trim()} - ${row.title.trim()}`;
+}
+
+export async function importDiscogsCollectionCsv(input: string): Promise<DiscogsImportSummary> {
+  requireEnv("DATABASE_URL");
+  const discogsToken = requireEnv("DISCOGS_USER_TOKEN");
+  const discogsUserAgent = process.env.DISCOGS_USER_AGENT?.trim() || DEFAULT_USER_AGENT;
+
+  const inspection = inspectDiscogsCollectionCsv(input);
+
+  if (inspection.requiredColumns.some((c) => !c.found)) {
+    throw new Error("The uploaded CSV is missing one or more required collection columns.");
+  }
+
+  const parsed = parseCsv(input);
+  const rows = parsed.rows as unknown as CollectionRow[];
+
+  if (rows.length === 0) {
+    throw new Error("No rows found in the collection CSV.");
+  }
+
+  const d = db();
+  const releaseCache = new Map<number, Promise<DiscogsRelease | null>>();
+  let imported = 0;
+  let rowsWithImages = 0;
+  let rowsWithoutImages = 0;
+
+  for (const row of rows) {
+    const releaseId = Number.parseInt(row.release_id, 10);
+    if (!Number.isFinite(releaseId)) continue;
+
+    if (!releaseCache.has(releaseId)) {
+      releaseCache.set(
+        releaseId,
+        fetchDiscogsRelease(releaseId, discogsToken, discogsUserAgent).catch(() => null)
+      );
+    }
+
+    const release = await releaseCache.get(releaseId)!;
+    const imageUrls = imageUrlsFor(release);
+
+    const mediaCondition = toMediaCondition(row["Collection Media Condition"]);
+    const sleeveCondition = toMediaCondition(row["Collection Sleeve Condition"]);
+    const pricePaid = row["Collection Price Paid"].trim();
+
+    const insertValues = {
+      id: crypto.randomUUID(),
+      artist: row.artist.trim(),
+      title: row.title.trim(),
+      format: toFormat(row.format),
+      genre: toGenre(release),
+      priceCents: pricePaid ? toCents(pricePaid) : 0,
+      stockQuantity: 1,
+      conditionMedia: mediaCondition,
+      conditionSleeve: sleeveCondition,
+      pressingLabel: firstNonEmpty(release?.labels?.[0]?.name, row.Label),
+      pressingYear: safeYear(release?.year) ?? (row.Released ? Number.parseInt(row.Released, 10) : null),
+      pressingCatalogNumber: firstNonEmpty(release?.labels?.[0]?.catno, row["Catalog#"]),
+      discogsListingId: null,
+      discogsReleaseId: releaseId,
+      description: descriptionForCollection(row, release),
+      status: "archived" as const, // In collection = not for sale until explicitly put on sale
+    };
+
+    const [product] = await d
+      .insert(schema.products)
+      .values(insertValues)
+      .returning({ id: schema.products.id });
+
+    if (imageUrls.length > 0) {
+      await d.insert(schema.productImages).values(
+        imageUrls.map((url, sortOrder) => ({
+          id: crypto.randomUUID(),
+          productId: product.id,
+          url,
+          sortOrder,
+        }))
+      );
+      rowsWithImages += 1;
+    } else {
+      rowsWithoutImages += 1;
+    }
+
+    imported += 1;
+  }
+
+  return {
+    ...inspection,
+    imported,
+    rowsWithImages,
+    rowsWithoutImages,
+    archived: 0,
+  };
+}

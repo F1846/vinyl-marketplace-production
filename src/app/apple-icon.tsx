@@ -8,8 +8,6 @@ export const size = {
 export const contentType = "image/png";
 
 export default function AppleIcon() {
-  const stroke = "#111111";
-
   return new ImageResponse(
     (
       <div
@@ -19,18 +17,18 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#ffffff",
-          borderRadius: "24px",
+          background: "#111111",
+          borderRadius: "40px",
         }}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          width="124"
-          height="124"
+          width="120"
+          height="120"
           viewBox="0 0 24 24"
           fill="none"
-          stroke={stroke}
-          strokeWidth="2"
+          stroke="#ffffff"
+          strokeWidth="1.5"
           strokeLinecap="round"
           strokeLinejoin="round"
         >
