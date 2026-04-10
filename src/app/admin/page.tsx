@@ -1,6 +1,6 @@
 import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { db } from "@/db";
-import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { schema } from "@/db";
 import Link from "next/link";
 
@@ -12,22 +12,16 @@ export default async function AdminDashboard() {
   const d = db();
 
   const productCount = await d
-    .select({ count: sql<number>`count(*)` })
+    .select({ total: sql<number>`coalesce(sum(${schema.products.stockQuantity}), 0)` })
     .from(schema.products)
-    .where(
-      and(
-        isNull(schema.products.deletedAt),
-        gt(schema.products.stockQuantity, 0)
-      )
-    );
+    .where(isNull(schema.products.deletedAt));
   const activeCount = await d
-    .select({ count: sql<number>`count(*)` })
+    .select({ total: sql<number>`coalesce(sum(${schema.products.stockQuantity}), 0)` })
     .from(schema.products)
     .where(
       and(
         isNull(schema.products.deletedAt),
-        eq(schema.products.status, "active"),
-        gt(schema.products.stockQuantity, 0)
+        eq(schema.products.status, "active")
       )
     );
   const orderCount = await d.select({ count: sql<number>`count(*)` }).from(schema.orders);
@@ -42,10 +36,10 @@ export default async function AdminDashboard() {
           href="/admin/products"
           className="card block transition duration-200 hover:-translate-y-0.5 hover:border-foreground/40"
         >
-          <p className="text-sm text-muted">Total Products</p>
-          <p className="text-3xl font-bold text-accent">{productCount[0]?.count ?? 0}</p>
+          <p className="text-sm text-muted">Total Units in Stock</p>
+          <p className="text-3xl font-bold text-accent">{productCount[0]?.total ?? 0}</p>
           <p className="text-xs text-muted mt-1">
-            {activeCount[0]?.count ?? 0} active
+            {activeCount[0]?.total ?? 0} units active
           </p>
         </Link>
         <Link

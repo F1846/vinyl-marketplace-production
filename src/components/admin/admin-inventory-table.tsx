@@ -15,11 +15,11 @@ import {
 import {
   archiveProduct,
   bulkUpdateProducts,
+  bulkUpdateStock,
   deleteProduct,
   putItemOnSale,
   relistProduct,
 } from "@/actions/products";
-import { AdminStockForm } from "@/components/admin/admin-stock-form";
 import type { MediaCondition, ProductFormat, ProductStatus } from "@/types/product";
 import { formatEuroFromCents } from "@/lib/money";
 
@@ -124,6 +124,8 @@ export function AdminInventoryTable({ items }: Props) {
   const [sortKey, setSortKey] = useState<InventorySortKey>("stock");
   const [sortDir, setSortDir] = useState<InventorySortDirection>("desc");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [pendingStock, setPendingStock] = useState<Record<string, string>>({});
+  const [savingStock, setSavingStock] = useState(false);
   const lastSelectedIndexRef = useRef<number | null>(null);
   const checkboxRefs = useRef<(HTMLInputElement | null)[]>([]);
   const returnTo = "/admin/inventory";
@@ -462,6 +464,36 @@ export function AdminInventoryTable({ items }: Props) {
         </p>
       )}
 
+      {Object.keys(pendingStock).length > 0 && (
+        <div className="flex items-center gap-3 rounded-[1rem] border border-accent/30 bg-accent/5 px-4 py-3">
+          <p className="flex-1 text-sm text-foreground">
+            <span className="font-semibold">{Object.keys(pendingStock).length}</span> unsaved stock change{Object.keys(pendingStock).length === 1 ? "" : "s"}
+          </p>
+          <button
+            type="button"
+            disabled={savingStock}
+            onClick={async () => {
+              setSavingStock(true);
+              const entries = Object.entries(pendingStock)
+                .map(([id, val]) => ({ id, stockQuantity: Math.max(0, Math.round(Number(val) || 0)) }));
+              await bulkUpdateStock(entries);
+              setPendingStock({});
+              setSavingStock(false);
+            }}
+            className="btn-primary text-sm"
+          >
+            {savingStock ? "Saving…" : "Save all changes"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setPendingStock({})}
+            className="btn-secondary text-sm"
+          >
+            Discard
+          </button>
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-surface-hover">
@@ -554,14 +586,15 @@ export function AdminInventoryTable({ items }: Props) {
                       <span className="text-xs text-muted">
                         {formatEuroFromCents(item.priceCents)}
                       </span>
-                      <div className="w-full">
-                        <AdminStockForm
-                          id={item.id}
-                          stockQuantity={item.stockQuantity}
-                          returnTo={returnTo}
-                          compact
-                        />
-                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={pendingStock[item.id] ?? item.stockQuantity}
+                        onChange={(e) => setPendingStock((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                        className="h-8 w-20 rounded-full border border-border bg-white px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                        aria-label="Stock quantity"
+                      />
                     </div>
                   </td>
                   <td className="hidden px-4 py-3 sm:table-cell">
@@ -570,12 +603,15 @@ export function AdminInventoryTable({ items }: Props) {
                   <td className="hidden px-4 py-3 text-foreground md:table-cell">
                     {formatEuroFromCents(item.priceCents)}
                   </td>
-                  <td className="hidden px-4 py-3 text-foreground md:table-cell">
-                    <AdminStockForm
-                      id={item.id}
-                      stockQuantity={item.stockQuantity}
-                      returnTo={returnTo}
-                      compact
+                  <td className="hidden px-4 py-3 md:table-cell">
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={pendingStock[item.id] ?? item.stockQuantity}
+                      onChange={(e) => setPendingStock((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                      className="h-9 w-20 rounded-full border border-border bg-white px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                      aria-label="Stock quantity"
                     />
                   </td>
                   <td className="px-4 py-3">

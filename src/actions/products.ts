@@ -285,6 +285,19 @@ export async function updateProductStock(formData: FormData) {
   redirect(returnTo);
 }
 
+export async function bulkUpdateStock(
+  entries: { id: string; stockQuantity: number }[]
+) {
+  "use server";
+  await requireAuthenticatedAdmin();
+
+  for (const { id, stockQuantity } of entries) {
+    if (!id || !Number.isFinite(stockQuantity) || stockQuantity < 0) continue;
+    await updateProductStockRecord(id, stockQuantity);
+    revalidateProductPaths(id);
+  }
+}
+
 export async function bulkUpdateProducts(formData: FormData) {
   "use server";
   await requireAuthenticatedAdmin();
