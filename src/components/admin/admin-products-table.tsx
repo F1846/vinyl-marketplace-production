@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
+// checkboxRefs is populated per-row to support Shift+ArrowDown keyboard range selection
 import {
   ArrowDown,
   ArrowUp,
@@ -41,13 +42,22 @@ type Props = {
   updated?: string;
 };
 
-function statusBadge(status: ProductStatus) {
-  const cls = {
-    active: "badge-active",
-    sold_out: "badge-sold",
-    archived: "badge-archived",
-  }[status];
-
+function statusBadge(status: ProductStatus, id: string) {
+  if (status === "active") {
+    return (
+      <Link
+        href={`/products/${id}`}
+        target="_blank"
+        className="badge-active hover:underline"
+        title="View public listing"
+      >
+        active ↗
+      </Link>
+    );
+  }
+  const cls = { sold_out: "badge-sold", archived: "badge-archived" }[
+    status as "sold_out" | "archived"
+  ];
   return <span className={cls}>{status}</span>;
 }
 
@@ -61,6 +71,7 @@ export function AdminProductsTable({
   const [query, setQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const lastSelectedIndexRef = useRef<number | null>(null);
+  const checkboxRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -218,8 +229,8 @@ export function AdminProductsTable({
             <span className="text-xs uppercase tracking-[0.16em] text-muted">
               {selectedIds.length} selected
             </span>
-            <span className="text-xs text-muted">
-              Tip: Shift-click another checkbox to select a range.
+            <span className="hidden text-xs text-muted sm:inline">
+              Tip: Shift-click or Shift+↓ to select a range.
             </span>
           </div>
 
@@ -313,6 +324,7 @@ export function AdminProductsTable({
                   <input
                     type="checkbox"
                     checked={selectedIdSet.has(product.id)}
+                    ref={(el) => { checkboxRefs.current[index] = el; }}
                     onChange={(event) =>
                       toggleProduct(
                         product.id,
@@ -321,6 +333,26 @@ export function AdminProductsTable({
                         Boolean((event.nativeEvent as MouseEvent | undefined)?.shiftKey)
                       )
                     }
+                    onKeyDown={(event) => {
+                      if (event.shiftKey && event.key === "ArrowDown" && index < filteredProducts.length - 1) {
+                        event.preventDefault();
+                        if (!selectedIdSet.has(product.id)) {
+                          toggleProduct(product.id, index, true, false);
+                        }
+                        const nextIndex = index + 1;
+                        toggleProduct(filteredProducts[nextIndex].id, nextIndex, true, false);
+                        checkboxRefs.current[nextIndex]?.focus();
+                      }
+                      if (event.shiftKey && event.key === "ArrowUp" && index > 0) {
+                        event.preventDefault();
+                        if (!selectedIdSet.has(product.id)) {
+                          toggleProduct(product.id, index, true, false);
+                        }
+                        const prevIndex = index - 1;
+                        toggleProduct(filteredProducts[prevIndex].id, prevIndex, true, false);
+                        checkboxRefs.current[prevIndex]?.focus();
+                      }
+                    }}
                     className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
                     aria-label={`Select ${product.artist} ${product.title}`}
                   />
@@ -335,7 +367,7 @@ export function AdminProductsTable({
                   {formatEuroFromCents(product.priceCents)}
                 </td>
                 <td className="px-4 py-3 text-foreground">{product.stockQuantity}</td>
-                <td className="px-4 py-3">{statusBadge(product.status)}</td>
+                <td className="px-4 py-3">{statusBadge(product.status, product.id)}</td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end flex-wrap gap-2">
                     <Link

@@ -290,7 +290,7 @@ export async function bulkUpdateProducts(formData: FormData) {
   const intent = String(formData.get("intent") ?? "").trim();
   const returnToRaw = formData.get("returnTo");
   const returnTo =
-    typeof returnToRaw === "string" && returnToRaw.startsWith("/admin/products")
+    typeof returnToRaw === "string" && returnToRaw.startsWith("/admin/")
       ? returnToRaw
       : "/admin/products";
   const selectedIds = Array.from(

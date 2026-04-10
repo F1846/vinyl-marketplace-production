@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Search, RotateCcw, EyeOff, Trash2, Upload, ChevronDown, ChevronUp, Tag } from "lucide-react";
-import { archiveProduct, deleteProduct, relistProduct, putItemOnSale } from "@/actions/products";
+import { archiveProduct, bulkUpdateProducts, deleteProduct, relistProduct, putItemOnSale } from "@/actions/products";
 import type { MediaCondition, ProductFormat, ProductStatus } from "@/types/product";
 import { formatEuroFromCents } from "@/lib/money";
 import { ImportCatalogForm } from "@/app/admin/import/import-catalog-form";
@@ -26,9 +26,18 @@ type Props = {
   items: InventoryRow[];
 };
 
-function StatusBadge({ status }: { status: ProductStatus }) {
+function StatusBadge({ status, id }: { status: ProductStatus; id: string }) {
   if (status === "active") {
-    return <span className="badge bg-emerald-100 text-emerald-800">On Sale</span>;
+    return (
+      <Link
+        href={`/products/${id}`}
+        target="_blank"
+        className="badge bg-emerald-100 text-emerald-800 hover:underline"
+        title="View public listing"
+      >
+        On Sale ↗
+      </Link>
+    );
   }
   if (status === "sold_out") {
     return <span className="badge bg-orange-100 text-orange-700">Sold Out</span>;
@@ -74,6 +83,9 @@ export function AdminInventoryTable({ items }: Props) {
   const [query, setQuery] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | ProductStatus>("all");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const lastSelectedIndexRef = useRef<number | null>(null);
+  const checkboxRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -92,6 +104,48 @@ export function AdminInventoryTable({ items }: Props) {
   const activeCount = items.filter((i) => i.status === "active").length;
   const soldOutCount = items.filter((i) => i.status === "sold_out").length;
   const archivedCount = items.filter((i) => i.status === "archived").length;
+
+  const visibleIds = useMemo(() => filtered.map((item) => item.id), [filtered]);
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIdSet.has(id));
+
+  const toggleItem = (
+    itemId: string,
+    index: number,
+    checked: boolean,
+    withRange: boolean
+  ) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+
+      if (withRange && lastSelectedIndexRef.current !== null) {
+        const start = Math.min(lastSelectedIndexRef.current, index);
+        const end = Math.max(lastSelectedIndexRef.current, index);
+        const rangeIds = filtered.slice(start, end + 1).map((item) => item.id);
+        for (const id of rangeIds) {
+          if (checked) {
+            next.add(id);
+          } else {
+            next.delete(id);
+          }
+        }
+      } else if (checked) {
+        next.add(itemId);
+      } else {
+        next.delete(itemId);
+      }
+
+      return Array.from(next);
+    });
+
+    lastSelectedIndexRef.current = index;
+  };
+
+  const toggleAll = () => {
+    setSelectedIds(allVisibleSelected ? [] : visibleIds);
+    lastSelectedIndexRef.current = allVisibleSelected ? null : visibleIds.length - 1;
+  };
 
   return (
     <div className="space-y-6">
@@ -169,11 +223,61 @@ export function AdminInventoryTable({ items }: Props) {
         </p>
       )}
 
+      {/* Bulk actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <input
+            id="inventory-select-all"
+            type="checkbox"
+            checked={allVisibleSelected}
+            onChange={toggleAll}
+            className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
+          />
+          <label htmlFor="inventory-select-all" className="text-sm font-medium text-foreground">
+            Select / deselect all
+          </label>
+          <span className="text-xs uppercase tracking-[0.16em] text-muted">
+            {selectedIds.length} selected
+          </span>
+          <span className="hidden text-xs text-muted sm:inline">
+            Tip: Shift-click or Shift+↓ to select a range.
+          </span>
+        </div>
+
+        <form action={bulkUpdateProducts} className="flex flex-wrap gap-2">
+          <input type="hidden" name="returnTo" value="/admin/inventory" />
+          {selectedIds.map((id) => (
+            <input key={id} type="hidden" name="selectedIds" value={id} />
+          ))}
+          <button
+            type="submit"
+            name="intent"
+            value="hide"
+            className="btn-secondary text-sm"
+            disabled={selectedIds.length === 0}
+          >
+            Archive selected
+          </button>
+          <button
+            type="submit"
+            name="intent"
+            value="delete"
+            className="btn-secondary text-sm"
+            disabled={selectedIds.length === 0}
+          >
+            Delete selected
+          </button>
+        </form>
+      </div>
+
       {/* Table */}
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-surface-hover">
             <tr>
+              <th className="w-10 px-4 py-3 text-left font-medium text-foreground">
+                <span className="sr-only">Select</span>
+              </th>
               <th className="px-4 py-3 text-left font-medium text-foreground">Item</th>
               <th className="hidden px-4 py-3 text-left font-medium text-foreground sm:table-cell">
                 Format
@@ -191,16 +295,53 @@ export function AdminInventoryTable({ items }: Props) {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted">
+                <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted">
                   {query ? "No items match your search." : "No items in inventory."}
                 </td>
               </tr>
             ) : (
-              filtered.map((item) => (
+              filtered.map((item, index) => (
                 <tr
                   key={item.id}
                   className="border-b border-border last:border-0 hover:bg-surface-hover"
                 >
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIdSet.has(item.id)}
+                      ref={(el) => { checkboxRefs.current[index] = el; }}
+                      onChange={(event) =>
+                        toggleItem(
+                          item.id,
+                          index,
+                          event.currentTarget.checked,
+                          Boolean((event.nativeEvent as MouseEvent | undefined)?.shiftKey)
+                        )
+                      }
+                      onKeyDown={(event) => {
+                        if (event.shiftKey && event.key === "ArrowDown" && index < filtered.length - 1) {
+                          event.preventDefault();
+                          if (!selectedIdSet.has(item.id)) {
+                            toggleItem(item.id, index, true, false);
+                          }
+                          const nextIndex = index + 1;
+                          toggleItem(filtered[nextIndex].id, nextIndex, true, false);
+                          checkboxRefs.current[nextIndex]?.focus();
+                        }
+                        if (event.shiftKey && event.key === "ArrowUp" && index > 0) {
+                          event.preventDefault();
+                          if (!selectedIdSet.has(item.id)) {
+                            toggleItem(item.id, index, true, false);
+                          }
+                          const prevIndex = index - 1;
+                          toggleItem(filtered[prevIndex].id, prevIndex, true, false);
+                          checkboxRefs.current[prevIndex]?.focus();
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
+                      aria-label={`Select ${item.artist} – ${item.title}`}
+                    />
+                  </td>
                   <td className="px-4 py-3">
                     <div className="font-medium text-foreground">
                       {item.artist} &ndash; {item.title}
@@ -227,7 +368,7 @@ export function AdminInventoryTable({ items }: Props) {
                     {item.stockQuantity}
                   </td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={item.status} />
+                    <StatusBadge status={item.status} id={item.id} />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap justify-end gap-1.5">

@@ -39,9 +39,32 @@ export default async function AboutPage() {
         <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
           {dictionary.about.whatFocuses}
         </h2>
+        <p>{dictionary.about.whatFocusesBody}</p>
         <p>
           {formatMessage(dictionary.about.orders, { pickupLabel: siteConfig.pickupLabel })}
         </p>
+      </section>
+
+      <section className="card space-y-3 text-sm leading-7 text-muted">
+        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
+          {dictionary.about.storyTitle}
+        </h2>
+        <p>{dictionary.about.storyBody}</p>
+      </section>
+
+      <section className="card space-y-3 text-sm leading-7 text-muted">
+        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
+          {dictionary.about.discogsTitle}
+        </h2>
+        <p>{dictionary.about.discogsBody}</p>
+        <a
+          href="https://www.discogs.com/it/user/F1846"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex text-sm font-medium text-accent transition-colors hover:underline"
+        >
+          {dictionary.about.discogsLink}
+        </a>
       </section>
     </div>
   );

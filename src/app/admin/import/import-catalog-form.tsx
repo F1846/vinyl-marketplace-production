@@ -5,11 +5,12 @@ import Link from "next/link";
 import { importCatalogCsvAction } from "@/actions/import";
 
 const INVENTORY_REQUIRED_COLUMNS = ["listing_id", "artist", "title", "format", "release_id", "status", "price"] as const;
-const COLLECTION_REQUIRED_COLUMNS = ["artist", "title", "release_id", "Collection Media Condition"] as const;
+const COLLECTION_REQUIRED_COLUMNS = ["artist", "title", "release_id", "collection media condition"] as const;
 
 function detectCsvType(headers: string[]): "inventory" | "collection" | "unknown" {
-  if (headers.includes("Collection Media Condition")) return "collection";
-  if (headers.includes("listing_id")) return "inventory";
+  const normalized = headers.map((h) => h.toLowerCase().trim());
+  if (normalized.includes("collection media condition")) return "collection";
+  if (normalized.includes("listing_id")) return "inventory";
   return "unknown";
 }
 
@@ -163,7 +164,7 @@ export function ImportCatalogForm() {
                 </div>
                 <div className="mt-4 grid gap-2 md:grid-cols-2">
                   {(detectedType === "collection" ? COLLECTION_REQUIRED_COLUMNS : INVENTORY_REQUIRED_COLUMNS).map((column) => {
-                    const found = previewHeaders.includes(column);
+                    const found = previewHeaders.some((h) => h.toLowerCase().trim() === column.toLowerCase());
                     return (
                       <p key={column} className="text-sm text-muted">
                         {column}:{" "}

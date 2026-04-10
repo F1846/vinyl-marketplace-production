@@ -75,6 +75,11 @@ export function CatalogBrowser({
   const [autoLoadBurstCount, setAutoLoadBurstCount] = useState(0);
   const autoLoadRef = useRef<HTMLDivElement | null>(null);
   const autoLoadEnabled = hasMore && autoLoadBurstCount < AUTO_LOAD_BURST_LIMIT;
+  // Keep a ref to avoid stale closures in the debounce effect
+  const queryRef = useRef(query);
+
+  // Keep queryRef current so debounce effect always uses the latest query
+  queryRef.current = query;
 
   useEffect(() => {
     setProducts(initialProducts);
@@ -95,6 +100,19 @@ export function CatalogBrowser({
     initialQuery.sort,
     initialTotalCount,
   ]);
+
+  // Live search: fire applyQuery 350 ms after the user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const trimmed = draftQuery.trim();
+      if (trimmed !== queryRef.current.q) {
+        void applyQuery({ ...queryRef.current, q: trimmed });
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+    // applyQuery is stable (useCallback with no changing deps); draftQuery is the trigger
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftQuery]);
 
   const activeLabel = useMemo(() => {
     if (query.q) {
@@ -235,11 +253,9 @@ export function CatalogBrowser({
                   value={draftQuery}
                   onChange={(event) => setDraftQuery(event.target.value)}
                   placeholder={dictionary.catalog.artistTitleLabel}
+                  aria-label={dictionary.catalog.search}
                 />
               </div>
-              <button type="submit" className="btn-secondary w-full">
-                {dictionary.catalog.updateResults}
-              </button>
             </form>
 
             <div className="space-y-3">

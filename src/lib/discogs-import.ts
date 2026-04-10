@@ -5,6 +5,7 @@ type ProductFormat = "vinyl" | "cassette" | "cd";
 type ProductStatus = "active" | "sold_out" | "archived";
 type MediaCondition = "M" | "NM" | "VG+" | "VG" | "G" | "P";
 
+// Keys are lowercase-normalized (matching parseCsv output)
 interface InventoryRow {
   listing_id: string;
   artist: string;
@@ -24,6 +25,24 @@ interface InventoryRow {
   weight: string;
   format_quantity: string;
   location: string;
+}
+
+// Keys are lowercase-normalized (matching parseCsv output)
+interface CollectionRow {
+  "catalog#": string;
+  artist: string;
+  title: string;
+  label: string;
+  format: string;
+  rating: string;
+  released: string;
+  release_id: string;
+  collectionfolder: string;
+  "date added": string;
+  "collection media condition": string;
+  "collection sleeve condition": string;
+  "collection notes": string;
+  "collection price paid": string;
 }
 
 interface DiscogsRelease {
@@ -46,6 +65,8 @@ interface DiscogsRelease {
 const DISCOGS_API_BASE = "https://api.discogs.com";
 const DEFAULT_USER_AGENT =
   "vinyl-marketplace-production/1.0 +https://www.federicoshop.de";
+
+// All lowercase — matched against lowercased CSV headers
 const REQUIRED_COLUMNS = [
   "listing_id",
   "artist",
@@ -54,6 +75,14 @@ const REQUIRED_COLUMNS = [
   "release_id",
   "status",
   "price",
+] as const;
+
+// All lowercase — matched against lowercased CSV headers
+const COLLECTION_REQUIRED_COLUMNS = [
+  "artist",
+  "title",
+  "release_id",
+  "collection media condition",
 ] as const;
 
 export type DiscogsImportInspection = {
@@ -78,7 +107,11 @@ function requireEnv(name: string): string {
   return value;
 }
 
-function parseCsv(input: string): { headers: string[]; rows: InventoryRow[] } {
+/**
+ * Parses CSV input and returns original headers (for display) plus rows
+ * keyed by lowercase-normalized header names (for case-insensitive matching).
+ */
+function parseCsv(input: string): { headers: string[]; rows: Record<string, string>[] } {
   const rows: string[][] = [];
   let currentField = "";
   let currentRow: string[] = [];
@@ -129,15 +162,17 @@ function parseCsv(input: string): { headers: string[]; rows: InventoryRow[] } {
   const [headerRow, ...dataRows] = rows;
   headerRow[0] = headerRow[0]?.replace(/^\uFEFF/, "") ?? "";
 
+  // Normalize headers to lowercase for case-insensitive key matching
+  const normalizedKeys = headerRow.map((h) => h.toLowerCase().trim());
+
   return {
-    headers: headerRow,
+    headers: headerRow, // keep originals for display
     rows: dataRows
       .filter((row) => row.some((value) => value.trim().length > 0))
-      .map(
-        (row) =>
-          Object.fromEntries(
-            headerRow.map((header, index) => [header, row[index] ?? ""])
-          ) as unknown as InventoryRow
+      .map((row) =>
+        Object.fromEntries(
+          normalizedKeys.map((key, index) => [key, row[index] ?? ""])
+        )
       ),
   };
 }
@@ -329,13 +364,14 @@ function imageUrlsFor(release: DiscogsRelease | null): string[] {
 
 export function inspectDiscogsInventoryCsv(input: string): DiscogsImportInspection {
   const parsed = parseCsv(input);
-  const activeRows = parsed.rows.filter((row) => toProductStatus(row.status) === "active");
+  const rows = parsed.rows as unknown as InventoryRow[];
+  const activeRows = rows.filter((row) => toProductStatus(row.status) === "active");
 
   return {
     headers: parsed.headers,
     requiredColumns: REQUIRED_COLUMNS.map((name) => ({
       name,
-      found: parsed.headers.includes(name),
+      found: parsed.headers.some((h) => h.toLowerCase().trim() === name),
     })),
     totalRows: parsed.rows.length,
     activeRows: activeRows.length,
@@ -350,7 +386,9 @@ export async function importDiscogsInventoryCsv(input: string): Promise<DiscogsI
 
   const inspection = inspectDiscogsInventoryCsv(input);
   const parsed = parseCsv(input);
-  const catalogRows = parsed.rows.filter((row) => toProductStatus(row.status) === "active");
+  const catalogRows = (parsed.rows as unknown as InventoryRow[]).filter(
+    (row) => toProductStatus(row.status) === "active"
+  );
 
   if (catalogRows.length === 0) {
     throw new Error("No 'For Sale' rows were found in the uploaded CSV.");
@@ -482,39 +520,15 @@ export async function importDiscogsInventoryCsv(input: string): Promise<DiscogsI
 
 // ──────────────────────────────────────────────
 // Discogs Collection CSV (export from profile/collection)
-// Columns: Catalog#, artist, title, Label, format, Rating, Released,
+// Columns: Catalog#, Artist, Title, Label, Format, Rating, Released,
 //          release_id, CollectionFolder, Date Added,
 //          Collection Media Condition, Collection Sleeve Condition,
 //          Collection Notes, Collection Price Paid
 // ──────────────────────────────────────────────
 
-const COLLECTION_REQUIRED_COLUMNS = [
-  "artist",
-  "title",
-  "release_id",
-  "Collection Media Condition",
-] as const;
-
-interface CollectionRow {
-  "Catalog#": string;
-  artist: string;
-  title: string;
-  Label: string;
-  format: string;
-  Rating: string;
-  Released: string;
-  release_id: string;
-  CollectionFolder: string;
-  "Date Added": string;
-  "Collection Media Condition": string;
-  "Collection Sleeve Condition": string;
-  "Collection Notes": string;
-  "Collection Price Paid": string;
-}
-
 export function isCollectionCsv(input: string): boolean {
-  const firstLine = input.split("\n")[0] ?? "";
-  return firstLine.includes("Collection Media Condition");
+  const firstLine = (input.split("\n")[0] ?? "").toLowerCase();
+  return firstLine.includes("collection media condition");
 }
 
 export function inspectDiscogsCollectionCsv(input: string): DiscogsImportInspection {
@@ -523,7 +537,7 @@ export function inspectDiscogsCollectionCsv(input: string): DiscogsImportInspect
     headers: parsed.headers,
     requiredColumns: COLLECTION_REQUIRED_COLUMNS.map((name) => ({
       name,
-      found: parsed.headers.includes(name),
+      found: parsed.headers.some((h) => h.toLowerCase().trim() === name),
     })),
     totalRows: parsed.rows.length,
     activeRows: parsed.rows.length,
@@ -534,8 +548,8 @@ function descriptionForCollection(row: CollectionRow, release: DiscogsRelease | 
   const parts: string[] = [];
 
   const releaseLine = [
-    firstNonEmpty(release?.labels?.[0]?.name, row.Label),
-    firstNonEmpty(release?.labels?.[0]?.catno, row["Catalog#"]),
+    firstNonEmpty(release?.labels?.[0]?.name, row.label),
+    firstNonEmpty(release?.labels?.[0]?.catno, row["catalog#"]),
     row.format.trim(),
   ]
     .filter(Boolean)
@@ -550,15 +564,18 @@ function descriptionForCollection(row: CollectionRow, release: DiscogsRelease | 
   if (genres.length > 0) parts.push(`Genres: ${Array.from(new Set(genres)).join(", ")}`);
 
   const conditions = [
-    row["Collection Media Condition"].trim() ? `Media: ${row["Collection Media Condition"].trim()}` : null,
-    row["Collection Sleeve Condition"].trim() && row["Collection Sleeve Condition"].trim() !== "Generic"
-      ? `Sleeve: ${row["Collection Sleeve Condition"].trim()}`
+    row["collection media condition"].trim()
+      ? `Media: ${row["collection media condition"].trim()}`
+      : null,
+    row["collection sleeve condition"].trim() &&
+    row["collection sleeve condition"].trim() !== "Generic"
+      ? `Sleeve: ${row["collection sleeve condition"].trim()}`
       : null,
   ].filter(Boolean);
 
   if (conditions.length > 0) parts.push(conditions.join(" | "));
 
-  const notes = row["Collection Notes"].trim();
+  const notes = row["collection notes"].trim();
   if (notes) parts.push(notes);
   else if (release?.notes?.trim()) parts.push(release.notes.trim().replace(/\s+/g, " ").slice(0, 500));
 
@@ -603,9 +620,9 @@ export async function importDiscogsCollectionCsv(input: string): Promise<Discogs
     const release = await releaseCache.get(releaseId)!;
     const imageUrls = imageUrlsFor(release);
 
-    const mediaCondition = toMediaCondition(row["Collection Media Condition"]);
-    const sleeveCondition = toMediaCondition(row["Collection Sleeve Condition"]);
-    const pricePaid = row["Collection Price Paid"].trim();
+    const mediaCondition = toMediaCondition(row["collection media condition"]);
+    const sleeveCondition = toMediaCondition(row["collection sleeve condition"]);
+    const pricePaid = row["collection price paid"].trim();
 
     const insertValues = {
       id: crypto.randomUUID(),
@@ -617,9 +634,11 @@ export async function importDiscogsCollectionCsv(input: string): Promise<Discogs
       stockQuantity: 1,
       conditionMedia: mediaCondition,
       conditionSleeve: sleeveCondition,
-      pressingLabel: firstNonEmpty(release?.labels?.[0]?.name, row.Label),
-      pressingYear: safeYear(release?.year) ?? (row.Released ? Number.parseInt(row.Released, 10) : null),
-      pressingCatalogNumber: firstNonEmpty(release?.labels?.[0]?.catno, row["Catalog#"]),
+      pressingLabel: firstNonEmpty(release?.labels?.[0]?.name, row.label),
+      pressingYear:
+        safeYear(release?.year) ??
+        (row.released ? Number.parseInt(row.released, 10) : null),
+      pressingCatalogNumber: firstNonEmpty(release?.labels?.[0]?.catno, row["catalog#"]),
       discogsListingId: null,
       discogsReleaseId: releaseId,
       description: descriptionForCollection(row, release),

@@ -119,13 +119,20 @@ const english = {
   },
   about: {
     body:
-      "Federico Shop is a focused shop for graded vinyl, cassette, and CD copies, with an emphasis on electronic music, fair pricing, and collector-friendly packing.",
+      "Federico Shop is a Berlin-based record shop shaped by a long personal connection to electronic music, careful grading, and a selective, collector-minded way of sharing records.",
+    discogsBody:
+      "If you want to explore more of my taste, collection history, and activity, you can visit my Discogs profile.",
+    discogsLink: "Visit F1846 on Discogs",
+    discogsTitle: "Discogs",
     orders:
       "Orders can be placed with card checkout, PayPal when configured, or local pickup from {pickupLabel}.",
+    storyBody:
+      "Music has been part of my life for years, and this shop grew out of that passion. Federico Shop is a way to pass on records I care about personally, keep the selection intentional, and offer a more direct and honest experience than a faceless marketplace.",
+    storyTitle: "A short story",
     title: "About Federico Shop",
     whatFocuses: "What the shop focuses on",
     whatFocusesBody:
-      "The catalog is curated rather than bulk-listed. Each product page includes condition details, format information, and shipping that adapts to the destination country and the mix of media in the order.",
+      "The focus is on electronic music across vinyl, cassette, and CD, with listings chosen more like a collection shelf than a bulk catalog. Many pieces come from my own personal collection, alongside records I have picked up over time because they felt worth keeping close.",
   },
   shippingPage: {
     delivery: "Delivery",
@@ -407,13 +414,19 @@ const german: typeof english = {
   about: {
     ...english.about,
     body:
-      "Federico Shop ist ein fokussierter Shop fur gegradete Vinyls, Kassetten und CDs mit Schwerpunkt auf elektronischer Musik, fairer Preisgestaltung und sammlerfreundlicher Verpackung.",
+      "Federico Shop ist ein Berliner Plattenladen, gepragt von einer langen personlichen Verbindung zur elektronischen Musik, sorgfaltigem Grading und einer selektiven, sammlerorientierten Auswahl.",
+    discogsBody:
+      "Wenn du mehr von meinem Geschmack, meiner Sammlung und meiner Aktivitat sehen willst, schau auf mein Discogs Profil.",
+    discogsLink: "F1846 auf Discogs ansehen",
     orders:
       "Bestellungen konnen per Karte, PayPal oder lokaler Abholung aus {pickupLabel} aufgegeben werden.",
+    storyBody:
+      "Musik begleitet mich seit vielen Jahren, und aus dieser Leidenschaft ist der Shop entstanden. Federico Shop ist mein Weg, Platten weiterzugeben, die mir personlich etwas bedeuten, die Auswahl bewusst zu halten und ein direkteres, ehrlicheres Einkaufserlebnis anzubieten.",
+    storyTitle: "Eine kurze Geschichte",
     title: "Uber Federico Shop",
     whatFocuses: "Worauf sich der Shop konzentriert",
     whatFocusesBody:
-      "Der Katalog ist kuratiert statt massenhaft gelistet. Jede Produktseite enthalt Zustandsdetails, Formatinformationen und Versand, der sich an Zielland und Medienmix der Bestellung anpasst.",
+      "Der Fokus liegt auf elektronischer Musik auf Vinyl, Kassette und CD, mit Listings, die eher wie ein Regal aus einer Sammlung als wie ein Massenkatalog ausgewahlt sind. Viele Stucke stammen aus meiner personlichen Sammlung, andere aus Jahren des Suchens und Sammelns.",
   },
   shippingPage: {
     ...english.shippingPage,
@@ -639,13 +652,19 @@ const italian: typeof english = {
   about: {
     ...english.about,
     body:
-      "Federico Shop e un negozio focalizzato su vinili, cassette e CD gradati, con attenzione alla musica elettronica, prezzi equi e imballaggio adatto ai collezionisti.",
+      "Federico Shop e un negozio berlinese nato da un legame personale di lunga data con la musica elettronica, da un grading attento e da una selezione pensata per collezionisti.",
+    discogsBody:
+      "Se vuoi vedere meglio il mio gusto, la mia collezione e la mia attivita, visita il mio profilo Discogs.",
+    discogsLink: "Visita F1846 su Discogs",
     orders:
       "Gli ordini possono essere effettuati con carta, PayPal o ritiro locale da {pickupLabel}.",
+    storyBody:
+      "La musica fa parte della mia vita da anni e questo shop nasce proprio da quella passione. Federico Shop e un modo per far circolare dischi a cui tengo personalmente, mantenere la selezione intenzionale e offrire un'esperienza piu diretta e sincera.",
+    storyTitle: "Una breve storia",
     title: "Su Federico Shop",
     whatFocuses: "Su cosa si concentra il negozio",
     whatFocusesBody:
-      "Il catalogo e curato e non caricato in massa. Ogni pagina prodotto include dettagli sulla condizione, informazioni sul formato e spedizione che si adatta al paese di destinazione e al mix di supporti dell'ordine.",
+      "Il focus e sulla musica elettronica in vinile, cassetta e CD, con inserzioni scelte piu come uno scaffale di collezione che come un catalogo di massa. Molti dischi arrivano dalla mia collezione personale, altri da anni di ricerca, ascolti e selezione.",
   },
   shippingPage: {
     ...english.shippingPage,
