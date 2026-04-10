@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useRef, useState } from "react";
+import React, { ChangeEvent, useRef, useState } from "react";
 import Link from "next/link";
 import { CheckCircle, Loader2, StopCircle, X } from "lucide-react";
 import type { DiscogsImportSummary, ImportProgressEvent } from "@/lib/discogs-import";
@@ -194,7 +194,7 @@ export function ImportCatalogForm() {
           <h1 className="text-2xl font-bold text-foreground">Bulk import catalog</h1>
           <p className="mt-1 text-sm text-muted">
             <strong>Inventory CSV</strong> — items go live in the public catalog immediately as active listings.<br />
-            <strong>Collection CSV</strong> — items land in Inventory as "not for sale". Use the Inventory page to set prices and publish them.
+            <strong>Collection CSV</strong> — items land in Inventory as &ldquo;not for sale&rdquo;. Use the Inventory page to set prices and publish them.
           </p>
         </div>
         <Link href="/admin/products" className="btn-secondary">
