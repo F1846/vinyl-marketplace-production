@@ -78,7 +78,7 @@ export default async function HomePage() {
   });
   const [{ count, minPrice }] = await d
     .select({
-      count: sql<number>`coalesce(sum(${schema.products.stockQuantity}), 0)`,
+      count: sql<number>`count(*)`,
       minPrice: sql<number | null>`min(${schema.products.priceCents})`,
     })
     .from(schema.products)
@@ -182,8 +182,8 @@ export default async function HomePage() {
               href={featuredHeroProduct ? `/products/${featuredHeroProduct.id}` : "/catalog"}
               className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
-              <p className="line-clamp-1 text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.availableNow}</p>
-              <p className="mt-1.5 line-clamp-1 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.availableNow}</p>
+              <p className="mt-1.5 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
                 {count ?? 0}
               </p>
               <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
@@ -196,8 +196,8 @@ export default async function HomePage() {
               href={cheapestProduct ? `/products/${cheapestProduct.id}` : "/catalog?sort=price-asc"}
               className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
-              <p className="line-clamp-1 text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.from}</p>
-              <p className="mt-1.5 line-clamp-1 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.from}</p>
+              <p className="mt-1.5 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
                 {minPrice === null ? "0 EUR" : formatEuroFromCents(minPrice)}
               </p>
               <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
@@ -216,8 +216,8 @@ export default async function HomePage() {
               }
               className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
-              <p className="line-clamp-1 text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.formatMix}</p>
-              <p className="mt-1.5 line-clamp-1 font-sans text-[1.22rem] font-bold capitalize tracking-[-0.04em] text-foreground">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.formatMix}</p>
+              <p className="mt-1.5 font-sans text-[1.22rem] font-bold capitalize tracking-[-0.04em] text-foreground">
                 {dictionary.home.formatMixValue}
               </p>
               <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
@@ -235,7 +235,7 @@ export default async function HomePage() {
             </div>
           )}
         </div>
-        <div className="grid gap-2 sm:grid-cols-2 lg:self-start">
+        <div className="grid gap-2 sm:grid-cols-2">
           {heroPreviewProducts.map((product) => (
             <ProductCard key={product.id} product={product} size="mini" />
           ))}

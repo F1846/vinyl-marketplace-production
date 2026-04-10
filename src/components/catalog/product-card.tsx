@@ -46,34 +46,29 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
     : isCompact
       ? "(max-width: 640px) 40vw, (max-width: 1024px) 22vw, 14vw"
       : "(max-width: 640px) 44vw, (max-width: 1024px) 26vw, 17vw";
-  const imageAspect = isMini ? "aspect-[0.78]" : isCompact ? "aspect-[0.74]" : "aspect-[0.76]";
-  const paddingClass = isMini ? "p-2.5" : isCompact ? "p-2.5" : "p-3";
-  const bodyClass = isMini
-    ? "grid h-full grid-rows-[1.35rem_1.95rem_1fr_auto]"
-    : isCompact
-      ? "grid h-full grid-rows-[1.8rem_2rem_1fr_auto]"
-      : "grid h-full grid-rows-[1.9rem_2.15rem_1fr_auto]";
+  const imageAspect = isMini ? "aspect-[0.82]" : isCompact ? "aspect-[0.85]" : "aspect-[0.88]";
+  const paddingClass = isMini ? "p-2.5" : isCompact ? "p-3" : "p-[0.8125rem]";
   const artistClass = isMini
-    ? "h-[1.35rem] text-[8px] font-semibold uppercase tracking-[0.18em] text-muted"
-    : "h-[1.8rem] text-[9px] font-semibold uppercase tracking-[0.18em] text-muted";
+    ? "min-h-[1.55rem] text-[8px] font-semibold uppercase tracking-[0.18em] text-muted"
+    : "min-h-[2.05rem] text-[9px] font-semibold uppercase tracking-[0.18em] text-muted";
   const titleClass = isMini
-    ? "h-[1.95rem] text-[0.88rem]"
+    ? "min-h-[2rem] text-[0.88rem]"
     : isCompact
-      ? "h-[2rem] text-[0.92rem]"
-      : "h-[2.15rem] text-[0.96rem]";
+      ? "min-h-[2.15rem] text-[0.92rem]"
+      : "min-h-[2.35rem] text-[0.96rem]";
   const priceClass = isMini
     ? "text-[0.88rem] font-semibold text-foreground"
     : isCompact
       ? "text-[0.92rem] font-semibold text-foreground"
       : "text-[0.96rem] font-semibold text-foreground";
   const metaClass = isMini
-    ? "mt-2 grid min-h-[1rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 text-[8px] uppercase tracking-[0.16em] text-muted"
-    : "mt-2 grid min-h-[1.05rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 text-[9px] uppercase tracking-[0.17em] text-muted";
+    ? "mt-2 flex items-center justify-between gap-2 text-[8px] uppercase tracking-[0.16em] text-muted"
+    : "mt-2.5 flex items-center justify-between gap-2 text-[9px] uppercase tracking-[0.17em] text-muted";
 
   return (
     <Link
       href={`/products/${product.id}`}
-      className="group flex h-full flex-col overflow-hidden rounded-[0.95rem] border border-border/90 bg-surface shadow-card transition duration-300 hover:-translate-y-0.5 hover:border-foreground/15"
+      className="group flex h-full flex-col overflow-hidden rounded-[1rem] border border-border/90 bg-surface shadow-card transition duration-300 hover:-translate-y-0.5 hover:border-foreground/15"
     >
       <div className={`relative overflow-hidden bg-[#ebe8e1] ${imageAspect}`}>
         {imageUrl ? (
@@ -96,26 +91,25 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
         )}
         <div className="absolute left-2.5 top-2.5">{formatBadge(product.format)}</div>
       </div>
-      <div className={`${paddingClass} ${bodyClass}`}>
+      <div className={`${paddingClass} flex flex-1 flex-col`}>
         <p className={`${artistClass} line-clamp-2`}>{product.artist}</p>
         <p
           className={`mt-1.5 line-clamp-2 font-sans font-bold leading-tight tracking-[-0.04em] text-foreground ${titleClass}`}
         >
           {product.title}
         </p>
-        <div />
-        <div className="pt-2">
+        <div className="mt-auto pt-2.5">
           <div className="flex items-center justify-between gap-2.5">
-            <span className={priceClass}>{formatEuroFromCents(product.priceCents)}</span>
-            {product.conditionMedia && (
-              <span className="rounded-full border border-border px-2 py-1 text-[9px] font-medium text-muted">
-                {product.conditionMedia}
-              </span>
-            )}
+          <span className={priceClass}>{formatEuroFromCents(product.priceCents)}</span>
+          {product.conditionMedia && (
+            <span className="rounded-full border border-border px-2 py-1 text-[9px] font-medium text-muted">
+              {product.conditionMedia}
+            </span>
+          )}
           </div>
           <div className={metaClass}>
             <span className="line-clamp-1">{product.genre}</span>
-            <span className="whitespace-nowrap text-right">
+            <span>
               {product.stockQuantity > 0
                 ? formatMessage(dictionary.productCard.inStock, { count: product.stockQuantity })
                 : dictionary.productCard.unavailable}
