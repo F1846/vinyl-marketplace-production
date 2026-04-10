@@ -1,4 +1,4 @@
-name: Daily Security Audit
+name: Daily Security Audit (Claude)
 
 on:
   schedule:

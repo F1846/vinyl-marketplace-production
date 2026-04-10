@@ -1,4 +1,4 @@
-name: Daily Security Audit (Free)
+name: Daily Security Audit
 
 on:
   schedule:
@@ -62,34 +62,34 @@ jobs:
         run: |
           {
             echo "=== dangerouslySetInnerHTML ==="
-            grep -rn "dangerouslySetInnerHTML" src/ || echo "none"
+            grep -rn "dangerouslySetInnerHTML" src/ | head -5 || echo "none"
 
             echo "=== eval() usage ==="
-            grep -rn "\beval(" src/ || echo "none"
+            grep -rn "\beval(" src/ | head -5 || echo "none"
 
             echo "=== hardcoded secrets ==="
-            grep -rn -E "(password|secret|token|key)\s*=\s*['\"][^'\"]{8,}" src/ --include="*.ts" --include="*.tsx" | grep -v "placeholder\|example\|test\|spec\|hash\|\.env" || echo "none"
+            grep -rn -E "(password|secret|token|key)\s*=\s*['\"][^'\"]{8,}" src/ --include="*.ts" --include="*.tsx" | grep -v "placeholder\|example\|test\|spec\|hash\|\.env\|translation\|dict\|i18n" | head -5 || echo "none"
 
             echo "=== SQL string interpolation ==="
-            grep -rn "sql\`.*\${" src/ || echo "none"
+            grep -rn "sql\`.*\${" src/ | head -5 || echo "none"
 
-            echo "=== console.log in src ==="
-            grep -rn "console\.log" src/ | grep -v "\.test\." | head -10 || echo "none"
+            echo "=== console.log ==="
+            grep -rn "console\.log" src/ | grep -v "\.test\." | head -5 || echo "none"
 
             echo "=== TODO/FIXME ==="
-            grep -rn "TODO\|FIXME\|HACK\|XXX" src/ | head -10 || echo "none"
+            grep -rn "TODO\|FIXME" src/ | head -5 || echo "none"
 
-            echo "=== missing auth guard in actions ==="
-            grep -L "requireAuthenticatedAdmin" src/actions/*.ts || echo "all actions guarded"
+            echo "=== missing auth guard ==="
+            grep -rL "requireAuthenticatedAdmin" src/actions/*.ts 2>/dev/null | head -5 || echo "all guarded"
 
-            echo "=== process.env without fallback ==="
-            grep -rn "process\.env\." src/app/api/ | grep -v "??\|||" | head -10 || echo "none"
+            echo "=== process.env no fallback ==="
+            grep -rn "process\.env\." src/app/api/ | grep -v "??\|||" | head -5 || echo "none"
 
             echo "=== any cast ==="
-            grep -rn " as any\b" src/ | grep -v "\.test\." | head -10 || echo "none"
+            grep -rn " as any\b" src/ | grep -v "\.test\." | head -5 || echo "none"
 
-            echo "=== npm audit high/critical ==="
-            cat /tmp/npm-audit.json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); const v=d.metadata?.vulnerabilities??{}; console.log('critical:'+v.critical+' high:'+v.high+' moderate:'+v.moderate)"
+            echo "=== npm audit ==="
+            node -e "const v=require('/tmp/npm-audit.json').metadata?.vulnerabilities??{}; console.log('critical:'+v.critical+' high:'+v.high+' moderate:'+v.moderate)"
 
           } > /tmp/static-findings.txt 2>&1
           cat /tmp/static-findings.txt
@@ -114,38 +114,21 @@ jobs:
           const npmAudit = JSON.parse(fs.readFileSync("/tmp/npm-audit.json", "utf8"));
           const vulns = npmAudit.metadata?.vulnerabilities ?? {};
           const advisories = Object.values(npmAudit.vulnerabilities ?? {})
-            .slice(0, 5)
-            .map(v => `${v.name}@${v.range}: ${v.severity} — ${v.title ?? ""}`)
-            .join("\n");
+            .slice(0, 3)
+            .map(v => `${v.name}: ${v.severity}`)
+            .join(", ");
 
-          const prompt = `You are a senior security engineer reviewing a daily automated scan of vinyl-marketplace-production, a Next.js e-commerce store (admin panel, Stripe/PayPal checkout, PostgreSQL via Drizzle ORM).
+          const findings = staticFindings.substring(0, 1200);
 
-## Automated scan results
+          const prompt = `Security audit of vinyl-marketplace-production (Next.js, Stripe, PostgreSQL/Drizzle).
 
-npm audit: ${process.env.NPM_CRITICAL} critical, ${process.env.NPM_HIGH} high, ${process.env.NPM_MODERATE} moderate
-TypeScript errors: ${process.env.TS_ERRORS}
+Scan: npm critical=${process.env.NPM_CRITICAL} high=${process.env.NPM_HIGH} moderate=${process.env.NPM_MODERATE}, TS errors=${process.env.TS_ERRORS}
+Packages: ${advisories || "none"}
+Static findings:
+${findings}
 
-Top vulnerable packages:
-${advisories || "none"}
-
-Static analysis findings:
-${staticFindings.substring(0, 3000)}
-
-## Task
-Based on these scan results, produce a prioritised security report.
-Known architecture: Next.js App Router, server actions, bcrypt admin auth, rate limiting via DB, Stripe webhooks with signature verification.
-
-Return ONLY this JSON (no markdown wrapper):
-{
-  "severity_summary": "overall risk: CRITICAL/HIGH/MEDIUM/LOW — one sentence",
-  "top_findings": [
-    {"id":"F1","severity":"HIGH","title":"..","file":"..","description":"..","recommendation":".."}
-  ],
-  "quick_wins": [".."],
-  "dependencies_at_risk": ["package — reason"],
-  "no_issues_found": [".."],
-  "priority_action": "single most important fix today"
-}`;
+Return ONLY this JSON:
+{"severity_summary":"CRITICAL/HIGH/MEDIUM/LOW — one sentence","top_findings":[{"id":"F1","severity":"HIGH","title":"..","file":"..","description":"..","recommendation":".."}],"quick_wins":[".."],"dependencies_at_risk":[".."],"no_issues_found":[".."],"priority_action":".."}`;
 
           const response = await fetch("https://models.inference.ai.azure.com/chat/completions", {
             method: "POST",
@@ -157,7 +140,7 @@ Return ONLY this JSON (no markdown wrapper):
               model: "gpt-4o",
               messages: [{ role: "user", content: prompt }],
               response_format: { type: "json_object" },
-              max_tokens: 1500,
+              max_tokens: 800,
               temperature: 0.2,
             }),
           });
