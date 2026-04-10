@@ -139,20 +139,25 @@ export default async function CatalogPage({
     getCatalogPage({ q, format, genre, sort, limit: 24, offset: 0 }),
     getCatalogFilters(),
   ]);
-  const catalogStructuredData = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
+const catalogStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: seo.title,
+  url: seo.canonical,
+  description: seo.description,
+  mainEntity: {
+    "@type": "ItemList",
     name: seo.title,
-    url: seo.canonical,
-    description: seo.description,
-    hasPart: catalog.products.map((product) => ({
-      "@type": "Product",
-      name: `${product.artist} - ${product.title}`,
+    numberOfItems: catalog.products.length,
+    itemListElement: catalog.products.map((product, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
       url: siteUrl(`/products/${product.id}`),
+      name: `${product.artist} - ${product.title}`,
       image: product.images[0]?.url,
-      category: [product.genre, product.format].filter(Boolean).join(" / "),
     })),
-  };
+  },
+};
   const breadcrumbStructuredData = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
