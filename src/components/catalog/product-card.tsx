@@ -46,8 +46,8 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
     : isCompact
       ? "(max-width: 640px) 40vw, (max-width: 1024px) 22vw, 14vw"
       : "(max-width: 640px) 44vw, (max-width: 1024px) 26vw, 17vw";
-  const imageAspect = isMini ? "aspect-[0.82]" : isCompact ? "aspect-[0.85]" : "aspect-[0.88]";
-  const paddingClass = isMini ? "p-2.5" : isCompact ? "p-3" : "p-[0.8125rem]";
+  const imageAspect = isMini ? "aspect-[0.82]" : "aspect-square";
+  const paddingClass = isMini ? "p-2.5" : isCompact ? "p-2.5" : "p-[0.8125rem]";
   const bodyClass = isMini
     ? "grid h-full grid-rows-[1.55rem_2rem_1fr_auto]"
     : isCompact
@@ -73,7 +73,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
   return (
     <Link
       href={`/products/${product.id}`}
-      className="group flex h-full flex-col overflow-hidden rounded-[1rem] border border-border/90 bg-surface shadow-card transition duration-300 hover:-translate-y-0.5 hover:border-foreground/15"
+      className="group flex h-full flex-col overflow-hidden rounded-[0.95rem] border border-border/90 bg-surface shadow-card transition duration-300 hover:-translate-y-0.5 hover:border-foreground/15"
     >
       <div className={`relative overflow-hidden bg-[#ebe8e1] ${imageAspect}`}>
         {imageUrl ? (

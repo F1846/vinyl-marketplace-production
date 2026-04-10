@@ -181,22 +181,25 @@ export function AdminInventoryTable({ items }: Props) {
       });
   }, [formatFilter, items, query, sortDir, sortKey, statusFilter]);
 
+  const sum = (arr: InventoryRow[]) =>
+    arr.reduce((acc, item) => acc + item.stockQuantity, 0);
+
   const statusCounts = useMemo(
     () => ({
-      all: items.length,
-      active: items.filter((item) => item.status === "active").length,
-      sold_out: items.filter((item) => item.status === "sold_out").length,
-      archived: items.filter((item) => item.status === "archived").length,
+      all: sum(items),
+      active: sum(items.filter((item) => item.status === "active")),
+      sold_out: sum(items.filter((item) => item.status === "sold_out")),
+      archived: sum(items.filter((item) => item.status === "archived")),
     }),
     [items]
   );
 
   const formatCounts = useMemo(
     () => ({
-      all: items.length,
-      vinyl: items.filter((item) => item.format === "vinyl").length,
-      cassette: items.filter((item) => item.format === "cassette").length,
-      cd: items.filter((item) => item.format === "cd").length,
+      all: sum(items),
+      vinyl: sum(items.filter((item) => item.format === "vinyl")),
+      cassette: sum(items.filter((item) => item.format === "cassette")),
+      cd: sum(items.filter((item) => item.format === "cd")),
     }),
     [items]
   );
@@ -289,7 +292,7 @@ export function AdminInventoryTable({ items }: Props) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Inventory ({items.length})</h1>
+          <h1 className="text-xl font-bold text-foreground">Inventory ({sum(items)} units)</h1>
         </div>
         <Link href="/admin/import" className="btn-secondary flex items-center gap-2 text-sm">
           <Upload className="h-4 w-4" />
