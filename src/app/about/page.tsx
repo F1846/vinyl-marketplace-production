@@ -30,6 +30,22 @@ export default function AboutPage() {
           from {siteConfig.pickupLabel}.
         </p>
       </section>
+
+      <section className="card space-y-3 text-sm leading-7 text-muted">
+        <h2 className="font-serif text-2xl text-foreground">Discogs</h2>
+        <p>
+          The collection is also listed on Discogs. You can browse the full catalog,
+          check seller feedback, and purchase directly through the Discogs marketplace.
+        </p>
+        <a
+          href="https://www.discogs.com/it/user/F1846"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex text-sm font-medium text-accent transition-colors hover:underline"
+        >
+          Visit F1846 on Discogs
+        </a>
+      </section>
     </div>
   );
 }
