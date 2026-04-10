@@ -232,7 +232,7 @@ export default async function CatalogPage({
         initialProducts={catalog.products}
         initialHasMore={catalog.hasMore}
         initialTotalCount={catalog.totalCount}
-        initialQuery={{ q, format, genre: genre[0] ?? "", sort }}
+        initialQuery={{ q, format, genre, sort }}
         filters={filters}
       />
     </>

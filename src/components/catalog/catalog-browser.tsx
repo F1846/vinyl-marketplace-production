@@ -16,7 +16,7 @@ type CatalogBrowserProps = {
   initialQuery: {
     q: string;
     format?: ProductFormat;
-    genre: string;
+    genre: string[];
     sort: CatalogSort;
   };
   filters: {
@@ -74,6 +74,8 @@ export function CatalogBrowser({
   const [loadingMore, setLoadingMore] = useState(false);
   const [autoLoadBurstCount, setAutoLoadBurstCount] = useState(0);
   const autoLoadRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchHadFocusRef = useRef(false);
   const autoLoadEnabled = hasMore && autoLoadBurstCount < AUTO_LOAD_BURST_LIMIT;
   // Keep a ref to avoid stale closures in the debounce effect
   const queryRef = useRef(query);
@@ -101,6 +103,16 @@ export function CatalogBrowser({
     initialTotalCount,
   ]);
 
+  // Restore search focus after loading completes
+  useEffect(() => {
+    if (!loading && searchHadFocusRef.current && searchInputRef.current) {
+      const input = searchInputRef.current;
+      const cursor = input.value.length;
+      input.focus();
+      input.setSelectionRange(cursor, cursor);
+    }
+  }, [loading, products]);
+
   // Live search: fire applyQuery 350 ms after the user stops typing
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -118,8 +130,8 @@ export function CatalogBrowser({
     if (query.q) {
       return formatMessage(dictionary.catalog.activeResultsFor, { query: query.q });
     }
-    if (query.genre) {
-      return query.genre;
+    if (query.genre.length > 0) {
+      return query.genre.join(", ");
     }
     if (query.format) {
       return query.format;
@@ -131,7 +143,7 @@ export function CatalogBrowser({
     const params = new URLSearchParams();
     if (nextQuery.q) params.set("q", nextQuery.q);
     if (nextQuery.format) params.set("format", nextQuery.format);
-    if (nextQuery.genre) params.set("genre", nextQuery.genre);
+    for (const genre of nextQuery.genre) params.append("genre", genre);
     if (nextQuery.sort !== "newest") params.set("sort", nextQuery.sort);
     params.set("offset", String(offset));
     params.set("limit", String(PAGE_SIZE));
@@ -150,7 +162,7 @@ export function CatalogBrowser({
     const params = new URLSearchParams();
     if (nextQuery.q) params.set("q", nextQuery.q);
     if (nextQuery.format) params.set("format", nextQuery.format);
-    if (nextQuery.genre) params.set("genre", nextQuery.genre);
+    for (const genre of nextQuery.genre) params.append("genre", genre);
     if (nextQuery.sort !== "newest") params.set("sort", nextQuery.sort);
     const nextUrl = params.toString() ? `/catalog?${params.toString()}` : "/catalog";
     window.history.replaceState({}, "", nextUrl);
@@ -235,28 +247,13 @@ export function CatalogBrowser({
               <Filter className="h-4 w-4" /> {dictionary.catalog.filters}
             </div>
 
-            <form
-              className="space-y-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void applyQuery({ ...query, q: draftQuery.trim() });
-              }}
-            >
-              <label htmlFor="catalog-search" className="label">
-                {dictionary.catalog.search}
-              </label>
-              <div className="relative">
-                <Search className="absolute left-4 top-3.5 h-4 w-4 text-muted" />
-                <input
-                  id="catalog-search"
-                  className="input pl-10"
-                  value={draftQuery}
-                  onChange={(event) => setDraftQuery(event.target.value)}
-                  placeholder={dictionary.catalog.artistTitleLabel}
-                  aria-label={dictionary.catalog.search}
-                />
-              </div>
-            </form>
+            <p className="text-sm text-muted">
+              {formatMessage(dictionary.catalog.resultsShowing, {
+                shown: products.length,
+                total: totalCount,
+                suffix: totalCount === 1 ? "" : "s",
+              })}
+            </p>
 
             <div className="space-y-3">
               <p className="font-sans text-base font-bold tracking-[-0.03em] text-foreground">
@@ -290,8 +287,8 @@ export function CatalogBrowser({
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => void applyQuery({ ...query, genre: "" })}
-                  className={getFilterButtonClass(!query.genre)}
+                  onClick={() => void applyQuery({ ...query, genre: [] })}
+                  className={getFilterButtonClass(query.genre.length === 0)}
                 >
                   {dictionary.common.all}
                 </button>
@@ -299,8 +296,15 @@ export function CatalogBrowser({
                   <button
                     key={genre}
                     type="button"
-                    onClick={() => void applyQuery({ ...query, genre })}
-                    className={getFilterButtonClass(query.genre === genre)}
+                    onClick={() =>
+                      void applyQuery({
+                        ...query,
+                        genre: query.genre.includes(genre)
+                          ? query.genre.filter((value) => value !== genre)
+                          : [...query.genre, genre],
+                      })
+                    }
+                    className={getFilterButtonClass(query.genre.includes(genre))}
                   >
                     {genre}
                   </button>
@@ -311,52 +315,64 @@ export function CatalogBrowser({
         </aside>
 
         <div className="space-y-6">
+          <div className="flex flex-col gap-3 rounded-[1.3rem] border border-border bg-white p-4 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-3.5 h-4 w-4 text-muted" />
+              <input
+                id="catalog-search"
+                ref={searchInputRef}
+                className="input pl-10"
+                value={draftQuery}
+                onChange={(event) => {
+                  searchHadFocusRef.current = true;
+                  setDraftQuery(event.target.value);
+                }}
+                onFocus={() => { searchHadFocusRef.current = true; }}
+                onBlur={() => { searchHadFocusRef.current = false; }}
+                placeholder={dictionary.catalog.artistTitleLabel}
+                aria-label={dictionary.catalog.search}
+                autoComplete="off"
+              />
+            </div>
+            <div className="flex items-center gap-3 sm:justify-end">
+              <label htmlFor="catalog-sort" className="text-sm font-medium text-foreground">
+                {dictionary.catalog.sort}
+              </label>
+              <select
+                id="catalog-sort"
+                className="input w-full min-w-[220px] sm:w-auto"
+                value={query.sort}
+                onChange={(event) =>
+                  void applyQuery({
+                    ...query,
+                    sort: event.target.value as CatalogSort,
+                  })
+                }
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {{
+                      newest: dictionary.catalog.sortNewest,
+                      "price-asc": dictionary.catalog.sortPriceAsc,
+                      "price-desc": dictionary.catalog.sortPriceDesc,
+                      "title-asc": dictionary.catalog.sortTitleAsc,
+                      "title-desc": dictionary.catalog.sortTitleDesc,
+                      "label-asc": dictionary.catalog.sortLabelAsc,
+                      "label-desc": dictionary.catalog.sortLabelDesc,
+                    }[option.value]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           {loading ? (
             <div className="card flex min-h-48 items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-accent" />
             </div>
           ) : products.length > 0 ? (
             <>
-              <div className="flex flex-col gap-4 rounded-[1.3rem] border border-border bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted">
-                  {formatMessage(dictionary.catalog.resultsShowing, {
-                    shown: products.length,
-                    total: totalCount,
-                    suffix: totalCount === 1 ? "" : "s",
-                  })}
-                </p>
-                <div className="flex items-center gap-3 sm:justify-end">
-                  <label htmlFor="catalog-sort" className="text-sm font-medium text-foreground">
-                    {dictionary.catalog.sort}
-                  </label>
-                  <select
-                    id="catalog-sort"
-                    className="input w-full min-w-[220px] sm:w-auto"
-                    value={query.sort}
-                    onChange={(event) =>
-                      void applyQuery({
-                        ...query,
-                        sort: event.target.value as CatalogSort,
-                      })
-                    }
-                  >
-                    {SORT_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {{
-                          newest: dictionary.catalog.sortNewest,
-                          "price-asc": dictionary.catalog.sortPriceAsc,
-                          "price-desc": dictionary.catalog.sortPriceDesc,
-                          "title-asc": dictionary.catalog.sortTitleAsc,
-                          "title-desc": dictionary.catalog.sortTitleDesc,
-                          "label-asc": dictionary.catalog.sortLabelAsc,
-                          "label-desc": dictionary.catalog.sortLabelDesc,
-                        }[option.value]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} size="compact" />
                 ))}
