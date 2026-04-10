@@ -46,7 +46,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
     : isCompact
       ? "(max-width: 640px) 40vw, (max-width: 1024px) 22vw, 14vw"
       : "(max-width: 640px) 44vw, (max-width: 1024px) 26vw, 17vw";
-  const imageAspect = isMini ? "aspect-[0.82]" : "aspect-square";
+  const imageAspect = isMini ? "aspect-[0.82]" : isCompact ? "aspect-[0.85]" : "aspect-[0.88]";
   const paddingClass = isMini ? "p-2.5" : isCompact ? "p-2.5" : "p-[0.8125rem]";
   const bodyClass = "flex h-full flex-col";
   const artistClass = isMini
