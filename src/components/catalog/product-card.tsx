@@ -46,21 +46,21 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
     : isCompact
       ? "(max-width: 640px) 40vw, (max-width: 1024px) 22vw, 14vw"
       : "(max-width: 640px) 44vw, (max-width: 1024px) 26vw, 17vw";
-  const imageAspect = isMini ? "aspect-[0.82]" : "aspect-square";
-  const paddingClass = isMini ? "p-2.5" : isCompact ? "p-2.5" : "p-[0.8125rem]";
+  const imageAspect = isMini ? "aspect-[0.78]" : isCompact ? "aspect-[0.74]" : "aspect-[0.76]";
+  const paddingClass = isMini ? "p-2.5" : isCompact ? "p-2.5" : "p-3";
   const bodyClass = isMini
-    ? "grid h-full grid-rows-[1.55rem_2rem_1fr_auto]"
+    ? "grid h-full grid-rows-[1.35rem_1.95rem_1fr_auto]"
     : isCompact
-      ? "grid h-full grid-rows-[2.05rem_2.15rem_1fr_auto]"
-      : "grid h-full grid-rows-[2.05rem_2.35rem_1fr_auto]";
+      ? "grid h-full grid-rows-[1.8rem_2rem_1fr_auto]"
+      : "grid h-full grid-rows-[1.9rem_2.15rem_1fr_auto]";
   const artistClass = isMini
-    ? "h-[1.55rem] text-[8px] font-semibold uppercase tracking-[0.18em] text-muted"
-    : "h-[2.05rem] text-[9px] font-semibold uppercase tracking-[0.18em] text-muted";
+    ? "h-[1.35rem] text-[8px] font-semibold uppercase tracking-[0.18em] text-muted"
+    : "h-[1.8rem] text-[9px] font-semibold uppercase tracking-[0.18em] text-muted";
   const titleClass = isMini
-    ? "h-[2rem] text-[0.88rem]"
+    ? "h-[1.95rem] text-[0.88rem]"
     : isCompact
-      ? "h-[2.15rem] text-[0.92rem]"
-      : "h-[2.35rem] text-[0.96rem]";
+      ? "h-[2rem] text-[0.92rem]"
+      : "h-[2.15rem] text-[0.96rem]";
   const priceClass = isMini
     ? "text-[0.88rem] font-semibold text-foreground"
     : isCompact
@@ -68,7 +68,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
       : "text-[0.96rem] font-semibold text-foreground";
   const metaClass = isMini
     ? "mt-2 grid min-h-[1rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 text-[8px] uppercase tracking-[0.16em] text-muted"
-    : "mt-2.5 grid min-h-[1.05rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 text-[9px] uppercase tracking-[0.17em] text-muted";
+    : "mt-2 grid min-h-[1.05rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 text-[9px] uppercase tracking-[0.17em] text-muted";
 
   return (
     <Link
@@ -104,7 +104,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
           {product.title}
         </p>
         <div />
-        <div className="pt-2.5">
+        <div className="pt-2">
           <div className="flex items-center justify-between gap-2.5">
             <span className={priceClass}>{formatEuroFromCents(product.priceCents)}</span>
             {product.conditionMedia && (
