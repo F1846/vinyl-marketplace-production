@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, notInArray, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 
 type ProductFormat = "vinyl" | "cassette" | "cd";
@@ -646,23 +646,51 @@ export async function importDiscogsCollectionCsv(input: string): Promise<Discogs
       status: "archived" as const, // In collection = not for sale until explicitly put on sale
     };
 
-    const [product] = await d
-      .insert(schema.products)
-      .values(insertValues)
-      .returning({ id: schema.products.id });
+    const yearConditionSync =
+      insertValues.pressingYear != null
+        ? eq(schema.products.pressingYear, insertValues.pressingYear)
+        : isNull(schema.products.pressingYear);
+    const labelConditionSync =
+      insertValues.pressingLabel != null
+        ? eq(schema.products.pressingLabel, insertValues.pressingLabel)
+        : isNull(schema.products.pressingLabel);
 
-    if (imageUrls.length > 0) {
-      await d.insert(schema.productImages).values(
-        imageUrls.map((url, sortOrder) => ({
-          id: crypto.randomUUID(),
-          productId: product.id,
-          url,
-          sortOrder,
-        }))
-      );
-      rowsWithImages += 1;
+    const existing = await d.query.products.findFirst({
+      where: and(
+        eq(schema.products.artist, insertValues.artist),
+        eq(schema.products.title, insertValues.title),
+        eq(schema.products.format, insertValues.format),
+        yearConditionSync,
+        labelConditionSync,
+        isNull(schema.products.deletedAt)
+      ),
+      columns: { id: true, stockQuantity: true },
+    });
+
+    if (existing) {
+      await d
+        .update(schema.products)
+        .set({ stockQuantity: existing.stockQuantity + 1, updatedAt: new Date() })
+        .where(eq(schema.products.id, existing.id));
     } else {
-      rowsWithoutImages += 1;
+      const [product] = await d
+        .insert(schema.products)
+        .values(insertValues)
+        .returning({ id: schema.products.id });
+
+      if (imageUrls.length > 0) {
+        await d.insert(schema.productImages).values(
+          imageUrls.map((url, sortOrder) => ({
+            id: crypto.randomUUID(),
+            productId: product.id,
+            url,
+            sortOrder,
+          }))
+        );
+        rowsWithImages += 1;
+      } else {
+        rowsWithoutImages += 1;
+      }
     }
 
     imported += 1;
@@ -867,18 +895,46 @@ export async function* importDiscogsCollectionCsvGenerator(
       status: targetStatus,
     };
 
-    const [product] = await d
-      .insert(schema.products)
-      .values(insertValues)
-      .returning({ id: schema.products.id });
+    const yearCondition =
+      insertValues.pressingYear != null
+        ? eq(schema.products.pressingYear, insertValues.pressingYear)
+        : isNull(schema.products.pressingYear);
+    const labelCondition =
+      insertValues.pressingLabel != null
+        ? eq(schema.products.pressingLabel, insertValues.pressingLabel)
+        : isNull(schema.products.pressingLabel);
 
-    if (imageUrls.length > 0) {
-      await d.insert(schema.productImages).values(
-        imageUrls.map((url, sortOrder) => ({ id: crypto.randomUUID(), productId: product.id, url, sortOrder }))
-      );
-      rowsWithImages += 1;
+    const existing = await d.query.products.findFirst({
+      where: and(
+        eq(schema.products.artist, insertValues.artist),
+        eq(schema.products.title, insertValues.title),
+        eq(schema.products.format, insertValues.format),
+        yearCondition,
+        labelCondition,
+        isNull(schema.products.deletedAt)
+      ),
+      columns: { id: true, stockQuantity: true },
+    });
+
+    if (existing) {
+      await d
+        .update(schema.products)
+        .set({ stockQuantity: existing.stockQuantity + 1, updatedAt: new Date() })
+        .where(eq(schema.products.id, existing.id));
     } else {
-      rowsWithoutImages += 1;
+      const [product] = await d
+        .insert(schema.products)
+        .values(insertValues)
+        .returning({ id: schema.products.id });
+
+      if (imageUrls.length > 0) {
+        await d.insert(schema.productImages).values(
+          imageUrls.map((url, sortOrder) => ({ id: crypto.randomUUID(), productId: product.id, url, sortOrder }))
+        );
+        rowsWithImages += 1;
+      } else {
+        rowsWithoutImages += 1;
+      }
     }
     imported += 1;
   }

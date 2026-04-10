@@ -79,6 +79,36 @@ export async function addProductFormAction(
   const description = String(formData.get("description"));
 
   try {
+    const yearCondition =
+      pressingYear != null
+        ? eq(schema.products.pressingYear, pressingYear)
+        : isNull(schema.products.pressingYear);
+    const labelCondition =
+      pressingLabel != null
+        ? eq(schema.products.pressingLabel, pressingLabel)
+        : isNull(schema.products.pressingLabel);
+
+    const existingProduct = await d.query.products.findFirst({
+      where: and(
+        eq(schema.products.artist, artist),
+        eq(schema.products.title, title),
+        eq(schema.products.format, format),
+        yearCondition,
+        labelCondition,
+        isNull(schema.products.deletedAt)
+      ),
+      columns: { id: true, stockQuantity: true },
+    });
+
+    if (existingProduct) {
+      await d
+        .update(schema.products)
+        .set({ stockQuantity: existingProduct.stockQuantity + 1, updatedAt: new Date() })
+        .where(eq(schema.products.id, existingProduct.id));
+      revalidateProductPaths(existingProduct.id);
+      return { error: null, success: true };
+    }
+
     await d.insert(schema.products).values({
       id: productId,
       artist,

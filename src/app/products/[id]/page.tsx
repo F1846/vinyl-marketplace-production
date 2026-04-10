@@ -143,8 +143,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     <div className="mx-auto max-w-5xl">
       <JsonLd data={productStructuredData} />
       <JsonLd data={breadcrumbStructuredData} />
-      <div className="grid gap-5 lg:grid-cols-[0.84fr_1.06fr] lg:items-start">
-        <div className="lg:max-w-[24.5rem]">
+      <div className="grid gap-5 lg:grid-cols-[0.84fr_1.06fr]">
+        <div className="lg:max-w-[24.5rem] lg:sticky lg:top-8 lg:self-start">
           <ProductImageGallery
             images={product.images}
             artist={product.artist}
