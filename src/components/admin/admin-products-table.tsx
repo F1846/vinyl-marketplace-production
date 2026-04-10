@@ -229,9 +229,6 @@ export function AdminProductsTable({
             <span className="text-xs uppercase tracking-[0.16em] text-muted">
               {selectedIds.length} selected
             </span>
-            <span className="hidden text-xs text-muted sm:inline">
-              Tip: Shift-click or Shift+↓ to select a range.
-            </span>
           </div>
 
           <form action={bulkUpdateProducts} className="flex flex-wrap gap-2">

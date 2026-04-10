@@ -43,8 +43,6 @@ type Props = {
 type InventorySortKey = "artist" | "price" | "status";
 type InventorySortDirection = "asc" | "desc";
 
-const ALL_CONDITIONS: MediaCondition[] = ["M", "NM", "VG+", "VG", "G", "P"];
-
 const STATUS_ORDER: Record<ProductStatus, number> = {
   active: 0,
   sold_out: 1,
@@ -122,9 +120,6 @@ export function AdminInventoryTable({ items }: Props) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | ProductStatus>("all");
   const [formatFilter, setFormatFilter] = useState<"all" | ProductFormat>("all");
-  const [conditionFilter, setConditionFilter] = useState<"all" | MediaCondition>("all");
-  const [minPriceEur, setMinPriceEur] = useState("");
-  const [maxPriceEur, setMaxPriceEur] = useState("");
   const [sortKey, setSortKey] = useState<InventorySortKey>("artist");
   const [sortDir, setSortDir] = useState<InventorySortDirection>("asc");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -133,8 +128,6 @@ export function AdminInventoryTable({ items }: Props) {
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    const minCents = minPriceEur.trim() ? Math.round(Number(minPriceEur) * 100) : null;
-    const maxCents = maxPriceEur.trim() ? Math.round(Number(maxPriceEur) * 100) : null;
 
     return [...items]
       .filter((item) => {
@@ -143,18 +136,6 @@ export function AdminInventoryTable({ items }: Props) {
         }
 
         if (formatFilter !== "all" && item.format !== formatFilter) {
-          return false;
-        }
-
-        if (conditionFilter !== "all" && item.conditionMedia !== conditionFilter) {
-          return false;
-        }
-
-        if (minCents !== null && item.priceCents < minCents) {
-          return false;
-        }
-
-        if (maxCents !== null && item.priceCents > maxCents) {
           return false;
         }
 
@@ -187,7 +168,7 @@ export function AdminInventoryTable({ items }: Props) {
         );
         return sortDir === "asc" ? delta : -delta;
       });
-  }, [conditionFilter, formatFilter, items, maxPriceEur, minPriceEur, query, sortDir, sortKey, statusFilter]);
+  }, [formatFilter, items, query, sortDir, sortKey, statusFilter]);
 
   const statusCounts = useMemo(
     () => ({
@@ -371,68 +352,6 @@ export function AdminInventoryTable({ items }: Props) {
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-            Condition:
-          </span>
-          {(["all", ...ALL_CONDITIONS] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setConditionFilter(value)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] transition-colors ${
-                conditionFilter === value
-                  ? "border-accent bg-accent text-white"
-                  : "border-border bg-surface text-muted hover:border-foreground/20 hover:text-foreground"
-              }`}
-            >
-              {value === "all" ? "All" : value}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-            Price:
-          </span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted">€</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="Min"
-              value={minPriceEur}
-              onChange={(event) => setMinPriceEur(event.target.value)}
-              className="w-20 rounded-lg border border-border px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent"
-              aria-label="Minimum price in euros"
-            />
-            <span className="text-xs text-muted">–</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="Max"
-              value={maxPriceEur}
-              onChange={(event) => setMaxPriceEur(event.target.value)}
-              className="w-20 rounded-lg border border-border px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent"
-              aria-label="Maximum price in euros"
-            />
-          </div>
-          {(conditionFilter !== "all" || minPriceEur || maxPriceEur) && (
-            <button
-              type="button"
-              onClick={() => {
-                setConditionFilter("all");
-                setMinPriceEur("");
-                setMaxPriceEur("");
-              }}
-              className="text-xs text-accent hover:underline"
-            >
-              Clear filters
-            </button>
-          )}
-        </div>
       </div>
 
       {query && (
@@ -456,9 +375,6 @@ export function AdminInventoryTable({ items }: Props) {
             </label>
             <span className="text-xs uppercase tracking-[0.16em] text-muted">
               {selectedIds.length} selected
-            </span>
-            <span className="hidden text-xs text-muted sm:inline">
-              Tip: Shift-click or Shift + arrow to select a range.
             </span>
           </div>
 

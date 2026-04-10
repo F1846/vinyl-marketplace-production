@@ -235,6 +235,14 @@ export function CatalogBrowser({
               <Filter className="h-4 w-4" /> {dictionary.catalog.filters}
             </div>
 
+            <p className="text-sm text-muted">
+              {formatMessage(dictionary.catalog.resultsShowing, {
+                shown: products.length,
+                total: totalCount,
+                suffix: totalCount === 1 ? "" : "s",
+              })}
+            </p>
+
             <div className="space-y-3">
               <p className="font-sans text-base font-bold tracking-[-0.03em] text-foreground">
                 {dictionary.catalog.format}
@@ -294,58 +302,47 @@ export function CatalogBrowser({
             </div>
           ) : products.length > 0 ? (
             <>
-              <div className="space-y-3 rounded-[1.3rem] border border-border bg-white p-4">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                  <p className="text-sm text-muted">
-                    {formatMessage(dictionary.catalog.resultsShowing, {
-                      shown: products.length,
-                      total: totalCount,
-                      suffix: totalCount === 1 ? "" : "s",
-                    })}
-                  </p>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center xl:flex-1 xl:justify-end">
-                    <div className="relative sm:flex-1 xl:max-w-2xl">
-                      <Search className="absolute left-4 top-3.5 h-4 w-4 text-muted" />
-                      <input
-                        id="catalog-search"
-                        className="input pl-10"
-                        value={draftQuery}
-                        onChange={(event) => setDraftQuery(event.target.value)}
-                        placeholder={dictionary.catalog.artistTitleLabel}
-                        aria-label={dictionary.catalog.search}
-                      />
-                    </div>
-                    <div className="flex items-center gap-3 sm:justify-end">
-                      <label htmlFor="catalog-sort" className="text-sm font-medium text-foreground">
-                        {dictionary.catalog.sort}
-                      </label>
-                      <select
-                        id="catalog-sort"
-                        className="input w-full min-w-[220px] sm:w-auto"
-                        value={query.sort}
-                        onChange={(event) =>
-                          void applyQuery({
-                            ...query,
-                            sort: event.target.value as CatalogSort,
-                          })
-                        }
-                      >
-                        {SORT_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {{
-                              newest: dictionary.catalog.sortNewest,
-                              "price-asc": dictionary.catalog.sortPriceAsc,
-                              "price-desc": dictionary.catalog.sortPriceDesc,
-                              "title-asc": dictionary.catalog.sortTitleAsc,
-                              "title-desc": dictionary.catalog.sortTitleDesc,
-                              "label-asc": dictionary.catalog.sortLabelAsc,
-                              "label-desc": dictionary.catalog.sortLabelDesc,
-                            }[option.value]}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+              <div className="flex flex-col gap-3 rounded-[1.3rem] border border-border bg-white p-4 sm:flex-row sm:items-center">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-3.5 h-4 w-4 text-muted" />
+                  <input
+                    id="catalog-search"
+                    className="input pl-10"
+                    value={draftQuery}
+                    onChange={(event) => setDraftQuery(event.target.value)}
+                    placeholder={dictionary.catalog.artistTitleLabel}
+                    aria-label={dictionary.catalog.search}
+                  />
+                </div>
+                <div className="flex items-center gap-3 sm:justify-end">
+                  <label htmlFor="catalog-sort" className="text-sm font-medium text-foreground">
+                    {dictionary.catalog.sort}
+                  </label>
+                  <select
+                    id="catalog-sort"
+                    className="input w-full min-w-[220px] sm:w-auto"
+                    value={query.sort}
+                    onChange={(event) =>
+                      void applyQuery({
+                        ...query,
+                        sort: event.target.value as CatalogSort,
+                      })
+                    }
+                  >
+                    {SORT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {{
+                          newest: dictionary.catalog.sortNewest,
+                          "price-asc": dictionary.catalog.sortPriceAsc,
+                          "price-desc": dictionary.catalog.sortPriceDesc,
+                          "title-asc": dictionary.catalog.sortTitleAsc,
+                          "title-desc": dictionary.catalog.sortTitleDesc,
+                          "label-asc": dictionary.catalog.sortLabelAsc,
+                          "label-desc": dictionary.catalog.sortLabelDesc,
+                        }[option.value]}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
