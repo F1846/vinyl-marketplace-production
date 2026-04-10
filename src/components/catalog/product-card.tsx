@@ -46,7 +46,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
     : isCompact
       ? "(max-width: 640px) 40vw, (max-width: 1024px) 22vw, 14vw"
       : "(max-width: 640px) 44vw, (max-width: 1024px) 26vw, 17vw";
-  const imageAspect = isMini ? "aspect-[0.82]" : isCompact ? "aspect-[0.88]" : "aspect-[0.9]";
+  const imageAspect = isMini ? "aspect-[0.82]" : isCompact ? "aspect-[0.85]" : "aspect-[0.88]";
   const paddingClass = isMini ? "p-2.5" : isCompact ? "p-3" : "p-[0.8125rem]";
   const bodyClass = isMini
     ? "grid h-full grid-rows-[1.55rem_2rem_1fr_auto]"
@@ -77,15 +77,13 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
     >
       <div className={`relative overflow-hidden bg-[#ebe8e1] ${imageAspect}`}>
         {imageUrl ? (
-          <div className="absolute inset-[5%]">
-            <Image
-              src={imageUrl}
-              alt={`${product.artist} - ${product.title}`}
-              fill
-              className="object-contain transition-transform duration-500 group-hover:scale-[1.02]"
-              sizes={imageSizes}
-            />
-          </div>
+          <Image
+            src={imageUrl}
+            alt={`${product.artist} - ${product.title}`}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            sizes={imageSizes}
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-muted">
             {dictionary.common.noImage}
