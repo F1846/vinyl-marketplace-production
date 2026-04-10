@@ -1,0 +1,335 @@
+name: Daily Security Audit
+
+on:
+  schedule:
+    - cron: "0 9 * * *"   # Every day at 09:00 UTC
+  workflow_dispatch:        # Also runnable manually from GitHub Actions tab
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: daily-security-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Deep Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      CI: "1"
+      DATABASE_URL: "postgresql://user:password@localhost:5432/vinyl_marketplace?sslmode=require"
+      NEXT_PUBLIC_SITE_URL: "http://localhost:3000"
+      STRIPE_MODE: "test"
+      STRIPE_SECRET_KEY: "sk_test_placeholder"
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_test_placeholder"
+      STRIPE_WEBHOOK_SECRET: "whsec_placeholder"
+      ADMIN_PASSWORD: "placeholder"
+      ADMIN_PASSWORD_HASH: ""
+      ADMIN_SESSION_SECRET: "audit-session-secret"
+      CHECKOUT_STATE_SECRET: "audit-checkout-state-secret"
+      MAILGUN_API_KEY: "key-placeholder"
+      MAILGUN_DOMAIN: "sandbox123.mailgun.org"
+      MAILGUN_BASE_URL: "https://api.mailgun.net"
+      EMAIL_FROM_NAME: "Federico Shop DE"
+      EMAIL_FROM: "Federico Shop DE <orders@example.com>"
+      EMAIL_BCC: ""
+      TEST_NOTIFICATION_EMAIL: ""
+      BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_placeholder"
+      DISCOGS_USER_TOKEN: ""
+      DISCOGS_USER_AGENT: "federico-shop/1.0 +https://www.federicoshop.de"
+      PAYPAL_ENVIRONMENT: "sandbox"
+      PAYPAL_CLIENT_ID: "placeholder"
+      PAYPAL_CLIENT_SECRET: "placeholder"
+      NEXT_PUBLIC_PAYPAL_ENABLED: "false"
+      TRACKING_PROVIDER: "ship24"
+      SHIP24_API_KEY: ""
+      SEVENTEENTRACK_API_KEY: ""
+      AFTERSHIP_API_KEY: ""
+      CRON_SECRET: "audit-cron-secret"
+      GOOGLE_SITE_VERIFICATION: ""
+      STORE_OWNER: "Federico Shop"
+      STORE_CONTACT_EMAIL: "orders@federicoshop.de"
+      STORE_EMERGENCY_EMAIL: "emergency@example.com"
+      STORE_EMERGENCY_EMAIL_NOTE: "Automation placeholder contact for local validation only."
+      STORE_ADDRESS_LINE1: "Okerstr"
+      STORE_ADDRESS_LINE2: ""
+      STORE_POSTAL_CODE: "12049"
+      STORE_CITY: "Neukolln Berlin"
+      STORE_COUNTRY: "Germany"
+      STORE_PHONE: ""
+      STORE_VAT_ID: ""
+      STORE_PICKUP_LABEL: "Berlin Neukolln : 12049"
+      STORE_PICKUP_NOTE: "Pickup is arranged by email after your order is placed."
+      SENTRY_DSN: ""
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Anthropic API key
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          test -n "$ANTHROPIC_API_KEY" || (echo "::error::Missing GitHub secret ANTHROPIC_API_KEY" && exit 1)
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        id: npm_audit
+        run: |
+          npm audit --json > "${{ runner.temp }}/npm-audit.json" || true
+          HIGH=$(node -e "const d=require('${{ runner.temp }}/npm-audit.json'); console.log(d.metadata?.vulnerabilities?.high ?? 0)")
+          CRIT=$(node -e "const d=require('${{ runner.temp }}/npm-audit.json'); console.log(d.metadata?.vulnerabilities?.critical ?? 0)")
+          echo "high=$HIGH" >> "$GITHUB_OUTPUT"
+          echo "critical=$CRIT" >> "$GITHUB_OUTPUT"
+          echo "### npm audit" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Critical: $CRIT" >> "$GITHUB_STEP_SUMMARY"
+          echo "- High: $HIGH" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code@latest
+
+      - name: Run Claude Code deep audit
+        id: run_claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NPM_AUDIT_CRITICAL: ${{ steps.npm_audit.outputs.critical }}
+          NPM_AUDIT_HIGH: ${{ steps.npm_audit.outputs.high }}
+        run: |
+          PROMPT=$(cat .github/codex/daily-security-audit.md)
+          PROMPT="${PROMPT}
+
+          Additional context from this run:
+          - npm audit critical vulnerabilities: ${NPM_AUDIT_CRITICAL}
+          - npm audit high vulnerabilities: ${NPM_AUDIT_HIGH}
+          - npm audit full output is at: ${{ runner.temp }}/npm-audit.json
+          "
+          printf '%s' "$PROMPT" | claude --print \
+            --model claude-sonnet-4-6 \
+            --output-format json \
+            > "${{ runner.temp }}/claude-raw.json"
+
+      - name: Parse Claude output
+        id: parse_claude
+        shell: bash
+        env:
+          CLAUDE_RAW_PATH: ${{ runner.temp }}/claude-raw.json
+          OUTPUT_PATH: ${{ runner.temp }}/audit-output.json
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+
+          const rawPath = process.env.CLAUDE_RAW_PATH;
+          const outputPath = process.env.OUTPUT_PATH;
+
+          if (!rawPath || !fs.existsSync(rawPath)) {
+            throw new Error(`Missing Claude output file: ${rawPath || "(empty path)"}`);
+          }
+
+          const raw = JSON.parse(fs.readFileSync(rawPath, "utf8"));
+          const text = raw.result ?? "";
+
+          let parsed;
+          const jsonBlock = text.match(/```json\s*([\s\S]*?)\s*```/);
+          try {
+            parsed = JSON.parse(jsonBlock ? jsonBlock[1] : text.trim());
+          } catch {
+            parsed = {
+              result: "report_only",
+              branch_topic: "",
+              commit_message: "",
+              pr_title: "[claude] Daily security audit",
+              pr_body: text.substring(0, 5000),
+              findings_summary: text.substring(0, 1000) || "No findings summary returned.",
+              validation_summary: "Claude output could not be parsed as structured JSON.",
+              review_status: "Needs review from F1846",
+            };
+          }
+
+          fs.writeFileSync(outputPath, JSON.stringify(parsed, null, 2));
+
+          const out = fs.createWriteStream(process.env.GITHUB_OUTPUT, { flags: "a" });
+          const set = (k, v = "") => out.write(`${k}<<EOF\n${String(v)}\nEOF\n`);
+
+          set("result", parsed.result ?? "");
+          set("branch_topic", parsed.branch_topic ?? "");
+          set("commit_message", parsed.commit_message ?? "");
+          set("pr_title", parsed.pr_title ?? "");
+          set("pr_body", parsed.pr_body ?? "");
+          set("findings_summary", parsed.findings_summary ?? "");
+          set("validation_summary", parsed.validation_summary ?? "");
+          set("review_status", parsed.review_status ?? "");
+          out.end();
+          NODE
+
+      - name: Detect working tree changes
+        id: detect_changes
+        shell: bash
+        run: |
+          if [ -n "$(git status --porcelain --untracked-files=normal)" ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Capture changed files
+        if: steps.detect_changes.outputs.has_changes == 'true'
+        shell: bash
+        env:
+          CHANGED_FILES_PATH: ${{ runner.temp }}/changed-files.txt
+        run: git status --short --untracked-files=normal > "$CHANGED_FILES_PATH"
+
+      - name: Derive branch name
+        id: branch
+        if: steps.detect_changes.outputs.has_changes == 'true'
+        shell: bash
+        env:
+          BRANCH_TOPIC: ${{ steps.parse_claude.outputs.branch_topic }}
+        run: |
+          topic="$(printf '%s' "${BRANCH_TOPIC:-security-audit}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g')"
+          [ -z "$topic" ] && topic="security-audit"
+          DATE="$(date -u +%Y%m%d)"
+          echo "branch=claude/audit-${DATE}-${topic}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push branch
+        if: steps.detect_changes.outputs.has_changes == 'true'
+        shell: bash
+        env:
+          BRANCH_NAME: ${{ steps.branch.outputs.branch }}
+          COMMIT_MESSAGE: ${{ steps.parse_claude.outputs.commit_message }}
+        run: |
+          git config user.name "claude[bot]"
+          git config user.email "claude[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH_NAME"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing staged."
+            exit 0
+          fi
+          message="${COMMIT_MESSAGE:-Apply automated security audit fix}"
+          git commit -m "$message"
+          git push --force-with-lease origin "$BRANCH_NAME"
+
+      - name: Create or update PR
+        id: pr
+        if: steps.detect_changes.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        env:
+          BRANCH_NAME: ${{ steps.branch.outputs.branch }}
+          PR_TITLE: ${{ steps.parse_claude.outputs.pr_title }}
+          PR_BODY: ${{ steps.parse_claude.outputs.pr_body }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const branch = process.env.BRANCH_NAME;
+            const title = process.env.PR_TITLE || "[claude] Daily security audit";
+            const body = process.env.PR_BODY || "Automated daily security audit fix.";
+            const base = context.payload.repository.default_branch;
+            const head = `${owner}:${branch}`;
+
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: "open", head, base, per_page: 100,
+            });
+
+            let pullRequest, actionResult;
+
+            if (pulls.length > 0) {
+              pullRequest = (await github.rest.pulls.update({
+                owner, repo, pull_number: pulls[0].number, title, body, base,
+              })).data;
+              actionResult = "updated";
+            } else {
+              pullRequest = (await github.rest.pulls.create({
+                owner, repo, head: branch, base, title, body, draft: false,
+              })).data;
+              actionResult = "created";
+            }
+
+            await github.rest.issues.addLabels({
+              owner, repo, issue_number: pullRequest.number,
+              labels: ["claude", "security", "automated-audit"],
+            });
+
+            try {
+              await github.rest.pulls.requestReviewers({
+                owner, repo, pull_number: pullRequest.number, reviewers: ["F1846"],
+              });
+            } catch {}
+
+            core.setOutput("pr_number", String(pullRequest.number));
+            core.setOutput("pr_url", pullRequest.html_url);
+            core.setOutput("pr_action", actionResult);
+
+      - name: Open findings issue (report-only runs)
+        if: steps.parse_claude.outputs.result == 'report_only'
+        uses: actions/github-script@v7
+        env:
+          FINDINGS: ${{ steps.parse_claude.outputs.findings_summary }}
+          VALIDATION: ${{ steps.parse_claude.outputs.validation_summary }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const today = new Date().toISOString().slice(0, 10);
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[claude] Security findings – ${today}`,
+              body: `## Daily security audit findings\n\n${process.env.FINDINGS}\n\n### Validation\n\n${process.env.VALIDATION}\n\n> Automated audit — no code changes were applied today. Review findings and act as needed.`,
+              labels: ["claude", "security", "automated-audit"],
+            });
+
+      - name: Write job summary
+        if: always()
+        shell: bash
+        env:
+          RESULT: ${{ steps.parse_claude.outputs.result }}
+          FINDINGS: ${{ steps.parse_claude.outputs.findings_summary }}
+          VALIDATION: ${{ steps.parse_claude.outputs.validation_summary }}
+          PR_URL: ${{ steps.pr.outputs.pr_url }}
+          PR_ACTION: ${{ steps.pr.outputs.pr_action }}
+          NPM_CRITICAL: ${{ steps.npm_audit.outputs.critical }}
+          NPM_HIGH: ${{ steps.npm_audit.outputs.high }}
+          CHANGED_FILES_PATH: ${{ runner.temp }}/changed-files.txt
+        run: |
+          {
+            echo "## Daily Security Audit — $(date -u +%Y-%m-%d)"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Result | ${RESULT:-unknown} |"
+            echo "| npm critical CVEs | ${NPM_CRITICAL:-0} |"
+            echo "| npm high CVEs | ${NPM_HIGH:-0} |"
+            if [ -n "$PR_URL" ]; then
+              echo "| Pull request | $PR_URL ($PR_ACTION) |"
+            else
+              echo "| Pull request | none |"
+            fi
+            echo
+            echo "### Findings"
+            printf '%s\n' "${FINDINGS:-No findings summary returned.}"
+            echo
+            echo "### Validation"
+            printf '%s\n' "${VALIDATION:-No validation summary returned.}"
+            echo
+            if [ -f "$CHANGED_FILES_PATH" ] && [ -s "$CHANGED_FILES_PATH" ]; then
+              echo "### Changed Files"
+              echo '```'
+              cat "$CHANGED_FILES_PATH"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
