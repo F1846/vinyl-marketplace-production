@@ -1,70 +1,34 @@
-import type { Metadata } from "next";
-import { formatMessage } from "@/lib/i18n/format";
-import { getRequestDictionary } from "@/lib/i18n/server";
-import { siteConfig, siteUrl } from "@/lib/site";
+import { siteConfig } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "About Federico Shop",
-  description:
-    "Learn about Federico Shop, a Berlin-based electronic music record shop focused on graded vinyl, cassette, and CD finds.",
-  keywords: [
-    "about Federico Shop",
-    "Federico Shop Berlin",
-    "Berlin record shop",
-    "electronic music record shop",
-  ],
-  alternates: {
-    canonical: siteUrl("/about"),
-  },
+export const metadata = {
+  title: "About",
 };
 
-export default async function AboutPage() {
-  const dictionary = await getRequestDictionary();
-
+export default function AboutPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-8">
       <div className="space-y-3">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-muted">
-          {dictionary.footer.about}
+          About
         </p>
-        <h1 className="font-sans text-3xl font-bold tracking-[-0.04em] text-foreground sm:text-4xl">
-          {dictionary.about.title}
-        </h1>
+        <h1 className="font-serif text-4xl text-foreground">About {siteConfig.name}</h1>
         <p className="text-base leading-7 text-muted">
-          {dictionary.about.body}
+          {siteConfig.name} is a focused shop for graded vinyl, cassette, and CD copies,
+          with an emphasis on electronic music, fair euro pricing, and collector-friendly packing.
         </p>
       </div>
 
       <section className="card space-y-3 text-sm leading-7 text-muted">
-        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
-          {dictionary.about.whatFocuses}
-        </h2>
-        <p>{dictionary.about.whatFocusesBody}</p>
+        <h2 className="font-serif text-2xl text-foreground">What the shop focuses on</h2>
         <p>
-          {formatMessage(dictionary.about.orders, { pickupLabel: siteConfig.pickupLabel })}
+          The catalog is curated rather than bulk-listed. Each product page includes
+          condition details, format information, and shipping that adapts to the destination
+          country and the mix of media in the order.
         </p>
-      </section>
-
-      <section className="card space-y-3 text-sm leading-7 text-muted">
-        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
-          {dictionary.about.storyTitle}
-        </h2>
-        <p>{dictionary.about.storyBody}</p>
-      </section>
-
-      <section className="card space-y-3 text-sm leading-7 text-muted">
-        <h2 className="font-sans text-2xl font-bold tracking-[-0.04em] text-foreground">
-          {dictionary.about.discogsTitle}
-        </h2>
-        <p>{dictionary.about.discogsBody}</p>
-        <a
-          href="https://www.discogs.com/it/user/F1846"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex text-sm font-medium text-accent transition-colors hover:underline"
-        >
-          {dictionary.about.discogsLink}
-        </a>
+        <p>
+          Orders can be placed with card checkout, PayPal when configured, or local pickup
+          from {siteConfig.pickupLabel}.
+        </p>
       </section>
     </div>
   );
