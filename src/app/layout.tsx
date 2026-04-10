@@ -120,6 +120,7 @@ const websiteStructuredData = [
     "@type": "Organization",
     "@id": `${siteConfig.baseUrl}#organization`,
     name: siteConfig.name,
+    alternateName: siteConfig.brandAliases,
     url: siteConfig.baseUrl,
     logo: {
       "@type": "ImageObject",
@@ -154,6 +155,7 @@ const websiteStructuredData = [
     "@type": "MusicStore",
     "@id": `${siteConfig.baseUrl}#store`,
     name: siteConfig.name,
+    alternateName: siteConfig.brandAliases,
     url: siteConfig.baseUrl,
     image: siteUrl("/opengraph-image"),
     logo: {

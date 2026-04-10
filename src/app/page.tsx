@@ -78,7 +78,7 @@ export default async function HomePage() {
   });
   const [{ count, minPrice }] = await d
     .select({
-      count: sql<number>`count(*)`,
+      count: sql<number>`coalesce(sum(${schema.products.stockQuantity}), 0)`,
       minPrice: sql<number | null>`min(${schema.products.priceCents})`,
     })
     .from(schema.products)

@@ -15,6 +15,26 @@ function normalizePickupLabel(value: string | null): string {
   return /studio/i.test(value) ? fallback : value;
 }
 
+function uniqueStrings(values: string[]): string[] {
+  const seen = new Set<string>();
+
+  return values.filter((value) => {
+    const normalized = value.trim();
+
+    if (!normalized) {
+      return false;
+    }
+
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
 export type CatalogLinkQuery = {
   q?: string;
   format?: ProductFormat;
@@ -65,6 +85,110 @@ const configuredSupportEmail =
   clean(process.env.STORE_SUPPORT_EMAIL) ??
   clean(process.env.STORE_SUPPORT_CONTACT_EMAIL);
 
+const brandAliases = uniqueStrings([
+  "Federico Shop",
+  "Federico Shop Berlin",
+  "Federico Shop DE",
+  "Federico Shop Germany",
+  "Federico Shop Deutschland",
+  "Federico Shop Italia",
+  "Federico Shop Records, Tapes and CDs",
+  "Federico Shop Vinyl",
+  "Federico Shop Neukolln",
+]);
+
+const seoKeywords = uniqueStrings([
+  ...brandAliases,
+  "Federico Berlin vinyl",
+  "Berlin record shop",
+  "Berlin vinyl store",
+  "Berlin vinyl records",
+  "Berlin record store",
+  "Berlin vinyl shop",
+  "Berlin CD shop",
+  "Berlin cassette shop",
+  "Berlin electronic music record shop",
+  "electronic music record shop",
+  "electronic music record shop Berlin",
+  "electronic vinyl Berlin",
+  "used electronic music records",
+  "collector vinyl Berlin",
+  "collector records Berlin",
+  "used vinyl Berlin",
+  "used vinyl online",
+  "used CDs Berlin",
+  "used cassettes Berlin",
+  "vinyl records",
+  "cassette tapes",
+  "CD shop",
+  "techno vinyl",
+  "techno vinyl Berlin",
+  "techno records Berlin",
+  "electro vinyl",
+  "electro records Berlin",
+  "EBM records",
+  "EBM records Berlin",
+  "darkwave vinyl",
+  "darkwave records Berlin",
+  "ambient records",
+  "ambient vinyl Berlin",
+  "post-punk records",
+  "post-punk vinyl Berlin",
+  "Berlin local pickup records",
+  "Berlin Neukolln record shop",
+  "record shop Neukolln Berlin",
+  "electronic music store Berlin",
+  "techno record store Berlin",
+  "Schallplattenladen Berlin",
+  "Schallplatten Berlin",
+  "Schallplatten Neukolln",
+  "Elektronische Musik Schallplatten Berlin",
+  "Techno Schallplatten Berlin",
+  "Techno Plattenladen Berlin",
+  "Electro Schallplatten",
+  "EBM Schallplatten",
+  "Darkwave Schallplatten",
+  "Post-Punk Schallplatten",
+  "Plattenladen Berlin Neukolln",
+  "Berliner Plattenladen",
+  "Vinyl Berlin kaufen",
+  "gebrauchte Schallplatten Berlin",
+  "gebrauchte Vinyl Berlin",
+  "Kassettenladen Berlin",
+  "CD Laden Berlin",
+  "lokale Abholung Berlin",
+  "lokale Abholung Neukolln",
+  "Vinili Berlino",
+  "negozio dischi Berlino",
+  "negozio vinili Berlino",
+  "negozio musica elettronica Berlino",
+  "vinili techno Berlino",
+  "vinili techno usati",
+  "vinili electro Berlino",
+  "vinili darkwave",
+  "dischi EBM",
+  "dischi post-punk",
+  "vinili usati Berlino",
+  "cassette usate Berlino",
+  "CD usati Berlino",
+  "ritiro locale Berlino",
+  "ritiro locale Neukolln Berlino",
+  "Discos de vinilo Berlin",
+  "tienda de discos Berlin",
+  "tienda de vinilos Berlin",
+  "tienda de musica electronica Berlin",
+  "vinilos techno Berlin",
+  "vinilos techno usados",
+  "vinilos darkwave",
+  "discos EBM",
+  "discos post-punk",
+  "vinilos usados Berlin",
+  "cassettes usados Berlin",
+  "CD usados Berlin",
+  "recogida local Berlin",
+  "recogida local Neukolln Berlin",
+]);
+
 export const siteConfig = {
   name: "Federico Shop",
   shortName: "Federico Shop",
@@ -74,36 +198,8 @@ export const siteConfig = {
   discogsUrl: "https://www.discogs.com/it/user/F1846",
   faviconPath: "/favicon.svg",
   logoPath: "/logo-mark.svg",
-  seoKeywords: [
-    "Federico Shop",
-    "Federico Shop Berlin",
-    "Federico Shop Germany",
-    "Federico Berlin vinyl",
-    "Berlin record shop",
-    "Berlin vinyl store",
-    "Berlin vinyl records",
-    "Berlin record store",
-    "electronic music record shop",
-    "electronic music record shop Berlin",
-    "techno vinyl",
-    "techno vinyl Berlin",
-    "electro vinyl",
-    "electro records Berlin",
-    "EBM records",
-    "EBM records Berlin",
-    "darkwave vinyl",
-    "darkwave records Berlin",
-    "ambient records",
-    "ambient vinyl Berlin",
-    "post-punk records",
-    "used vinyl Berlin",
-    "used vinyl online",
-    "vinyl records",
-    "cassette tapes",
-    "CD shop",
-    "Berlin local pickup records",
-    "Berlin Neukolln record shop",
-  ],
+  brandAliases,
+  seoKeywords,
   orderEmail: configuredOrderEmail ?? fallbackOrderEmail,
   supportEmail: configuredSupportEmail ?? fallbackSupportEmail,
   baseUrl:
