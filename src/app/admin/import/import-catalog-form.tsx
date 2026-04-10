@@ -492,9 +492,6 @@ export function ImportCatalogForm() {
             </>
           )}
 
-          <p className="text-xs text-muted">
-            This import keeps running in the background even if you leave or close the tab.
-          </p>
         </div>
       )}
 

@@ -1095,17 +1095,133 @@ export async function* importDiscogsCollectionCsvGenerator(
     return;
   }
 
-  yield { type: "start", total: inspection.totalRows, csvType: "collection" };
+  requireEnv("DATABASE_URL");
+  const discogsToken = requireEnv("DISCOGS_USER_TOKEN");
+  const discogsUserAgent = process.env.DISCOGS_USER_AGENT?.trim() || DEFAULT_USER_AGENT;
 
-  if (signal?.aborted) {
-    return;
+  const parsed = parseCsv(input);
+  const rows = parsed.rows as unknown as CollectionRow[];
+
+  yield { type: "start", total: rows.length, csvType: "collection" };
+
+  const d = db();
+  const releaseCache = new Map<number, Promise<DiscogsRelease | null>>();
+  let imported = 0;
+  let rowsWithImages = 0;
+  let rowsWithoutImages = 0;
+
+  for (const row of rows) {
+    if (signal?.aborted) break;
+
+    try {
+      const releaseId = Number.parseInt(row.release_id, 10);
+      if (!Number.isFinite(releaseId)) continue;
+
+      if (!releaseCache.has(releaseId)) {
+        releaseCache.set(
+          releaseId,
+          fetchDiscogsRelease(releaseId, discogsToken, discogsUserAgent).catch(() => null)
+        );
+      }
+
+      const release = await releaseCache.get(releaseId)!;
+      const imageUrls = imageUrlsFor(release);
+
+      const mediaCondition = toMediaCondition(row["collection media condition"]);
+      const sleeveCondition = toMediaCondition(row["collection sleeve condition"]);
+      const pricePaid = row["collection price paid"].trim();
+
+      const insertValues = {
+        id: crypto.randomUUID(),
+        artist: row.artist.trim(),
+        title: row.title.trim(),
+        format: toFormat(row.format),
+        genre: toGenre(release),
+        priceCents: pricePaid ? toCents(pricePaid) : 0,
+        stockQuantity: 1,
+        conditionMedia: mediaCondition,
+        conditionSleeve: sleeveCondition,
+        pressingLabel: firstNonEmpty(release?.labels?.[0]?.name, row.label),
+        pressingYear:
+          safeYear(release?.year) ??
+          (row.released ? Number.parseInt(row.released, 10) : null),
+        pressingCatalogNumber: firstNonEmpty(release?.labels?.[0]?.catno, row["catalog#"]),
+        discogsListingId: null,
+        discogsReleaseId: releaseId,
+        description: descriptionForCollection(row, release),
+        status: targetStatus,
+      };
+
+      const existing = await d.query.products.findFirst({
+        where: buildProductIdentityWhere({
+          artist: insertValues.artist,
+          title: insertValues.title,
+          format: insertValues.format,
+          pressingYear: insertValues.pressingYear,
+          pressingLabel: insertValues.pressingLabel,
+          pressingCatalogNumber: insertValues.pressingCatalogNumber,
+          conditionMedia: insertValues.conditionMedia,
+          conditionSleeve: insertValues.conditionSleeve,
+        }),
+        columns: { id: true, stockQuantity: true, status: true, version: true },
+      });
+
+      if (existing) {
+        const nextStockQuantity = existing.stockQuantity + 1;
+        await d
+          .update(schema.products)
+          .set({
+            stockQuantity: nextStockQuantity,
+            status: resolveProductStatus({
+              status: existing.status,
+              stockQuantity: nextStockQuantity,
+            }),
+            updatedAt: new Date(),
+            version: existing.version + 1,
+          })
+          .where(eq(schema.products.id, existing.id));
+      } else {
+        const [product] = await d
+          .insert(schema.products)
+          .values(insertValues)
+          .returning({ id: schema.products.id });
+
+        if (imageUrls.length > 0) {
+          await d.insert(schema.productImages).values(
+            imageUrls.map((url, sortOrder) => ({
+              id: crypto.randomUUID(),
+              productId: product.id,
+              url,
+              sortOrder,
+            }))
+          );
+          rowsWithImages += 1;
+        } else {
+          rowsWithoutImages += 1;
+        }
+      }
+
+      imported += 1;
+    } catch {
+      // Skip this row and continue with the rest
+    }
+
+    yield {
+      type: "progress",
+      processed: imported,
+      total: rows.length,
+      current: `${row.artist?.trim() ?? ""} – ${row.title?.trim() ?? ""}`,
+    };
   }
-
-  const summary = await importDiscogsCollectionCsv(input, targetStatus);
 
   yield {
     type: "complete",
-    summary,
+    summary: {
+      ...inspection,
+      imported,
+      rowsWithImages,
+      rowsWithoutImages,
+    },
   };
 }
 

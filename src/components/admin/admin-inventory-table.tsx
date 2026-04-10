@@ -108,7 +108,7 @@ function PutOnSaleForm({
       <button
         type="submit"
         title="Set price and put on sale"
-        className="inline-flex items-center gap-1 rounded-r-md border border-border px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted transition-colors hover:border-success hover:bg-emerald-50 hover:text-success"
+        className="inline-flex items-center gap-1 rounded-[1rem] border border-border px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted transition-colors hover:border-success hover:bg-emerald-50 hover:text-success"
       >
         <Tag className="h-3 w-3" />
         Put on Sale

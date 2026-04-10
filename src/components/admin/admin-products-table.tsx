@@ -252,27 +252,6 @@ export function AdminProductsTable({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => selectByStatuses(["active"])}
-            className="btn-secondary text-sm"
-          >
-            Select active
-          </button>
-          <button
-            type="button"
-            onClick={() => selectByStatuses(["sold_out"])}
-            className="btn-secondary text-sm"
-          >
-            Select sold out
-          </button>
-          <button
-            type="button"
-            onClick={() => selectByStatuses(["archived"])}
-            className="btn-secondary text-sm"
-          >
-            Select archived
-          </button>
-          <button
-            type="button"
             onClick={() => {
               setSelectedIds([]);
               lastSelectedIndexRef.current = null;
