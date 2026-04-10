@@ -3,7 +3,9 @@ import type { ReactNode } from "react";
 import { Fraunces, Manrope } from "next/font/google";
 import Script from "next/script";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+
 import "@/styles/globals.css";
+
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { LocaleProvider } from "@/components/providers/locale-provider";
@@ -39,64 +41,10 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL(siteConfig.baseUrl),
   manifest: "/manifest.webmanifest",
-  export const metadata: Metadata = {
-  title: {
-    default: "Federico Shop | Berlin Electronic Music Vinyl, Cassettes & CDs",
-    template: "%s | Federico Shop",
-  },
-  metadataBase: new URL(siteConfig.baseUrl),
-  manifest: "/manifest.webmanifest",
   icons: {
     icon: [{ url: "/icon", type: "image/png", sizes: "512x512" }],
     apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
   },
-  description: siteConfig.description,
-  applicationName: siteConfig.name,
-  keywords: siteConfig.seoKeywords,
-  authors: [{ name: siteConfig.name }],
-  creator: siteConfig.name,
-  publisher: siteConfig.name,
-  category: "music store",
-  openGraph: {
-    title: "Federico Shop | Berlin Electronic Music Record Shop",
-    description: siteConfig.description,
-    type: "website",
-    url: siteConfig.baseUrl,
-    siteName: siteConfig.name,
-    images: [
-      {
-        url: siteUrl("/opengraph-image"),
-        width: 1200,
-        height: 630,
-        alt: "Federico Shop - Berlin electronic music record shop",
-      },
-    ],
-  },
-  alternates: {
-    canonical: siteConfig.baseUrl,
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Federico Shop | Berlin Electronic Music Record Shop",
-    description: siteConfig.description,
-    images: [siteUrl("/twitter-image")],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    nocache: false,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
-    },
-  },
-  verification: {
-    google: process.env.GOOGLE_SITE_VERIFICATION,
-  },
-};
   description: siteConfig.description,
   applicationName: siteConfig.name,
   keywords: siteConfig.seoKeywords,
@@ -158,31 +106,22 @@ const websiteStructuredData = [
       "query-input": "required name=search_term_string",
     },
   },
- {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: siteConfig.name,
-  url: siteConfig.baseUrl,
-  logo: siteUrl("/icon"),
-  email: siteConfig.supportEmail,
-  knowsAbout: siteConfig.seoKeywords,
-  contactPoint: [
-    {
-      "@type": "ContactPoint",
-      email: siteConfig.supportEmail,
-      contactType: "customer support",
-      areaServed: ["DE", "EU"],
-      availableLanguage: ["en", "de", "it"],
-    },
-    {
-      "@type": "ContactPoint",
-      email: siteConfig.orderEmail,
-      contactType: "sales",
-      areaServed: ["DE", "EU"],
-      availableLanguage: ["en", "de", "it"],
-    },
-  ],
-},
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: siteConfig.name,
+    url: siteConfig.baseUrl,
+    logo: siteUrl("/icon"),
+    email: siteConfig.supportEmail,
+    knowsAbout: siteConfig.seoKeywords,
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        email: siteConfig.supportEmail,
+        contactType: "customer support",
+        areaServed: ["DE", "EU"],
+        availableLanguage: ["en", "de", "it"],
+      },
       {
         "@type": "ContactPoint",
         email: siteConfig.orderEmail,
@@ -192,48 +131,53 @@ const websiteStructuredData = [
       },
     ],
   },
-{
-  "@context": "https://schema.org",
-  "@type": "MusicStore",
-  name: siteConfig.name,
-  url: siteConfig.baseUrl,
-  image: siteUrl("/opengraph-image"),
-  logo: siteUrl("/icon"),
-  description: siteConfig.description,
-  email: siteConfig.supportEmail,
-  telephone: siteConfig.legal.phone ?? undefined,
-  paymentAccepted: ["PayPal", "Credit Card", "Local Pickup"],
-  priceRange: "EUR",
-  areaServed: ["Germany", "Europe"],
-  knowsAbout: siteConfig.seoKeywords,
-  hasOfferCatalog: {
-    "@type": "OfferCatalog",
-    name: "Federico Shop catalog collections",
-    itemListElement: [
-      ...catalogFormatCollections.map((collection) => ({
-        "@type": "OfferCatalog",
-        name: collection.label,
-        url: buildCatalogUrl({ format: collection.format }),
-      })),
-      ...catalogGenreCollections.map((collection) => ({
-        "@type": "OfferCatalog",
-        name: collection.label,
-        url: buildCatalogUrl({ genre: collection.genre }),
-      })),
-    ],
+  {
+    "@context": "https://schema.org",
+    "@type": "MusicStore",
+    name: siteConfig.name,
+    url: siteConfig.baseUrl,
+    image: siteUrl("/opengraph-image"),
+    logo: siteUrl("/icon"),
+    description: siteConfig.description,
+    email: siteConfig.supportEmail,
+    telephone: siteConfig.legal.phone ?? undefined,
+    paymentAccepted: ["PayPal", "Credit Card", "Local Pickup"],
+    priceRange: "EUR",
+    areaServed: ["Germany", "Europe"],
+    knowsAbout: siteConfig.seoKeywords,
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Federico Shop catalog collections",
+      itemListElement: [
+        ...catalogFormatCollections.map((collection) => ({
+          "@type": "OfferCatalog",
+          name: collection.label,
+          url: buildCatalogUrl({ format: collection.format }),
+        })),
+        ...catalogGenreCollections.map((collection) => ({
+          "@type": "OfferCatalog",
+          name: collection.label,
+          url: buildCatalogUrl({ genre: collection.genre }),
+        })),
+      ],
+    },
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: [siteConfig.legal.street, siteConfig.legal.street2]
+        .filter(Boolean)
+        .join(", "),
+      addressLocality: siteConfig.legal.city,
+      postalCode: siteConfig.legal.postalCode,
+      addressCountry: siteConfig.legal.country,
+    },
   },
-  address: {
-    "@type": "PostalAddress",
-    streetAddress: [siteConfig.legal.street, siteConfig.legal.street2]
-      .filter(Boolean)
-      .join(", "),
-    addressLocality: siteConfig.legal.city,
-    postalCode: siteConfig.legal.postalCode,
-    addressCountry: siteConfig.legal.country,
-  },
-},
+];
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const locale = await getRequestLocale();
   const dictionary = getDictionary(locale);
 
@@ -254,6 +198,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             gtag('config', '${googleTagId}');
           `}
         </Script>
+
         <LocaleProvider locale={locale} dictionary={dictionary}>
           <JsonLd data={websiteStructuredData} />
           <Header />
