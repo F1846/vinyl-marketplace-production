@@ -100,7 +100,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       "@type": "Offer",
       url: siteUrl(`/products/${product.id}`),
       priceCurrency: "EUR",
-      price: (product.priceCents / 100).toFixed(2),
+      price: product.priceCents / 100,
       availability: inStock
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
