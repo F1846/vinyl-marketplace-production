@@ -42,7 +42,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.baseUrl),
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: [{ url: "/icon", type: "image/png", sizes: "512x512" }],
+    icon: [
+      { url: siteConfig.faviconPath, type: "image/svg+xml", sizes: "any" },
+      { url: "/icon", type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: [{ url: siteConfig.faviconPath, type: "image/svg+xml" }],
     apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
   },
   description: siteConfig.description,
@@ -97,9 +101,14 @@ const websiteStructuredData = [
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
+    "@id": `${siteConfig.baseUrl}#website`,
     name: siteConfig.name,
     url: siteConfig.baseUrl,
     description: siteConfig.description,
+    inLanguage: ["en", "de", "it"],
+    publisher: {
+      "@id": `${siteConfig.baseUrl}#organization`,
+    },
     potentialAction: {
       "@type": "SearchAction",
       target: `${siteConfig.baseUrl}/catalog?q={search_term_string}`,
@@ -109,10 +118,19 @@ const websiteStructuredData = [
   {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": `${siteConfig.baseUrl}#organization`,
     name: siteConfig.name,
     url: siteConfig.baseUrl,
-    logo: siteUrl("/icon"),
+    logo: {
+      "@type": "ImageObject",
+      url: siteUrl(siteConfig.logoPath),
+      contentUrl: siteUrl(siteConfig.logoPath),
+      width: 512,
+      height: 512,
+      caption: siteConfig.name,
+    },
     email: siteConfig.supportEmail,
+    sameAs: [siteConfig.discogsUrl],
     knowsAbout: siteConfig.seoKeywords,
     contactPoint: [
       {
@@ -134,16 +152,25 @@ const websiteStructuredData = [
   {
     "@context": "https://schema.org",
     "@type": "MusicStore",
+    "@id": `${siteConfig.baseUrl}#store`,
     name: siteConfig.name,
     url: siteConfig.baseUrl,
     image: siteUrl("/opengraph-image"),
-    logo: siteUrl("/icon"),
+    logo: {
+      "@type": "ImageObject",
+      url: siteUrl(siteConfig.logoPath),
+      contentUrl: siteUrl(siteConfig.logoPath),
+      width: 512,
+      height: 512,
+      caption: siteConfig.name,
+    },
     description: siteConfig.description,
     email: siteConfig.supportEmail,
     telephone: siteConfig.legal.phone ?? undefined,
     paymentAccepted: ["PayPal", "Credit Card", "Local Pickup"],
     priceRange: "EUR",
     areaServed: ["Germany", "Europe"],
+    sameAs: [siteConfig.discogsUrl],
     knowsAbout: siteConfig.seoKeywords,
     hasOfferCatalog: {
       "@type": "OfferCatalog",
