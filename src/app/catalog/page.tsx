@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import { CatalogBrowser } from "@/components/catalog/catalog-browser";
 import { JsonLd } from "@/components/seo/json-ld";
 import { catalogSortValues, getCatalogFilters, getCatalogPage } from "@/lib/catalog";
@@ -15,9 +16,12 @@ function normalizeCatalogParams(params: {
 }) {
   const q = params.q?.trim() ?? "";
   const genre = params.genre?.trim() ?? "";
-  const sort = catalogSortValues.includes((params.sort ?? "") as (typeof catalogSortValues)[number])
+  const sort = catalogSortValues.includes(
+    (params.sort ?? "") as (typeof catalogSortValues)[number],
+  )
     ? ((params.sort ?? "newest") as (typeof catalogSortValues)[number])
     : "newest";
+
   const format =
     params.format === "vinyl" || params.format === "cassette" || params.format === "cd"
       ? (params.format as ProductFormat)
@@ -26,7 +30,11 @@ function normalizeCatalogParams(params: {
   return { q, format, genre, sort };
 }
 
-function getCatalogSeoMeta(query: { q: string; format?: ProductFormat; genre: string }) {
+function getCatalogSeoMeta(query: {
+  q: string;
+  format?: ProductFormat;
+  genre: string;
+}) {
   const formatLabel =
     query.format === "vinyl"
       ? "Vinyl Records"
@@ -82,7 +90,12 @@ function getCatalogSeoMeta(query: { q: string; format?: ProductFormat; genre: st
     return {
       title: `Search results for "${query.q}"`,
       description: `Search Federico Shop for ${query.q} across graded vinyl, cassette, and CD listings.`,
-      keywords: [`${query.q}`, `${query.q} records`, `${query.q} vinyl`, "Federico Shop search"],
+      keywords: [
+        `${query.q}`,
+        `${query.q} records`,
+        `${query.q} vinyl`,
+        "Federico Shop search",
+      ],
       canonical: buildCatalogUrl({ q: query.q }),
     };
   }
@@ -139,25 +152,27 @@ export default async function CatalogPage({
     getCatalogPage({ q, format, genre, sort, limit: 24, offset: 0 }),
     getCatalogFilters(),
   ]);
-const catalogStructuredData = {
-  "@context": "https://schema.org",
-  "@type": "CollectionPage",
-  name: seo.title,
-  url: seo.canonical,
-  description: seo.description,
-  mainEntity: {
-    "@type": "ItemList",
+
+  const catalogStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
     name: seo.title,
-    numberOfItems: catalog.products.length,
-    itemListElement: catalog.products.map((product, index) => ({
-      "@type": "ListItem",
-      position: index + 1,
-      url: siteUrl(`/products/${product.id}`),
-      name: `${product.artist} - ${product.title}`,
-      image: product.images[0]?.url,
-    })),
-  },
-};
+    url: seo.canonical,
+    description: seo.description,
+    mainEntity: {
+      "@type": "ItemList",
+      name: seo.title,
+      numberOfItems: catalog.products.length,
+      itemListElement: catalog.products.map((product, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        url: siteUrl(`/products/${product.id}`),
+        name: `${product.artist} - ${product.title}`,
+        image: product.images[0]?.url,
+      })),
+    },
+  };
+
   const breadcrumbStructuredData = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
