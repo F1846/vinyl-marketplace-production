@@ -383,12 +383,12 @@ export function AdminInventoryTable({ items }: Props) {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="overflow-hidden rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-surface-hover">
             <tr>
               <th className="w-10 px-4 py-3 text-left font-medium text-foreground"><span className="sr-only">Select</span></th>
-              <th className="min-w-[320px] px-4 py-3 text-left font-medium text-foreground">Item</th>
+              <th className="w-full px-4 py-3 text-left font-medium text-foreground">Item</th>
               <th className="hidden px-4 py-3 text-left font-medium text-foreground sm:table-cell">Format</th>
               <th className="hidden px-4 py-3 text-left font-medium text-foreground md:table-cell">{renderSortHeader("Price", "price")}</th>
               <th className="hidden px-4 py-3 text-left font-medium text-foreground md:table-cell">{renderSortHeader("Stock", "stock")}</th>
@@ -442,16 +442,16 @@ export function AdminInventoryTable({ items }: Props) {
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 hover:text-accent hover:underline"
                             >
-                              {item.artist} \u2014 {item.title}
+                              {item.artist} — {item.title}
                               <ExternalLink className="h-3 w-3 flex-shrink-0 text-muted" />
                             </a>
                           ) : (
-                            <span>{item.artist} \u2014 {item.title}</span>
+                            <span>{item.artist} — {item.title}</span>
                           )}
                         </div>
                         {(item.pressingLabel || item.pressingCatalogNumber || item.pressingYear) && (
                           <div className="mt-0.5 text-xs text-muted">
-                            {[item.pressingLabel, item.pressingCatalogNumber, item.pressingYear].filter(Boolean).join(" \u00b7 ")}
+                            {[item.pressingLabel, item.pressingCatalogNumber, item.pressingYear].filter(Boolean).join(" · ")}
                           </div>
                         )}
                         <div className="mt-1 flex flex-wrap items-center gap-2 sm:hidden">
