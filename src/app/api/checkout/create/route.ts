@@ -5,6 +5,7 @@ import {
   createCheckoutMetadata,
   getCheckoutProducts,
 } from "@/lib/checkout";
+import { enforceCheckoutRateLimit } from "@/lib/checkout-rate-limit";
 import { stripe } from "@/lib/stripe";
 import { checkoutSchema } from "@/validations/checkout";
 
@@ -31,18 +32,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const checkoutRateLimit = await enforceCheckoutRateLimit(req);
+  if (checkoutRateLimit.response) {
+    return checkoutRateLimit.response;
+  }
+
   let body: unknown;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: { code: "INVALID_JSON" } }, { status: 400 });
+    return NextResponse.json(
+      { error: { code: "INVALID_JSON" } },
+      { status: 400, headers: checkoutRateLimit.headers }
+    );
   }
 
   const parsed = checkoutSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: { code: "VALIDATION_FAILED", details: parsed.error.flatten() } },
-      { status: 400 }
+      { status: 400, headers: checkoutRateLimit.headers }
     );
   }
 
@@ -106,7 +115,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url }, { headers: checkoutRateLimit.headers });
   } catch (error) {
     return NextResponse.json(
       {
@@ -115,7 +124,7 @@ export async function POST(req: NextRequest) {
           message: error instanceof Error ? error.message : "Checkout failed.",
         },
       },
-      { status: 409 }
+      { status: 409, headers: checkoutRateLimit.headers }
     );
   }
 }
