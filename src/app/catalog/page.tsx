@@ -146,7 +146,7 @@ export async function generateMetadata({
   return {
     title: seo.title,
     description: seo.description,
-    keywords: seo.keywords,
+    keywords: [...seo.keywords, siteConfig.name, "Berlin-based online record shop"],
     alternates: {
       canonical: seo.canonical,
     },
@@ -154,6 +154,12 @@ export async function generateMetadata({
       title: `${seo.title} | ${siteConfig.name}`,
       description: seo.description,
       url: seo.canonical,
+      siteName: siteConfig.name,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${seo.title} | ${siteConfig.name}`,
+      description: seo.description,
     },
   };
 }
@@ -182,6 +188,10 @@ export default async function CatalogPage({
     name: seo.title,
     url: seo.canonical,
     description: seo.description,
+    keywords: seo.keywords.join(", "),
+    isPartOf: {
+      "@id": `${siteConfig.baseUrl}#website`,
+    },
     mainEntity: {
       "@type": "ItemList",
       name: seo.title,

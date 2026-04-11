@@ -33,6 +33,11 @@ function getMetadataForPage(
       url: canonical,
       siteName: siteConfig.name,
     },
+    twitter: {
+      card: "summary_large_image",
+      title: `${page.title} | ${siteConfig.name}`,
+      description: page.description,
+    },
   };
 }
 
@@ -68,6 +73,10 @@ function buildCollectionStructuredData(
     name: page.title,
     url: siteUrl(`/${page.slug}`),
     description: page.description,
+    keywords: page.keywords.join(", "),
+    isPartOf: {
+      "@id": `${siteConfig.baseUrl}#website`,
+    },
     mainEntity: {
       "@type": "ItemList",
       name: page.collectionLabel,
@@ -90,6 +99,10 @@ function buildPickupStructuredData(page: PickupSeoLandingPage) {
       name: page.title,
       url: siteUrl(`/${page.slug}`),
       description: page.description,
+      keywords: page.keywords.join(", "),
+      isPartOf: {
+        "@id": `${siteConfig.baseUrl}#website`,
+      },
       about: {
         "@type": "MusicStore",
         name: siteConfig.name,

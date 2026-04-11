@@ -13,6 +13,49 @@ import { conditionLabel } from "@/types/product";
 
 export const dynamic = "force-dynamic";
 
+function uniqueKeywords(values: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+
+  return values
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .filter((value) => {
+      const key = value.toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+}
+
+function buildProductSeoDescription(product: Awaited<ReturnType<typeof getProduct>>) {
+  if (!product) {
+    return "";
+  }
+
+  if (product.description?.trim()) {
+    return product.description.trim();
+  }
+
+  const releaseDetail = [
+    product.pressingLabel,
+    product.pressingCatalogNumber,
+    product.pressingYear ? String(product.pressingYear) : null,
+  ]
+    .filter(Boolean)
+    .join(" / ");
+
+  return [
+    `${product.artist} - ${product.title}.`,
+    `${product.genre} ${product.format.toUpperCase()} in stock at ${formatEuroFromCents(product.priceCents)}.`,
+    releaseDetail ? `${releaseDetail}.` : null,
+    "Available from Federico Shop, the Berlin-based online record shop for graded collector copies.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 async function getProduct(id: string) {
   const d = db();
   return d.query.products.findFirst({
@@ -39,23 +82,27 @@ export async function generateMetadata({
     };
   }
 
-  const title = `${product.artist} - ${product.title}`;
-  const description =
-    product.description?.trim() ||
-    `${product.artist} - ${product.title}. ${product.format.toUpperCase()} / ${product.genre} / ${formatEuroFromCents(product.priceCents)} from Federico Shop Berlin.`;
+  const title = `${product.artist} - ${product.title} (${product.format.toUpperCase()})`;
+  const description = buildProductSeoDescription(product);
   const imageUrl = product.images[0]?.url;
+  const productKeywords = uniqueKeywords([
+    `${product.artist} ${product.title}`,
+    `${product.artist} ${product.title} ${product.format}`,
+    `${product.artist} ${product.title} ${product.genre}`,
+    product.pressingLabel ? `${product.pressingLabel} ${product.title}` : null,
+    product.pressingCatalogNumber,
+    product.pressingYear ? `${product.artist} ${product.pressingYear}` : null,
+    `${product.genre} ${product.format}`,
+    `${product.genre} ${product.format} Berlin`,
+    `buy ${product.genre.toLowerCase()} ${product.format}`,
+    `${siteConfig.name} ${product.genre}`,
+    "Berlin-based online record shop",
+  ]);
 
   return {
     title,
     description,
-    keywords: [
-      `${product.artist} ${product.title}`,
-      `${product.genre} ${product.format}`,
-      `${product.pressingLabel ?? "electronic music"} record`,
-      "used vinyl record",
-      "Federico Shop Berlin",
-      "electronic music online record shop",
-    ],
+    keywords: productKeywords,
     alternates: {
       canonical: siteUrl(`/products/${product.id}`),
     },
@@ -88,15 +135,25 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   }
 
   const inStock = product.stockQuantity > 0;
+  const productKeywords = uniqueKeywords([
+    `${product.artist} ${product.title}`,
+    `${product.artist} ${product.title} ${product.format}`,
+    `${product.genre} ${product.format}`,
+    product.pressingLabel,
+    product.pressingCatalogNumber,
+    product.pressingYear ? String(product.pressingYear) : null,
+    "Federico Shop",
+  ]);
   const productStructuredData = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: `${product.artist} - ${product.title}`,
-    description:
-      product.description?.trim() ||
-      `${product.format.toUpperCase()} / ${product.genre} / ${formatEuroFromCents(product.priceCents)}`,
+    url: siteUrl(`/products/${product.id}`),
+    description: buildProductSeoDescription(product),
     image: product.images.map((image) => image.url),
+    keywords: productKeywords.join(", "),
     sku: product.pressingCatalogNumber || product.id,
+    mpn: product.pressingCatalogNumber || undefined,
     category: [product.genre, product.format].filter(Boolean).join(" / "),
     brand: product.pressingLabel
       ? {
@@ -104,11 +161,63 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           name: product.pressingLabel,
         }
       : undefined,
+    additionalProperty: [
+      {
+        "@type": "PropertyValue",
+        name: "Artist",
+        value: product.artist,
+      },
+      {
+        "@type": "PropertyValue",
+        name: "Format",
+        value: product.format.toUpperCase(),
+      },
+      {
+        "@type": "PropertyValue",
+        name: "Genre",
+        value: product.genre,
+      },
+      product.pressingLabel
+        ? {
+            "@type": "PropertyValue",
+            name: "Label",
+            value: product.pressingLabel,
+          }
+        : null,
+      product.pressingCatalogNumber
+        ? {
+            "@type": "PropertyValue",
+            name: "Catalog Number",
+            value: product.pressingCatalogNumber,
+          }
+        : null,
+      product.pressingYear
+        ? {
+            "@type": "PropertyValue",
+            name: "Year",
+            value: String(product.pressingYear),
+          }
+        : null,
+      product.conditionMedia
+        ? {
+            "@type": "PropertyValue",
+            name: "Media Condition",
+            value: product.conditionMedia,
+          }
+        : null,
+      product.conditionSleeve
+        ? {
+            "@type": "PropertyValue",
+            name: "Sleeve Condition",
+            value: product.conditionSleeve,
+          }
+        : null,
+    ].filter(Boolean),
     offers: {
       "@type": "Offer",
       url: siteUrl(`/products/${product.id}`),
       priceCurrency: "EUR",
-      price: product.priceCents / 100,
+      price: (product.priceCents / 100).toFixed(2),
       availability: inStock
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
