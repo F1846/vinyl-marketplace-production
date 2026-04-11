@@ -171,6 +171,11 @@ export default async function CatalogPage({
     getCatalogFilters(),
   ]);
 
+  // Use the summary-page ItemList pattern: each ListItem has only position + url.
+  // Google follows each url to the individual product page to validate the full
+  // Product schema (with offers, seller, itemCondition). Embedding inline Product
+  // items with both url AND item caused Google to surface validation errors on
+  // /catalog rather than the canonical product URLs.
   const catalogStructuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -185,22 +190,6 @@ export default async function CatalogPage({
         "@type": "ListItem",
         position: index + 1,
         url: siteUrl(`/products/${product.id}`),
-        item: {
-          "@type": "Product",
-          name: `${product.artist} - ${product.title}`,
-          image: product.images[0]?.url ? [product.images[0].url] : undefined,
-          category: [product.genre, product.format].filter(Boolean).join(" / "),
-          offers: {
-            "@type": "Offer",
-            priceCurrency: "EUR",
-            price: (product.priceCents / 100).toFixed(2),
-            availability:
-              product.stockQuantity > 0
-                ? "https://schema.org/InStock"
-                : "https://schema.org/OutOfStock",
-            url: siteUrl(`/products/${product.id}`),
-          },
-        },
       })),
     },
   };

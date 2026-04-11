@@ -17,6 +17,19 @@ export const metadata: Metadata = {
   alternates: {
     canonical: siteUrl("/shipping"),
   },
+  openGraph: {
+    title: "Shipping and Pickup | Federico Shop",
+    description:
+      "Review Federico Shop shipping rates, local pickup in Berlin Neukolln, and format-aware delivery for vinyl, cassette, and CD.",
+    url: siteUrl("/shipping"),
+    siteName: siteConfig.name,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Shipping and Pickup | Federico Shop",
+    description:
+      "Review Federico Shop shipping rates, local pickup in Berlin Neukolln, and format-aware delivery for vinyl, cassette, and CD.",
+  },
 };
 
 export default async function ShippingPage() {

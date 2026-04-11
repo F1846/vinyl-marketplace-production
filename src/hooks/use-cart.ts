@@ -13,7 +13,7 @@ export interface CartItemType {
 }
 
 const CART_KEY = "federico_shop_cart";
-const CART_COOKIE_MAX_AGE_SECONDS = 60 * 10;
+const CART_COOKIE_MAX_AGE_SECONDS = 60 * 10; 
 const CART_TTL_MS = 10 * 60 * 1000;
 
 type StoredCartPayload = {
@@ -114,7 +114,8 @@ function persistCart(items: CartItemType[]) {
   };
   localStorage.setItem(CART_KEY, JSON.stringify(payload));
   const compactItems = items.map(({ productId, quantity }) => ({ productId, quantity }));
-  document.cookie = `${CART_KEY}=${encodeURIComponent(JSON.stringify(compactItems))}; path=/; max-age=${CART_COOKIE_MAX_AGE_SECONDS}; samesite=lax`;
+  const isSecure = typeof window !== "undefined" && window.location.protocol === "https:";
+  document.cookie = `${CART_KEY}=${encodeURIComponent(JSON.stringify(compactItems))}; path=/; max-age=${CART_COOKIE_MAX_AGE_SECONDS}; samesite=lax${isSecure ? "; secure" : ""}`;
 }
 
 function setCart(items: CartItemType[]) {

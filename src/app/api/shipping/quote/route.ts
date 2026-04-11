@@ -1,10 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 import { calculateShippingQuote } from "@/lib/shipping";
 import { shippingQuoteSchema } from "@/validations/checkout";
 
 export async function POST(req: NextRequest) {
+  const quoteRateLimit = await rateLimit(
+    `shipping-quote:${getRequestIp(req)}`,
+    20,
+    60 * 1000
+  );
+
+  if (!quoteRateLimit.success) {
+    return NextResponse.json(
+      { error: { code: "RATE_LIMITED", message: "Too many requests. Please try again shortly." } },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(quoteRateLimit.retryAfterSeconds),
+          "X-RateLimit-Limit": String(quoteRateLimit.limit),
+          "X-RateLimit-Remaining": String(quoteRateLimit.remaining),
+        },
+      }
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();

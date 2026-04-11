@@ -1,9 +1,20 @@
+import type { Metadata } from "next";
 import { getRequestDictionary } from "@/lib/i18n/server";
-import { legalAddressLines, siteConfig } from "@/lib/site";
+import { legalAddressLines, siteConfig, siteUrl } from "@/lib/site";
 
-export const metadata = {
-  title: "Imprint",
+export const metadata: Metadata = {
+  title: "Imprint | Federico Shop",
+  description:
+    "Legal imprint and company information for Federico Shop, a Berlin-based online record shop.",
+  alternates: {
+    canonical: siteUrl("/imprint"),
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
+
 
 export default async function ImprintPage() {
   const dictionary = await getRequestDictionary();
