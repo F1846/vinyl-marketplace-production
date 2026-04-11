@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useDictionary } from "@/components/providers/locale-provider";
 import { formatMessage } from "@/lib/i18n/format";
 import { formatEuroFromCents } from "@/lib/money";
+import { getReservedQuantity, useCart } from "@/hooks/use-cart";
 
 type ProductCardProduct = {
   id: string;
@@ -15,6 +16,9 @@ type ProductCardProduct = {
   priceCents: number;
   stockQuantity: number;
   conditionMedia: string | null;
+  pressingLabel?: string | null;
+  pressingCatalogNumber?: string | null;
+  pressingYear?: number | null;
   images: Array<{
     id: string;
     url: string;
@@ -38,7 +42,10 @@ interface ProductCardProps {
 
 export function ProductCard({ product, size = "default" }: ProductCardProps) {
   const dictionary = useDictionary();
+  const { items } = useCart();
   const imageUrl = product.images[0]?.url ?? null;
+  const reservedQuantity = getReservedQuantity(items, product.id);
+  const availableStock = Math.max(product.stockQuantity - reservedQuantity, 0);
   const isMini = size === "mini";
   const isCompact = size === "compact" || isMini;
   const imageSizes = isMini
@@ -63,6 +70,16 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
     : isCompact
       ? "text-[0.92rem] font-semibold text-foreground"
       : "text-[0.96rem] font-semibold text-foreground";
+  const detailWrapperClass = isMini
+    ? "mt-2.5 space-y-1.5 text-[0.66rem]"
+    : isCompact
+      ? "mt-2.5 space-y-1.5 text-[0.68rem]"
+      : "mt-3 space-y-1.5 text-[0.7rem]";
+  const detailValueClass = isMini
+    ? "line-clamp-1 text-[0.72rem] font-medium text-foreground"
+    : isCompact
+      ? "line-clamp-1 text-[0.74rem] font-medium text-foreground"
+      : "line-clamp-1 text-[0.76rem] font-medium text-foreground";
   const metaClass = isMini
     ? "mt-2 flex items-center justify-between gap-2 text-[8px] uppercase tracking-[0.16em] text-muted"
     : "mt-2.5 flex items-center justify-between gap-2 text-[9px] uppercase tracking-[0.17em] text-muted";
@@ -86,7 +103,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
             {dictionary.common.noImage}
           </div>
         )}
-        {product.stockQuantity === 0 && (
+        {availableStock === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/45">
             <span className="badge-sold font-semibold">{dictionary.productCard.soldOut}</span>
           </div>
@@ -100,20 +117,36 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
         >
           {product.title}
         </p>
+        <div className={detailWrapperClass}>
+          <div className="grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-2">
+            <span className="uppercase tracking-[0.16em] text-muted">Label</span>
+            <span className={detailValueClass}>{product.pressingLabel ?? "—"}</span>
+          </div>
+          <div className="grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-2">
+            <span className="uppercase tracking-[0.16em] text-muted">Cat#</span>
+            <span className={detailValueClass}>{product.pressingCatalogNumber ?? "—"}</span>
+          </div>
+          <div className="grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-2">
+            <span className="uppercase tracking-[0.16em] text-muted">Year</span>
+            <span className={detailValueClass}>
+              {product.pressingYear ? String(product.pressingYear) : "—"}
+            </span>
+          </div>
+        </div>
         <div className="mt-auto pt-2.5">
           <div className="flex items-center justify-between gap-2.5">
-          <span className={priceClass}>{formatEuroFromCents(product.priceCents)}</span>
-          {product.conditionMedia && (
-            <span className="rounded-full border border-border px-2 py-1 text-[9px] font-medium text-muted">
-              {product.conditionMedia}
-            </span>
-          )}
+            <span className={priceClass}>{formatEuroFromCents(product.priceCents)}</span>
+            {product.conditionMedia && (
+              <span className="rounded-full border border-border px-2 py-1 text-[9px] font-medium text-muted">
+                {product.conditionMedia}
+              </span>
+            )}
           </div>
           <div className={metaClass}>
             <span className="line-clamp-1">{product.genre}</span>
             <span>
-              {product.stockQuantity > 0
-                ? formatMessage(dictionary.productCard.inStock, { count: product.stockQuantity })
+              {availableStock > 0
+                ? formatMessage(dictionary.productCard.inStock, { count: availableStock })
                 : dictionary.productCard.unavailable}
             </span>
           </div>

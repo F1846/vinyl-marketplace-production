@@ -45,6 +45,7 @@ type AdminProductRow = {
 type Props = {
   products: AdminProductRow[];
   productCountLabel: number;
+  productListingCount: number;
   sort: SortKey;
   dir: SortDirection;
   updated?: string;
@@ -72,6 +73,7 @@ function statusBadge(status: ProductStatus, id: string) {
 export function AdminProductsTable({
   products,
   productCountLabel,
+  productListingCount,
   sort,
   dir,
   updated,
@@ -93,6 +95,18 @@ export function AdminProductsTable({
 
   const visibleIds = useMemo(() => filteredProducts.map((product) => product.id), [filteredProducts]);
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const selectedProducts = useMemo(
+    () => products.filter((product) => selectedIdSet.has(product.id)),
+    [products, selectedIdSet]
+  );
+  const selectedUnits = useMemo(
+    () =>
+      selectedProducts.reduce(
+        (sum, product) => sum + Math.max(product.stockQuantity, 0),
+        0
+      ),
+    [selectedProducts]
+  );
   const allVisibleSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIdSet.has(id));
   const returnTo = useMemo(() => {
@@ -153,7 +167,9 @@ export function AdminProductsTable({
       if (withRange && lastSelectedIndexRef.current !== null) {
         const start = Math.min(lastSelectedIndexRef.current, index);
         const end = Math.max(lastSelectedIndexRef.current, index);
-        const rangeIds = products.slice(start, end + 1).map((product) => product.id);
+        const rangeIds = filteredProducts
+          .slice(start, end + 1)
+          .map((product) => product.id);
 
         for (const id of rangeIds) {
           if (checked) {
@@ -182,7 +198,9 @@ export function AdminProductsTable({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-foreground">Products ({productCountLabel})</h1>
+        <h1 className="text-xl font-bold text-foreground">
+          Products ({productCountLabel} items / {productListingCount} listings)
+        </h1>
         <div className="flex gap-2">
           <Link href="/admin/import" className="btn-secondary text-sm">
             CSV import
@@ -223,7 +241,8 @@ export function AdminProductsTable({
               Select / deselect all
             </label>
             <span className="text-xs uppercase tracking-[0.16em] text-muted">
-              {selectedIds.length} selected
+              {selectedUnits} items selected / {selectedIds.length} listing
+              {selectedIds.length === 1 ? "" : "s"}
             </span>
           </div>
 
