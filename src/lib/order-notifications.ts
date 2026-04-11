@@ -26,6 +26,16 @@ async function getOrderWithItemsForEmail(orderId: string): Promise<OrderWithItem
               title: true,
               format: true,
             },
+            with: {
+              images: {
+                columns: {
+                  url: true,
+                  sortOrder: true,
+                },
+                orderBy: [schema.productImages.sortOrder],
+                limit: 1,
+              },
+            },
           },
         },
       },
@@ -42,8 +52,10 @@ async function getOrderWithItemsForEmail(orderId: string): Promise<OrderWithItem
     items: order.items.map((item) => ({
       ...item,
       product: {
-        ...item.product,
-        imageUrl: null,
+        artist: item.product.artist,
+        title: item.product.title,
+        format: item.product.format,
+        imageUrl: item.product.images[0]?.url ?? null,
       },
     })),
   };

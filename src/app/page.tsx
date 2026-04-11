@@ -180,7 +180,7 @@ export default async function HomePage() {
             {dictionary.home.independentRecordStore}
           </div>
           <div className="space-y-3">
-            <h1 className="max-w-[11ch] text-balance font-sans text-[clamp(3.15rem,7vw,5.25rem)] font-bold leading-[0.98] tracking-[-0.045em] text-foreground">
+            <h1 className="max-w-[11.25ch] text-balance font-sans text-[clamp(3.15rem,7vw,5.25rem)] font-bold leading-[1.04] tracking-[-0.042em] text-foreground">
               {dictionary.home.worthHaving}
             </h1>
             <p className="max-w-xl text-[15px] leading-7 text-muted">
@@ -235,8 +235,10 @@ export default async function HomePage() {
               className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.formatMix}</p>
-              <p className="mt-1.5 flex min-h-[3rem] flex-wrap items-start gap-y-1 pl-0.5 font-sans text-[1.04rem] font-bold capitalize leading-[1.08] text-foreground sm:text-[1.1rem]">
-                {renderFormatMixValue(dictionary.home.formatMixValue)}
+              <p className="mt-1.5 min-h-[3.3rem] overflow-visible pl-0.5 pt-[1px] pb-[4px] font-sans text-[1.04rem] font-bold capitalize leading-[1.2] text-foreground sm:text-[1.1rem]">
+                <span className="inline-flex flex-wrap items-baseline gap-y-1">
+                  {renderFormatMixValue(dictionary.home.formatMixValue)}
+                </span>
               </p>
               <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
                 {formatSpotlight

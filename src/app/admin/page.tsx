@@ -36,10 +36,10 @@ export default async function AdminDashboard() {
           href="/admin/products"
           className="card block transition duration-200 hover:-translate-y-0.5 hover:border-foreground/40"
         >
-          <p className="text-sm text-muted">Total Units in Stock</p>
+          <p className="text-sm text-muted">Total Items in Stock</p>
           <p className="text-3xl font-bold text-accent">{productCount[0]?.total ?? 0}</p>
           <p className="text-xs text-muted mt-1">
-            {activeCount[0]?.total ?? 0} units active
+            {activeCount[0]?.total ?? 0} items active
           </p>
         </Link>
         <Link

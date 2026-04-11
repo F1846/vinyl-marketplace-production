@@ -80,7 +80,7 @@ export default async function AdminOrderDetailPage({
       : `${siteConfig.name} - ${order.orderNumber} - Order update`;
   const defaultManualMessage =
     order.deliveryMethod === "pickup"
-      ? `Hi ${order.customerName},\n\nYour order is ready for local pickup.\n\nPickup address:\n${siteConfig.pickupContactName}\n${siteConfig.pickupStreet}\n${siteConfig.pickupPostalCode} ${siteConfig.pickupCity}\n${siteConfig.pickupCountry}\n\nContact ${siteConfig.pickupPhone}${siteConfig.pickupPhoneLabel ? ` via ${siteConfig.pickupPhoneLabel}` : ""} for order pickup.\n\nBest,\n${siteConfig.name}`
+      ? `Hi ${order.customerName},\n\nYour order is ready for local pickup.\n\nPickup address:\n${siteConfig.pickupContactName}\n${siteConfig.pickupStreet}\n${siteConfig.pickupPostalCode} ${siteConfig.pickupCity}\n${siteConfig.pickupCountry}\n\nWe will confirm local pickup details by email.\n\nBest,\n${siteConfig.name}`
       : `Hi ${order.customerName},\n\nHere is an update about your order ${order.orderNumber}.\n\nBest,\n${siteConfig.name}`;
 
   return (

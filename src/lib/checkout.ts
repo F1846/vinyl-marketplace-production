@@ -1,4 +1,4 @@
-import { and, eq, gte, gt, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gte, gt, inArray, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { sendOrderConfirmation } from "@/lib/email";
 import { generateOrderNumber } from "@/lib/order-number";
@@ -287,6 +287,22 @@ export async function finalizeOrder(input: FinalizeOrderInput) {
   const d = db();
   const products = await getCheckoutProducts(input.items);
   const productMap = new Map(products.map((product) => [product.id, product]));
+  const productIds = [...new Set(input.items.map((item) => item.id))];
+  const productImages = await d.query.productImages.findMany({
+    where: inArray(schema.productImages.productId, productIds),
+    columns: {
+      productId: true,
+      url: true,
+    },
+    orderBy: [asc(schema.productImages.sortOrder)],
+  });
+  const firstImageByProductId = new Map<string, string>();
+
+  for (const image of productImages) {
+    if (!firstImageByProductId.has(image.productId)) {
+      firstImageByProductId.set(image.productId, image.url);
+    }
+  }
   const subtotalCents = input.items.reduce((sum, item) => {
     const product = productMap.get(item.id)!;
     return sum + product.priceCents * item.qty;
@@ -378,7 +394,7 @@ export async function finalizeOrder(input: FinalizeOrderInput) {
             artist: product.artist,
             title: product.title,
             format: product.format,
-            imageUrl: null,
+            imageUrl: firstImageByProductId.get(item.id) ?? null,
           },
         };
       }),

@@ -270,15 +270,7 @@ export function pickupAddressCoreLines(): string[] {
 }
 
 export function pickupContactLine(): string | null {
-  if (!siteConfig.pickupPhone) {
-    return null;
-  }
-
-  const methodLabel = siteConfig.pickupPhoneLabel
-    ? ` via ${siteConfig.pickupPhoneLabel}`
-    : "";
-
-  return `Contact ${siteConfig.pickupPhone}${methodLabel} for order pickup.`;
+  return "You will receive a follow-up email with local pickup details.";
 }
 
 export function pickupAddressLines(): string[] {

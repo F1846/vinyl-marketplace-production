@@ -2,7 +2,6 @@ import { formatEuroFromCents } from "@/lib/money";
 import { createInvoiceToken } from "@/lib/invoice";
 import {
   pickupAddressCoreLines,
-  pickupContactLine,
   siteConfig,
   siteUrl,
 } from "@/lib/site";
@@ -129,6 +128,7 @@ export async function sendOrderConfirmation(order: OrderWithItems) {
   const invoiceUrl = siteUrl(
     `/api/orders/invoice?token=${encodeURIComponent(createInvoiceToken(order.id))}`
   );
+  const itemsHtml = buildOrderItemsHtml(order.items);
   const lineItems = order.items
     .map(
       (item) =>
@@ -142,7 +142,7 @@ export async function sendOrderConfirmation(order: OrderWithItems) {
     html: buildOrderEmailHtml({
       orderNumber: order.orderNumber,
       customerName: order.customerName,
-      lineItems,
+      itemsHtml,
       subtotal: formatEuroFromCents(order.subtotalCents),
       shipping: formatEuroFromCents(order.shippingCents),
       total: formatEuroFromCents(order.totalCents),
@@ -200,7 +200,6 @@ export async function sendOrderStatusUpdate(
   const trackingSummary = options?.trackingSummary ?? null;
   const label = statusLabel(order.status);
   const message = statusMessage(order.status);
-  const previousStatusLabel = options?.previousStatus ? statusLabel(options.previousStatus) : null;
 
   await sendTransactionalEmail({
     to: order.customerEmail,
@@ -210,7 +209,6 @@ export async function sendOrderStatusUpdate(
       customerName: order.customerName,
       statusLabel: label,
       message,
-      previousStatusLabel,
       trackingCarrier:
         trackingSummary?.carrierName ?? trackingSummary?.carrierSlug ?? order.trackingCarrier,
       trackingNumber: order.trackingNumber,
@@ -221,7 +219,6 @@ export async function sendOrderStatusUpdate(
       customerName: order.customerName,
       statusLabel: label,
       message,
-      previousStatusLabel,
       trackingCarrier:
         trackingSummary?.carrierName ?? trackingSummary?.carrierSlug ?? order.trackingCarrier,
       trackingNumber: order.trackingNumber,
@@ -263,6 +260,28 @@ export async function sendManualOrderMessage(
     input.subject.trim() || buildCustomerEmailSubject(order.orderNumber, "Order update");
   const messageText = formatPlainTextBlock(input.message);
   const replyAddress = senderEmailAddress(input.sender);
+  const manualFooterLines = [
+    `Reply to this email or write to ${replyAddress}.`,
+    ...(order.deliveryMethod === "shipping"
+      ? [
+          order.trackingNumber ? `Tracking number: ${order.trackingNumber}` : null,
+          `Track your order: ${siteUrl("/track-order")}`,
+        ]
+      : ["We will confirm local pickup details by email."]),
+  ].filter((line): line is string => Boolean(line));
+  const manualFooterHtml = [
+    `<p>Reply to this email or write to <a href="mailto:${replyAddress}">${replyAddress}</a>.</p>`,
+    ...(order.deliveryMethod === "shipping"
+      ? [
+          order.trackingNumber
+            ? `<p>Tracking number: <code>${escapeHtml(order.trackingNumber)}</code></p>`
+            : null,
+          `<p>Track your order: <a href="${siteUrl("/track-order")}">${siteUrl("/track-order")}</a></p>`,
+        ]
+      : ["<p>We will confirm local pickup details by email.</p>"]),
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join("");
 
   await sendTransactionalEmail({
     to: order.customerEmail,
@@ -279,20 +298,14 @@ export async function sendManualOrderMessage(
           <p class="body-copy">${formatHtmlBlock(messageText)}</p>
         </div>
       `,
-      footerHtml: `
-        <p>Reply to this email or write to <a href="mailto:${replyAddress}">${replyAddress}</a>.</p>
-        <p>Track your order: <a href="${siteUrl("/track-order")}">${siteUrl("/track-order")}</a></p>
-      `,
+      footerHtml: manualFooterHtml,
     }),
     text: buildCustomerEmailTextShell({
       title: subject,
       intro: `Hi ${order.customerName}, here is a message about your order ${order.orderNumber}.`,
       orderNumber: order.orderNumber,
       bodyLines: ["Message:", messageText],
-      footerLines: [
-        `Reply to this email or write to ${replyAddress}.`,
-        `Track your order: ${siteUrl("/track-order")}`,
-      ],
+      footerLines: manualFooterLines,
     }),
   });
 }
@@ -316,6 +329,58 @@ function formatPlainTextBlock(value: string): string {
 
 function formatHtmlBlock(value: string): string {
   return escapeHtml(formatPlainTextBlock(value)).replace(/\n/g, "<br>");
+}
+
+function buildOrderItemsHtml(items: OrderWithItems["items"]): string {
+  return items
+    .map((item) => {
+      const productUrl = siteUrl(`/products/${item.productId}`);
+      const imageAlt = escapeHtml(`${item.product.artist} - ${item.product.title}`);
+      const imageHtml = item.product.imageUrl
+        ? `
+          <a href="${productUrl}" style="display:block;text-decoration:none">
+            <img
+              src="${escapeHtml(item.product.imageUrl)}"
+              alt="${imageAlt}"
+              width="72"
+              height="72"
+              style="display:block;width:72px;height:72px;border-radius:16px;border:1px solid #dbd8d0;background:#f4f3ef;object-fit:cover"
+            />
+          </a>
+        `
+        : `
+          <div
+            style="width:72px;height:72px;border-radius:16px;border:1px solid #dbd8d0;background:#f4f3ef;color:#6f6c66;font-size:11px;line-height:72px;text-align:center;text-transform:uppercase;letter-spacing:.14em"
+          >
+            No image
+          </div>
+        `;
+
+      return `
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;margin:0 0 14px;border:1px solid #ece8e0;border-radius:18px;background:#faf8f2">
+          <tr>
+            <td style="padding:14px;vertical-align:top;width:88px">
+              ${imageHtml}
+            </td>
+            <td style="padding:14px 14px 14px 0;vertical-align:top">
+              <div style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#6f6c66;font-family:Manrope,'Helvetica Neue',Arial,sans-serif">
+                ${escapeHtml(item.product.artist)}
+              </div>
+              <div style="margin:0 0 6px;font-size:17px;line-height:1.3;font-weight:700;color:#171717;font-family:Manrope,'Helvetica Neue',Arial,sans-serif">
+                <a href="${productUrl}" style="color:#171717;text-decoration:none">${escapeHtml(item.product.title)}</a>
+              </div>
+              <div style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#3d3a35;font-family:Manrope,'Helvetica Neue',Arial,sans-serif">
+                ${escapeHtml(item.product.format)} x ${item.quantity}
+              </div>
+              <div style="margin:0;font-size:14px;line-height:1.6;font-weight:700;color:#171717;font-family:Manrope,'Helvetica Neue',Arial,sans-serif">
+                ${formatEuroFromCents(item.priceAtPurchaseCents * item.quantity)}
+              </div>
+            </td>
+          </tr>
+        </table>
+      `;
+    })
+    .join("");
 }
 
 function senderEmailAddress(sender: CustomerEmailSender): string {
@@ -358,6 +423,7 @@ function buildCustomerEmailHtmlShell({
     .body-pre{margin:0;white-space:pre-wrap;font-size:14px;line-height:1.7;color:#3d3a35;font-family:Manrope,'Helvetica Neue',Arial,sans-serif}
     .totals{font-size:15px;line-height:1.8;color:#171717}
     .totals strong{font-weight:700}
+    .order-chip-label{margin-right:6px;opacity:.72}
     .footer{margin-top:24px;padding-top:16px;border-top:1px solid #ece8e0;font-size:12px;line-height:1.8;color:#6f6c66;font-family:Manrope,'Helvetica Neue',Arial,sans-serif}
     a{color:#171717}
   </style>
@@ -367,7 +433,7 @@ function buildCustomerEmailHtmlShell({
     <p class="brand">${siteConfig.name}</p>
     <h1>${title}</h1>
     <p class="intro">${intro}</p>
-    ${orderNumber ? `<div class="order-chip">${orderNumber}</div>` : ""}
+    ${orderNumber ? `<div class="order-chip"><span class="order-chip-label">Order Number:</span>${orderNumber}</div>` : ""}
     ${bodyHtml}
     <div class="footer">${footerHtml}</div>
   </div>
@@ -393,7 +459,7 @@ function buildCustomerEmailTextShell({
     "",
     title,
     intro,
-    orderNumber ? `Order: ${orderNumber}` : null,
+    orderNumber ? `Order Number: ${orderNumber}` : null,
     "",
     ...bodyLines,
     "",
@@ -406,19 +472,28 @@ function buildCustomerEmailTextShell({
 function buildOrderEmailHtml({
   orderNumber,
   customerName,
-  lineItems,
+  itemsHtml,
   subtotal,
   shipping,
   total,
   address,
   deliveryMethod,
   invoiceUrl,
-}: Record<string, string>): string {
+}: {
+  orderNumber: string;
+  customerName: string;
+  itemsHtml: string;
+  subtotal: string;
+  shipping: string;
+  total: string;
+  address: string;
+  deliveryMethod: string;
+  invoiceUrl: string;
+}): string {
   const deliveryLabel =
     deliveryMethod === "pickup" ? "Pickup details" : "Shipping address";
   const isPickup = deliveryMethod === "pickup";
-  const pickupNext =
-    pickupContactLine() ?? `Contact ${siteConfig.supportEmail} for order pickup details.`;
+  const pickupNext = "You will receive a follow-up email with local pickup details.";
 
   return buildCustomerEmailHtmlShell({
     title: "Order confirmed",
@@ -429,7 +504,7 @@ function buildOrderEmailHtml({
     bodyHtml: `
       <div class="section">
         <h2>Items</h2>
-        <pre class="body-pre">${lineItems}</pre>
+        ${itemsHtml}
       </div>
       <div class="section">
         <h2>Totals</h2>
@@ -453,7 +528,7 @@ function buildOrderEmailHtml({
       ${
         isPickup
           ? `<p>Questions about pickup: <a href="mailto:${siteConfig.supportEmail}">${siteConfig.supportEmail}</a></p>`
-          : `<p>Track your order: <a href="${siteUrl("/track-order")}">${siteUrl("/track-order")}</a></p>`
+          : `<p>Track your order: <a href="${siteUrl("/track-order")}">${siteUrl("/track-order")}</a></p><p>Tracking is added as soon as your parcel ships.</p>`
       }
     `,
   });
@@ -473,8 +548,7 @@ function buildOrderEmailText({
   const deliveryLabel =
     deliveryMethod === "pickup" ? "Pickup details" : "Shipping address";
   const isPickup = deliveryMethod === "pickup";
-  const pickupNext =
-    pickupContactLine() ?? `Contact ${siteConfig.supportEmail} for order pickup details.`;
+  const pickupNext = "You will receive a follow-up email with local pickup details.";
 
   return buildCustomerEmailTextShell({
     title: "Order confirmed",
@@ -498,7 +572,10 @@ function buildOrderEmailText({
       `Download invoice: ${invoiceUrl}`,
       ...(isPickup
         ? [`Questions about pickup: ${siteConfig.supportEmail}`]
-        : [`Track your order: ${siteUrl("/track-order")}`]),
+        : [
+            `Track your order: ${siteUrl("/track-order")}`,
+            "Tracking is added as soon as your parcel ships.",
+          ]),
     ],
   });
 }
@@ -556,7 +633,6 @@ function buildStatusEmailHtml({
   customerName,
   statusLabel,
   message,
-  previousStatusLabel,
   trackingCarrier,
   trackingNumber,
   trackingUrl,
@@ -569,7 +645,6 @@ function buildStatusEmailHtml({
       <div class="section">
         <h2>Status</h2>
         <p class="body-copy">${message}</p>
-        ${previousStatusLabel ? `<p class="body-copy">Previous status: <strong>${previousStatusLabel}</strong></p>` : ""}
       </div>
       ${
         trackingNumber
@@ -592,7 +667,6 @@ function buildStatusEmailText({
   customerName,
   statusLabel,
   message,
-  previousStatusLabel,
   trackingCarrier,
   trackingNumber,
   trackingUrl,
@@ -603,7 +677,6 @@ function buildStatusEmailText({
     orderNumber,
     bodyLines: [
       message,
-      previousStatusLabel ? `Previous status: ${previousStatusLabel}` : null,
       trackingNumber ? `${trackingCarrier || "Tracking"}: ${trackingNumber}` : null,
       trackingUrl ? `Tracking page: ${trackingUrl}` : null,
     ].filter((line): line is string => Boolean(line)),
