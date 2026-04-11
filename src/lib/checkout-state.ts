@@ -32,23 +32,19 @@ function isShippingDetails(value: unknown): value is ShippingDetailsInput {
 export function isCheckoutStateSigningConfigured(): boolean {
   return Boolean(
     process.env.CHECKOUT_STATE_SECRET?.trim() ||
-      process.env.ADMIN_SESSION_SECRET?.trim() ||
-      process.env.STRIPE_SECRET_KEY?.trim() ||
-      process.env.PAYPAL_CLIENT_SECRET?.trim()
+      process.env.ADMIN_SESSION_SECRET?.trim()
   );
 }
 
 function getCheckoutStateSecret(): string {
-  const secret = isCheckoutStateSigningConfigured()
-    ? process.env.CHECKOUT_STATE_SECRET?.trim() ||
-      process.env.ADMIN_SESSION_SECRET?.trim() ||
-      process.env.STRIPE_SECRET_KEY?.trim() ||
-      process.env.PAYPAL_CLIENT_SECRET?.trim()
-    : null;
+  const secret =
+    process.env.CHECKOUT_STATE_SECRET?.trim() ||
+    process.env.ADMIN_SESSION_SECRET?.trim() ||
+    null;
 
   if (!secret) {
     throw new Error(
-      "Checkout state signing secret is not configured. Set CHECKOUT_STATE_SECRET before enabling PayPal checkout."
+      "CHECKOUT_STATE_SECRET is not configured. Set it in your environment variables."
     );
   }
 

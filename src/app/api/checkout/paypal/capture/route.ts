@@ -108,11 +108,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ orderNumber: order.orderNumber });
   } catch (error) {
+    console.error("paypal capture failed:", error);
     return NextResponse.json(
       {
         error: {
           code: "PAYPAL_CAPTURE_FAILED",
-          message: error instanceof Error ? error.message : "Could not capture PayPal order.",
+          message: "Payment capture failed. Please contact support if you were charged.",
         },
       },
       { status: 409 }

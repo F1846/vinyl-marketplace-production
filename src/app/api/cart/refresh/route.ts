@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
+import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 import { db, schema } from "@/db";
 
 const refreshCartSchema = z.object({
@@ -8,6 +9,14 @@ const refreshCartSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const rl = await rateLimit(`cart-refresh:${getRequestIp(req)}`, 30, 60 * 1000);
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: { code: "RATE_LIMITED", message: "Too many requests. Please slow down." } },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();

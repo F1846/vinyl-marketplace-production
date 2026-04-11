@@ -3,8 +3,17 @@ import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { calculateShippingQuote } from "@/lib/shipping";
 import { shippingQuoteSchema } from "@/validations/checkout";
+import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const rl = await rateLimit(`shipping-quote:${getRequestIp(req)}`, 20, 60 * 1000);
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: { code: "RATE_LIMITED", message: "Too many requests. Please slow down." } },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();
