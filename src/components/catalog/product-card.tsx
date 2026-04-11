@@ -53,7 +53,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
     : isCompact
       ? "(max-width: 640px) 40vw, (max-width: 1024px) 22vw, 14vw"
       : "(max-width: 640px) 44vw, (max-width: 1024px) 26vw, 17vw";
-  const imageAspect = isMini ? "aspect-[0.82]" : isCompact ? "aspect-[0.85]" : "aspect-[0.88]";
+  const imageAspect = isMini ? "aspect-[0.78]" : isCompact ? "aspect-[0.80]" : "aspect-[0.82]";
   const paddingClass = isMini ? "p-2.5" : isCompact ? "p-3" : "p-[0.8125rem]";
   const artistClass = isMini
     ? "h-[2.1rem] text-[0.88rem] font-semibold uppercase tracking-[0.08em] text-muted"
@@ -97,7 +97,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
             fill
             className="object-contain transition-transform duration-500 group-hover:scale-[1.01]"
             sizes={imageSizes}
-            style={{ padding: "2%" }}
+            style={{ padding: "0.5%" }}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-muted">
