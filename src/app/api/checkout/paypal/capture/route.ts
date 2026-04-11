@@ -5,6 +5,7 @@ import {
   isCheckoutStateSigningConfigured,
   verifyCheckoutStateToken,
 } from "@/lib/checkout-state";
+import { enforceCheckoutCompletionRateLimit } from "@/lib/checkout-rate-limit";
 import {
   createShippingAddressFromCheckout,
   finalizeOrder,
@@ -35,18 +36,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const checkoutRateLimit = await enforceCheckoutCompletionRateLimit(req);
+  if (checkoutRateLimit.response) {
+    return checkoutRateLimit.response;
+  }
+
   let body: unknown;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: { code: "INVALID_JSON" } }, { status: 400 });
+    return NextResponse.json(
+      { error: { code: "INVALID_JSON" } },
+      { status: 400, headers: checkoutRateLimit.headers }
+    );
   }
 
   const parsed = paypalCaptureSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: { code: "VALIDATION_FAILED", details: parsed.error.flatten() } },
-      { status: 400 }
+      { status: 400, headers: checkoutRateLimit.headers }
     );
   }
 
@@ -54,7 +63,7 @@ export async function POST(req: NextRequest) {
   if (!state) {
     return NextResponse.json(
       { error: { code: "INVALID_STATE", message: "PayPal checkout state is invalid or expired." } },
-      { status: 400 }
+      { status: 400, headers: checkoutRateLimit.headers }
     );
   }
 
@@ -63,7 +72,10 @@ export async function POST(req: NextRequest) {
   });
 
   if (existingOrder) {
-    return NextResponse.json({ orderNumber: existingOrder.orderNumber });
+    return NextResponse.json(
+      { orderNumber: existingOrder.orderNumber },
+      { headers: checkoutRateLimit.headers }
+    );
   }
 
   try {
@@ -106,7 +118,10 @@ export async function POST(req: NextRequest) {
       status: "processing",
     });
 
-    return NextResponse.json({ orderNumber: order.orderNumber });
+    return NextResponse.json(
+      { orderNumber: order.orderNumber },
+      { headers: checkoutRateLimit.headers }
+    );
   } catch (error) {
     console.error("paypal capture failed:", error);
     return NextResponse.json(
@@ -116,7 +131,7 @@ export async function POST(req: NextRequest) {
           message: "Payment capture failed. Please contact support if you were charged.",
         },
       },
-      { status: 409 }
+      { status: 409, headers: checkoutRateLimit.headers }
     );
   }
 }

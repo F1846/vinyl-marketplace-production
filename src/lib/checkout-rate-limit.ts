@@ -5,6 +5,8 @@ const CHECKOUT_ATTEMPT_LIMIT = 5;
 const CHECKOUT_ATTEMPT_WINDOW_MS = 10 * 60 * 1000;
 const CHECKOUT_RATE_LIMIT_MESSAGE =
   "Too many checkout attempts. Please try again shortly.";
+const CHECKOUT_COMPLETION_RATE_LIMIT_MESSAGE =
+  "Too many checkout completion attempts. Please try again shortly.";
 
 function createRateLimitHeaders(result: RateLimitResult): Record<string, string> {
   return {
@@ -14,15 +16,14 @@ function createRateLimitHeaders(result: RateLimitResult): Record<string, string>
   };
 }
 
-export async function enforceCheckoutRateLimit(request: NextRequest): Promise<{
+async function enforceRateLimit(
+  bucket: string,
+  message: string
+): Promise<{
   headers: Record<string, string>;
   response: NextResponse | null;
 }> {
-  const result = await rateLimit(
-    `checkout-create:${getRequestIp(request)}`,
-    CHECKOUT_ATTEMPT_LIMIT,
-    CHECKOUT_ATTEMPT_WINDOW_MS
-  );
+  const result = await rateLimit(bucket, CHECKOUT_ATTEMPT_LIMIT, CHECKOUT_ATTEMPT_WINDOW_MS);
   const headers = createRateLimitHeaders(result);
 
   if (result.success) {
@@ -35,7 +36,7 @@ export async function enforceCheckoutRateLimit(request: NextRequest): Promise<{
       {
         error: {
           code: "RATE_LIMITED",
-          message: CHECKOUT_RATE_LIMIT_MESSAGE,
+          message,
         },
       },
       {
@@ -44,4 +45,26 @@ export async function enforceCheckoutRateLimit(request: NextRequest): Promise<{
       }
     ),
   };
+}
+
+export async function enforceCheckoutRateLimit(request: NextRequest): Promise<{
+  headers: Record<string, string>;
+  response: NextResponse | null;
+}> {
+  return enforceRateLimit(
+    `checkout-create:${getRequestIp(request)}`,
+    CHECKOUT_RATE_LIMIT_MESSAGE
+  );
+}
+
+export async function enforceCheckoutCompletionRateLimit(
+  request: NextRequest
+): Promise<{
+  headers: Record<string, string>;
+  response: NextResponse | null;
+}> {
+  return enforceRateLimit(
+    `checkout-complete:${getRequestIp(request)}`,
+    CHECKOUT_COMPLETION_RATE_LIMIT_MESSAGE
+  );
 }
