@@ -62,6 +62,12 @@ export default async function AdminProductsPage({
       ne(schema.products.status, "archived")
     ),
     orderBy,
+    with: {
+      images: {
+        orderBy: [schema.productImages.sortOrder],
+        limit: 1,
+      },
+    },
   });
   const productRows = products.map((product) => ({
     id: product.id,
@@ -71,6 +77,11 @@ export default async function AdminProductsPage({
     priceCents: product.priceCents,
     stockQuantity: product.stockQuantity,
     status: resolveProductStatus(product) as ProductStatus,
+    imageUrl: product.images[0]?.url ?? null,
+    pressingLabel: product.pressingLabel,
+    pressingCatalogNumber: product.pressingCatalogNumber,
+    pressingYear: product.pressingYear,
+    discogsReleaseId: product.discogsReleaseId,
   }));
 
   return (

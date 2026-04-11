@@ -1,11 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 // checkboxRefs is populated per-row to support Shift+ArrowDown keyboard range selection
 import {
   ArrowDown,
   ArrowUp,
+  ExternalLink,
   EyeOff,
   Pencil,
   RotateCcw,
@@ -33,6 +35,11 @@ type AdminProductRow = {
   priceCents: number;
   stockQuantity: number;
   status: ProductStatus;
+  imageUrl: string | null;
+  pressingLabel: string | null;
+  pressingCatalogNumber: string | null;
+  pressingYear: number | null;
+  discogsReleaseId: number | null;
 };
 
 type Props = {
@@ -251,14 +258,14 @@ export function AdminProductsTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="overflow-hidden rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-surface-hover">
             <tr>
               <th className="w-14 px-4 py-3 text-left font-medium text-foreground">
                 <span className="sr-only">Select</span>
               </th>
-              <th className="px-4 py-3 text-left font-medium text-foreground">Product</th>
+              <th className="w-full px-4 py-3 text-left font-medium text-foreground">Product</th>
               <th className="px-4 py-3 text-left font-medium text-foreground">Format</th>
               <th className="px-4 py-3 text-left font-medium text-foreground">
                 {renderSortHeader("Price", "price")}
@@ -319,8 +326,47 @@ export function AdminProductsTable({
                     aria-label={`Select ${product.artist} ${product.title}`}
                   />
                 </td>
-                <td className="px-4 py-3 text-foreground">
-                  {product.artist} &ndash; {product.title}
+                <td className="px-4 py-3">
+                  <div className="flex items-start gap-3">
+                    {product.imageUrl ? (
+                      <Image
+                        src={product.imageUrl}
+                        alt={`${product.artist} - ${product.title}`}
+                        width={48}
+                        height={48}
+                        className="h-12 w-12 flex-shrink-0 rounded border border-border object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded border border-border bg-surface text-xs text-muted">
+                        —
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-foreground">
+                        {product.discogsReleaseId ? (
+                          <a
+                            href={`https://www.discogs.com/release/${product.discogsReleaseId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 hover:text-accent hover:underline"
+                          >
+                            {product.artist} — {product.title}
+                            <ExternalLink className="h-3 w-3 flex-shrink-0 text-muted" />
+                          </a>
+                        ) : (
+                          <span>{product.artist} — {product.title}</span>
+                        )}
+                      </div>
+                      {(product.pressingLabel || product.pressingCatalogNumber || product.pressingYear) && (
+                        <div className="mt-0.5 text-xs text-muted">
+                          {[product.pressingLabel, product.pressingCatalogNumber, product.pressingYear]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <span className={`badge badge-${product.format}`}>{product.format}</span>
