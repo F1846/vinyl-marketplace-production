@@ -30,21 +30,20 @@ function isShippingDetails(value: unknown): value is ShippingDetailsInput {
 }
 
 export function isCheckoutStateSigningConfigured(): boolean {
+  // Only accept dedicated secrets — never fall back to payment-provider keys,
+  // because rotating Stripe/PayPal credentials would silently break checkout
+  // state verification for in-flight PayPal orders.
   return Boolean(
     process.env.CHECKOUT_STATE_SECRET?.trim() ||
-      process.env.ADMIN_SESSION_SECRET?.trim() ||
-      process.env.STRIPE_SECRET_KEY?.trim() ||
-      process.env.PAYPAL_CLIENT_SECRET?.trim()
+      process.env.ADMIN_SESSION_SECRET?.trim()
   );
 }
 
 function getCheckoutStateSecret(): string {
-  const secret = isCheckoutStateSigningConfigured()
-    ? process.env.CHECKOUT_STATE_SECRET?.trim() ||
-      process.env.ADMIN_SESSION_SECRET?.trim() ||
-      process.env.STRIPE_SECRET_KEY?.trim() ||
-      process.env.PAYPAL_CLIENT_SECRET?.trim()
-    : null;
+  const secret =
+    process.env.CHECKOUT_STATE_SECRET?.trim() ||
+    process.env.ADMIN_SESSION_SECRET?.trim() ||
+    null;
 
   if (!secret) {
     throw new Error(

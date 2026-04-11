@@ -34,6 +34,7 @@ export async function addToCart(productId: string) {
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, JSON.stringify(current), {
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: CART_COOKIE_MAX_AGE_SECONDS,
     path: "/",
@@ -47,6 +48,7 @@ export async function removeFromCart(productId: string) {
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, JSON.stringify(updated), {
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: CART_COOKIE_MAX_AGE_SECONDS,
     path: "/",
@@ -66,6 +68,7 @@ export async function updateCartQuantity(productId: string, quantity: number) {
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, JSON.stringify(updated), {
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: CART_COOKIE_MAX_AGE_SECONDS,
     path: "/",

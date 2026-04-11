@@ -221,8 +221,9 @@ export async function sendManualOrderEmail(orderId: string, formData: FormData):
   const messageRaw = formData.get("message");
   const sender =
     senderRaw === "support" || senderRaw === "orders" ? senderRaw : "support";
-  const subject = typeof subjectRaw === "string" ? subjectRaw.trim() : "";
-  const message = typeof messageRaw === "string" ? messageRaw.trim() : "";
+  // Cap lengths to avoid oversized email headers and payloads
+  const subject = (typeof subjectRaw === "string" ? subjectRaw.trim() : "").slice(0, 200);
+  const message = (typeof messageRaw === "string" ? messageRaw.trim() : "").slice(0, 10_000);
 
   if (!message) {
     redirect(buildOrderDetailPath(orderId, "email=missing"));
