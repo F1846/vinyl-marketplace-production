@@ -65,7 +65,15 @@ export async function generateMetadata({
       type: "website",
       url: siteUrl(`/products/${product.id}`),
       siteName: siteConfig.name,
-      images: imageUrl ? [{ url: imageUrl }] : undefined,
+      images: imageUrl
+        ? [{ url: imageUrl, width: 1200, height: 1200, alt: title }]
+        : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: imageUrl ? [imageUrl] : undefined,
     },
   };
 }

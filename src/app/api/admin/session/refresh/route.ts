@@ -33,10 +33,14 @@ export async function POST() {
 
     response.cookies.set(session.name, session.value, session.options);
     return response;
-  } catch {
+  } catch (err) {
+    // Session secret is not configured — tell the client the refresh failed
+    // so it can prompt for re-authentication rather than assuming success.
+    console.error("Admin session refresh failed:", err);
     return NextResponse.json(
-      { ok: true },
+      { ok: false },
       {
+        status: 500,
         headers: {
           "Cache-Control": "no-store",
         },

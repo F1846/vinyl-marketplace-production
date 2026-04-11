@@ -1,10 +1,21 @@
+import type { Metadata } from "next";
 import { formatMessage } from "@/lib/i18n/format";
 import { getRequestDictionary } from "@/lib/i18n/server";
-import { siteConfig } from "@/lib/site";
+import { siteConfig, siteUrl } from "@/lib/site";
 
-export const metadata = {
-  title: "Privacy Policy",
+export const metadata: Metadata = {
+  title: "Privacy Policy | Federico Shop",
+  description:
+    "Read the Federico Shop privacy policy covering data handling for our Berlin-based online vinyl, cassette, and CD shop.",
+  alternates: {
+    canonical: siteUrl("/privacy"),
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
+
 
 export default async function PrivacyPage() {
   const dictionary = await getRequestDictionary();

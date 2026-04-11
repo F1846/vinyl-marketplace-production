@@ -31,8 +31,8 @@ type CatalogResponse = {
   totalCount: number;
 };
 
-const PAGE_SIZE = 24;
-const AUTO_LOAD_BURST_LIMIT = 4;
+const PAGE_SIZE = 50;
+const AUTO_LOAD_BURST_LIMIT = 0;
 const SORT_OPTIONS: Array<{ value: CatalogSort; label: string }> = [
   { value: "newest", label: "Newest" },
   { value: "price-asc", label: "Price: low to high" },

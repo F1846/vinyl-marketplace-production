@@ -17,8 +17,8 @@ Before using this repository in production, replace the placeholder contact belo
 
 Recommended contact format:
 
-- `security@your-domain.example`
-- or `support@your-domain.example`
+- `orders@federicoshop.de`
+- or `support@federicoshop.de`
 
 Recommended subject:
 

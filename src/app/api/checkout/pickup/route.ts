@@ -50,11 +50,12 @@ export async function POST(req: NextRequest) {
       { headers: checkoutRateLimit.headers }
     );
   } catch (error) {
+    console.error("pickup checkout failed:", error);
     return NextResponse.json(
       {
         error: {
           code: "CHECKOUT_FAILED",
-          message: error instanceof Error ? error.message : "Pickup checkout failed.",
+          message: "Checkout failed. Please try again or contact support.",
         },
       },
       { status: 409, headers: checkoutRateLimit.headers }
