@@ -430,10 +430,10 @@ export function AdminInventoryTable({ items }: Props) {
               <th className="hidden px-4 py-3 text-left font-medium text-foreground lg:table-cell">
                 {renderSortHeader("Stock", "stock")}
               </th>
-              <th className="px-4 py-3 text-left font-medium text-foreground">
+              <th className="hidden lg:table-cell px-4 py-3 text-left font-medium text-foreground">
                 {renderSortHeader("Status", "status")}
               </th>
-              <th className="px-4 py-3 text-right font-medium text-foreground">Actions</th>
+              <th className="hidden lg:table-cell px-4 py-3 text-right font-medium text-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -494,14 +494,53 @@ export function AdminInventoryTable({ items }: Props) {
                             {[item.pressingLabel, item.pressingCatalogNumber, item.pressingYear].filter(Boolean).join(" · ")}
                           </div>
                         )}
-                        <div className="mt-1 flex flex-wrap items-center gap-2 lg:hidden" aria-hidden="true">
-                          <span className={`badge badge-${item.format}`}>{item.format}</span>
-                          <span className="text-xs text-muted">{formatEuroFromCents(item.priceCents)}</span>
-                          <input type="number" min="0" step="1"
-                            value={pendingStock[item.id] ?? item.stockQuantity}
-                            onChange={(e) => setPendingStock((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                            className="h-8 w-20 rounded-full border border-border bg-white px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
-                            aria-label="Stock quantity" />
+                        {/* Mobile-only: full controls below title */}
+                        <div className="mt-2 flex flex-col gap-2 lg:hidden">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`badge badge-${item.format}`}>{item.format}</span>
+                            <StatusBadge status={item.status} id={item.id} />
+                          </div>
+                          {item.status === "archived" ? (
+                            <PutOnSaleForm id={item.id} currentPriceCents={item.priceCents} />
+                          ) : (
+                            <span className="text-sm text-foreground">{formatEuroFromCents(item.priceCents)}</span>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted">Qty</span>
+                            <input type="number" min="0" step="1"
+                              value={pendingStock[item.id] ?? item.stockQuantity}
+                              onChange={(e) => setPendingStock((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                              className="h-8 w-20 rounded-full border border-border bg-white px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                              aria-label="Stock quantity" />
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            <Link href={`/admin/products/${item.id}/edit`}
+                              className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted transition-colors hover:border-accent hover:text-accent">
+                              Edit
+                            </Link>
+                            {item.status === "sold_out" && (
+                              <form action={relistProduct.bind(null, item.id)}>
+                                <button type="submit" className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted transition-colors hover:border-success hover:text-success">
+                                  <RotateCcw className="h-3 w-3" />
+                                  Relist
+                                </button>
+                              </form>
+                            )}
+                            {item.status === "active" && (
+                              <form action={archiveProduct.bind(null, item.id)}>
+                                <button type="submit" className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted transition-colors hover:border-amber-500 hover:text-amber-600">
+                                  <EyeOff className="h-3 w-3" />
+                                  Remove
+                                </button>
+                              </form>
+                            )}
+                            <form action={deleteProduct.bind(null, item.id)}>
+                              <button type="submit" className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted transition-colors hover:border-danger hover:text-danger">
+                                <Trash2 className="h-3 w-3" />
+                                Delete
+                              </button>
+                            </form>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -519,10 +558,10 @@ export function AdminInventoryTable({ items }: Props) {
                       className="h-9 w-20 rounded-full border border-border bg-white px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
                       aria-label="Stock quantity" />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="hidden lg:table-cell px-4 py-3">
                     <StatusBadge status={item.status} id={item.id} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="hidden lg:table-cell px-4 py-3">
                     <div className="flex flex-wrap justify-end gap-1.5">
                       <Link href={`/admin/products/${item.id}/edit`}
                         className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted transition-colors hover:border-accent hover:text-accent">
