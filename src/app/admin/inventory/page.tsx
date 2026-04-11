@@ -20,6 +20,9 @@ export type InventoryRow = {
   conditionMedia: MediaCondition | null;
   pressingLabel: string | null;
   pressingYear: number | null;
+  pressingCatalogNumber: string | null;
+  discogsReleaseId: number | null;
+  imageUrl: string | null;
 };
 
 export default async function AdminInventoryPage() {
@@ -29,6 +32,12 @@ export default async function AdminInventoryPage() {
   const products = await d.query.products.findMany({
     where: isNull(schema.products.deletedAt),
     orderBy: [desc(schema.products.createdAt)],
+    with: {
+      images: {
+        orderBy: [schema.productImages.sortOrder],
+        limit: 1,
+      },
+    },
   });
 
   const rows: InventoryRow[] = products.map((product) => ({
@@ -43,6 +52,9 @@ export default async function AdminInventoryPage() {
     conditionMedia: product.conditionMedia,
     pressingLabel: product.pressingLabel,
     pressingYear: product.pressingYear,
+    pressingCatalogNumber: product.pressingCatalogNumber,
+    discogsReleaseId: product.discogsReleaseId,
+    imageUrl: product.images[0]?.url ?? null,
   }));
 
   return <AdminInventoryTable items={rows} />;
