@@ -1,10 +1,21 @@
+import type { Metadata } from "next";
 import { formatMessage } from "@/lib/i18n/format";
 import { getRequestDictionary } from "@/lib/i18n/server";
-import { siteConfig } from "@/lib/site";
+import { siteConfig, siteUrl } from "@/lib/site";
 
-export const metadata = {
-  title: "Refund Policy",
+export const metadata: Metadata = {
+  title: "Refund Policy | Federico Shop",
+  description:
+    "Read Federico Shop refund and return policy for vinyl records, cassette tapes, and CDs ordered online.",
+  alternates: {
+    canonical: siteUrl("/refund"),
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
+
 
 export default async function RefundPage() {
   const dictionary = await getRequestDictionary();

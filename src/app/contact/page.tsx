@@ -17,6 +17,19 @@ export const metadata: Metadata = {
   alternates: {
     canonical: siteUrl("/contact"),
   },
+  openGraph: {
+    title: "Contact Federico Shop",
+    description:
+      "Contact Federico Shop for orders, local pickup, shipping questions, and record requests.",
+    url: siteUrl("/contact"),
+    siteName: siteConfig.name,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Contact Federico Shop",
+    description:
+      "Contact Federico Shop for orders, local pickup, shipping questions, and record requests.",
+  },
 };
 
 export default async function ContactPage() {

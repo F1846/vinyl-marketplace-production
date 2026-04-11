@@ -16,6 +16,19 @@ export const metadata: Metadata = {
   alternates: {
     canonical: siteUrl("/about"),
   },
+  openGraph: {
+    title: "About Federico Shop",
+    description:
+      "Learn about Federico Shop, a Berlin-based online record shop focused on graded vinyl, cassette, and CD finds.",
+    url: siteUrl("/about"),
+    siteName: siteConfig.name,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "About Federico Shop",
+    description:
+      "Learn about Federico Shop, a Berlin-based online record shop focused on graded vinyl, cassette, and CD finds.",
+  },
 };
 
 export default async function AboutPage() {
