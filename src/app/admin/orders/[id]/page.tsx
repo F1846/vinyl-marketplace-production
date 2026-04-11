@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
@@ -35,11 +36,25 @@ export default async function AdminOrderDetailPage({
   const d = db();
   const foundOrder = await d.query.orders.findFirst({
     where: eq(schema.orders.id, id),
+    with: {
+      items: {
+        with: {
+          product: {
+            with: {
+              images: {
+                orderBy: [schema.productImages.sortOrder],
+              },
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!foundOrder) notFound();
 
-  let order = foundOrder;
+  const { items: orderItems, ...foundOrderBase } = foundOrder;
+  let order = foundOrderBase;
   let trackingSummary: TrackingSummary | null = null;
   let trackingError: string | null = null;
 
@@ -290,6 +305,84 @@ export default async function AdminOrderDetailPage({
         </div>
 
         <div className="space-y-6">
+          <div className="card space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-foreground">Items in this order</h2>
+              <span className="rounded-full border border-border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+                {orderItems.reduce((sum, item) => sum + item.quantity, 0)} item
+                {orderItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? "" : "s"}
+              </span>
+            </div>
+
+            {orderItems.length > 0 ? (
+              <div className="space-y-3">
+                {orderItems.map((item) => {
+                  const imageUrl = item.product.images[0]?.url ?? null;
+                  const lineTotal = item.priceAtPurchaseCents * item.quantity;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex gap-3 rounded-[1rem] border border-border bg-background p-3"
+                    >
+                      <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-[0.85rem] bg-[#ebe8e1]">
+                        {imageUrl ? (
+                          <Image
+                            src={imageUrl}
+                            alt={`${item.product.artist} - ${item.product.title}`}
+                            fill
+                            className="object-cover"
+                            sizes="64px"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-[0.16em] text-muted">
+                            No image
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                            {item.product.artist}
+                          </p>
+                          <Link
+                            href={`/products/${item.product.id}`}
+                            className="block text-sm font-semibold leading-5 text-foreground hover:text-accent"
+                          >
+                            {item.product.title}
+                          </Link>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 text-xs text-muted">
+                          <span className="rounded-full border border-border px-2 py-1 uppercase tracking-[0.16em]">
+                            {item.product.format}
+                          </span>
+                          <span>Qty: {item.quantity}</span>
+                          <span>Unit: {formatEuroFromCents(item.priceAtPurchaseCents)}</span>
+                          {item.product.conditionMedia && (
+                            <span>Media: {item.product.conditionMedia}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                          Line total
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-foreground">
+                          {formatEuroFromCents(lineTotal)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted">No order items saved for this order.</p>
+            )}
+          </div>
+
           <div className="card space-y-2">
             <div className="flex justify-between text-sm text-muted">
               <span>Subtotal</span>
@@ -375,9 +468,9 @@ export default async function AdminOrderDetailPage({
         </div>
       </div>
 
-      <div className="card space-y-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
+          <div className="card space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
             <h2 className="text-lg font-semibold text-foreground">Email customer</h2>
             <p className="mt-1 text-sm text-muted">
               Sends to {order.customerEmail} using the same branded email style as the other customer emails.
@@ -391,9 +484,9 @@ export default async function AdminOrderDetailPage({
               <label htmlFor="sender" className="label">
                 Send from
               </label>
-              <select id="sender" name="sender" className="input" defaultValue="support">
-                <option value="support">{siteConfig.supportEmail}</option>
+              <select id="sender" name="sender" className="input" defaultValue="orders">
                 <option value="orders">{siteConfig.orderEmail}</option>
+                <option value="support">{siteConfig.supportEmail}</option>
               </select>
             </div>
             <div>

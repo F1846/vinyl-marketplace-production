@@ -7,14 +7,21 @@ const SESSION_REFRESH_INTERVAL_MS = 60 * 1000;
 const ACTIVITY_THROTTLE_MS = 750;
 // Show warning this many ms before auto-logout
 const WARNING_BEFORE_MS = 2 * 60 * 1000; // 2 minutes
+// eslint-disable-next-line no-unused-vars
+type ScheduleLogoutFn = (lastActivityAtMs: number) => void;
+// eslint-disable-next-line no-unused-vars
+type RefreshSessionFn = (forceRefresh?: boolean) => Promise<void>;
 
 export function AdminSessionTimeout({ timeoutMs }: { timeoutMs: number }) {
   const timerRef = useRef<number | null>(null);
   const warningTimerRef = useRef<number | null>(null);
   const loggingOutRef = useRef(false);
   const refreshInFlightRef = useRef(false);
+  const warningVisibleRef = useRef(false);
   const lastActivityAtRef = useRef(Date.now());
   const lastRefreshAtRef = useRef(Date.now());
+  const scheduleLogoutRef = useRef<ScheduleLogoutFn | null>(null);
+  const refreshSessionRef = useRef<RefreshSessionFn | null>(null);
   const [showWarning, setShowWarning] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const countdownRef = useRef<number | null>(null);
@@ -45,8 +52,9 @@ export function AdminSessionTimeout({ timeoutMs }: { timeoutMs: number }) {
 
       // Warning timer
       warningTimerRef.current = window.setTimeout(() => {
+        warningVisibleRef.current = true;
         setShowWarning(true);
-        let secs = Math.round(Math.min(WARNING_BEFORE_MS, remaining) / 1000);
+        let secs = Math.max(0, Math.ceil(Math.min(WARNING_BEFORE_MS, remaining) / 1000));
         setSecondsLeft(secs);
         countdownRef.current = window.setInterval(() => {
           secs -= 1;
@@ -62,6 +70,7 @@ export function AdminSessionTimeout({ timeoutMs }: { timeoutMs: number }) {
         void logout();
       }, remaining);
     }
+    scheduleLogoutRef.current = scheduleLogoutFrom;
 
     async function refreshSession(force = false) {
       const now = Date.now();
@@ -78,8 +87,10 @@ export function AdminSessionTimeout({ timeoutMs }: { timeoutMs: number }) {
         refreshInFlightRef.current = false;
       }
     }
+    refreshSessionRef.current = refreshSession;
 
     function markActivity(forceRefresh = false) {
+      if (warningVisibleRef.current) return;
       const now = Date.now();
       if (!forceRefresh && now - lastActivityAtRef.current < ACTIVITY_THROTTLE_MS) return;
       lastActivityAtRef.current = now;
@@ -95,32 +106,48 @@ export function AdminSessionTimeout({ timeoutMs }: { timeoutMs: number }) {
 
     lastActivityAtRef.current = Date.now();
     lastRefreshAtRef.current = Date.now();
+    warningVisibleRef.current = false;
     scheduleLogoutFrom(lastActivityAtRef.current);
 
+    const handlePointerDown = () => markActivity();
+    const handleKeyDown = () => markActivity();
+    const handleScroll = () => markActivity();
+    const handleTouchStart = () => markActivity();
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        handlePotentialInactivity();
+      }
+    };
+
     const activityEvents = ["pointerdown", "keydown", "scroll", "touchstart"] as const;
-    for (const ev of activityEvents) window.addEventListener(ev, () => markActivity(), { passive: true });
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) handlePotentialInactivity(); });
+    window.addEventListener(activityEvents[0], handlePointerDown, { passive: true });
+    window.addEventListener(activityEvents[1], handleKeyDown, { passive: true });
+    window.addEventListener(activityEvents[2], handleScroll, { passive: true });
+    window.addEventListener(activityEvents[3], handleTouchStart, { passive: true });
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", handlePotentialInactivity);
 
     return () => {
       clearTimer();
-      for (const ev of activityEvents) window.removeEventListener(ev, () => markActivity());
-      document.removeEventListener("visibilitychange", () => { if (!document.hidden) handlePotentialInactivity(); });
+      scheduleLogoutRef.current = null;
+      refreshSessionRef.current = null;
+      window.removeEventListener(activityEvents[0], handlePointerDown);
+      window.removeEventListener(activityEvents[1], handleKeyDown);
+      window.removeEventListener(activityEvents[2], handleScroll);
+      window.removeEventListener(activityEvents[3], handleTouchStart);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handlePotentialInactivity);
     };
   }, [timeoutMs]);
 
   async function handleKeepAlive() {
+    warningVisibleRef.current = false;
     setShowWarning(false);
     if (countdownRef.current !== null) window.clearInterval(countdownRef.current);
-    lastActivityAtRef.current = Date.now();
-    // Force a session refresh
-    try {
-      await fetch("/api/admin/session/refresh", { method: "POST", credentials: "same-origin", cache: "no-store" });
-    } catch {
-      // Ignore
-    }
-    lastActivityAtRef.current = Date.now();
+    const now = Date.now();
+    lastActivityAtRef.current = now;
+    await refreshSessionRef.current?.(true);
+    scheduleLogoutRef.current?.(now);
   }
 
   if (!showWarning) return null;
@@ -140,7 +167,7 @@ export function AdminSessionTimeout({ timeoutMs }: { timeoutMs: number }) {
             <span className="font-semibold text-foreground tabular-nums">
               {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")}
             </span>
-            {" "}due to inactivity.
+            {" "}due to inactivity. Continue to stay signed in for another 10 minutes.
           </p>
         </div>
         <button
@@ -149,7 +176,7 @@ export function AdminSessionTimeout({ timeoutMs }: { timeoutMs: number }) {
           className="btn-primary w-full inline-flex items-center justify-center gap-2"
         >
           <RefreshCw className="h-4 w-4" />
-          Keep me logged in
+          Continue session
         </button>
       </div>
     </div>

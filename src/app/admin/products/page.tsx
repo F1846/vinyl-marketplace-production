@@ -82,7 +82,11 @@ export default async function AdminProductsPage({
       )}
       <AdminProductsTable
         products={productRows}
-        productCountLabel={products.length}
+        productCountLabel={productRows.reduce(
+          (sum, product) => sum + Math.max(product.stockQuantity, 0),
+          0
+        )}
+        productListingCount={productRows.length}
         sort={sort}
         dir={dir}
         updated={params.updated}

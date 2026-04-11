@@ -23,6 +23,24 @@ type StoredCartPayload = {
 
 let cartCache: CartItemType[] = [];
 const listeners = new Set<() => void>();
+let activeSubscriberCount = 0;
+let expirationIntervalId: number | null = null;
+let storageListener: NonNullable<Window["onstorage"]> | null = null;
+
+function clearCartCookie() {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  document.cookie = `${CART_KEY}=; path=/; max-age=0; samesite=lax`;
+}
+
+export function getReservedQuantity(items: CartItemType[], productId: string) {
+  return items.reduce(
+    (sum, item) => (item.productId === productId ? sum + item.quantity : sum),
+    0
+  );
+}
 
 function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;
@@ -85,11 +103,14 @@ function readCartFromStorage(): CartItemType[] {
     const payload = parsed as Partial<StoredCartPayload>;
 
     if (!payload || typeof payload !== "object" || !Array.isArray(payload.items)) {
+      localStorage.removeItem(CART_KEY);
+      clearCartCookie();
       return [];
     }
 
     if (typeof payload.expiresAt !== "number" || payload.expiresAt <= Date.now()) {
       localStorage.removeItem(CART_KEY);
+      clearCartCookie();
       return [];
     }
 
@@ -104,6 +125,45 @@ function readCartFromStorage(): CartItemType[] {
 function notifyListeners() {
   for (const listener of listeners) {
     listener();
+  }
+}
+
+function ensureSharedSync() {
+  if (typeof window === "undefined" || activeSubscriberCount > 0) {
+    return;
+  }
+
+  storageListener = (event: StorageEvent) => {
+    if (event.key === CART_KEY) {
+      cartCache = readCartFromStorage();
+      notifyListeners();
+    }
+  };
+
+  window.addEventListener("storage", storageListener);
+
+  expirationIntervalId = window.setInterval(() => {
+    const nextCart = readCartFromStorage();
+    const didExpire = cartCache.length > 0 && nextCart.length === 0;
+    if (didExpire) {
+      clearPersistedCart();
+    }
+  }, 30_000);
+}
+
+function teardownSharedSync() {
+  if (typeof window === "undefined" || activeSubscriberCount > 0) {
+    return;
+  }
+
+  if (storageListener) {
+    window.removeEventListener("storage", storageListener);
+    storageListener = null;
+  }
+
+  if (expirationIntervalId != null) {
+    window.clearInterval(expirationIntervalId);
+    expirationIntervalId = null;
   }
 }
 
@@ -126,7 +186,7 @@ function setCart(items: CartItemType[]) {
 function clearPersistedCart() {
   cartCache = [];
   localStorage.removeItem(CART_KEY);
-  document.cookie = `${CART_KEY}=; path=/; max-age=0; samesite=lax`;
+  clearCartCookie();
   notifyListeners();
 }
 
@@ -144,28 +204,13 @@ export function useCart() {
     };
 
     listeners.add(syncFromCache);
-
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === CART_KEY) {
-        cartCache = readCartFromStorage();
-        notifyListeners();
-      }
-    };
-
-    window.addEventListener("storage", handleStorage);
-
-    const expirationInterval = window.setInterval(() => {
-      const nextCart = readCartFromStorage();
-      const didExpire = cartCache.length > 0 && nextCart.length === 0;
-      if (didExpire) {
-        clearPersistedCart();
-      }
-    }, 30_000);
+    ensureSharedSync();
+    activeSubscriberCount += 1;
 
     return () => {
       listeners.delete(syncFromCache);
-      window.removeEventListener("storage", handleStorage);
-      window.clearInterval(expirationInterval);
+      activeSubscriberCount = Math.max(0, activeSubscriberCount - 1);
+      teardownSharedSync();
     };
   }, []);
 

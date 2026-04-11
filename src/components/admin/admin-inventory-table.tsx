@@ -50,7 +50,11 @@ const STATUS_ORDER: Record<ProductStatus, number> = {
   archived: 2,
 };
 
-const PAGE_SIZE = 100;
+const PAGE_SIZE_OPTIONS = [100, 250, 500, 1000] as const;
+
+function sumStockQuantity<T extends { stockQuantity: number }>(rows: T[]) {
+  return rows.reduce((acc, row) => acc + Math.max(row.stockQuantity, 0), 0);
+}
 
 function StatusBadge({ status, id }: { status: ProductStatus; id: string }) {
   if (status === "active") {
@@ -126,6 +130,7 @@ export function AdminInventoryTable({ items }: Props) {
   const [sortKey, setSortKey] = useState<InventorySortKey>("stock");
   const [sortDir, setSortDir] = useState<InventorySortDirection>("desc");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(100);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingStock, setPendingStock] = useState<Record<string, string>>({});
   const [savingStock, setSavingStock] = useState(false);
@@ -186,43 +191,43 @@ export function AdminInventoryTable({ items }: Props) {
   useEffect(() => {
     setPage(1);
     lastSelectedIndexRef.current = null;
-  }, [deferredQuery, formatFilter, sortDir, sortKey, statusFilter]);
+  }, [deferredQuery, formatFilter, pageSize, sortDir, sortKey, statusFilter]);
 
   useEffect(() => {
     lastSelectedIndexRef.current = null;
   }, [page]);
 
   const totalUnits = useMemo(
-    () => items.reduce((acc, item) => acc + item.stockQuantity, 0),
+    () => sumStockQuantity(items),
     [items]
   );
 
   const statusCounts = useMemo(
     () => ({
-      all: items.length,
-      active: items.filter((item) => item.status === "active").length,
-      sold_out: items.filter((item) => item.status === "sold_out").length,
-      archived: items.filter((item) => item.status === "archived").length,
+      all: totalUnits,
+      active: sumStockQuantity(items.filter((item) => item.status === "active")),
+      sold_out: sumStockQuantity(items.filter((item) => item.status === "sold_out")),
+      archived: sumStockQuantity(items.filter((item) => item.status === "archived")),
     }),
-    [items]
+    [items, totalUnits]
   );
 
   const formatCounts = useMemo(
     () => ({
-      all: items.length,
-      vinyl: items.filter((item) => item.format === "vinyl").length,
-      cassette: items.filter((item) => item.format === "cassette").length,
-      cd: items.filter((item) => item.format === "cd").length,
+      all: totalUnits,
+      vinyl: sumStockQuantity(items.filter((item) => item.format === "vinyl")),
+      cassette: sumStockQuantity(items.filter((item) => item.format === "cassette")),
+      cd: sumStockQuantity(items.filter((item) => item.format === "cd")),
     }),
-    [items]
+    [items, totalUnits]
   );
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const paginatedFiltered = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [currentPage, filtered]);
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [currentPage, filtered, pageSize]);
 
   const visibleIds = useMemo(() => paginatedFiltered.map((item) => item.id), [paginatedFiltered]);
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -231,6 +236,14 @@ export function AdminInventoryTable({ items }: Props) {
   const selectedItems = useMemo(
     () => items.filter((item) => selectedIdSet.has(item.id)),
     [items, selectedIdSet]
+  );
+  const selectedUnits = useMemo(
+    () => sumStockQuantity(selectedItems),
+    [selectedItems]
+  );
+  const filteredUnits = useMemo(
+    () => sumStockQuantity(filtered),
+    [filtered]
   );
   const selectedWithoutPriceCount = selectedItems.filter(
     (item) => item.priceCents <= 0
@@ -313,7 +326,7 @@ export function AdminInventoryTable({ items }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-foreground">
-            Inventory ({totalUnits} units / {items.length} listings)
+            Inventory ({totalUnits} items / {items.length} listings)
           </h1>
         </div>
         <Link href="/admin/import" className="btn-secondary flex items-center gap-2 text-sm">
@@ -388,17 +401,38 @@ export function AdminInventoryTable({ items }: Props) {
 
       {query && (
         <p className="text-sm text-muted">
-          {filtered.length} result{filtered.length === 1 ? "" : "s"} for &ldquo;{query}&rdquo;
+          {filteredUnits} item{filteredUnits === 1 ? "" : "s"} across {filtered.length} listing
+          {filtered.length === 1 ? "" : "s"} for &ldquo;{query}&rdquo;
         </p>
       )}
 
-      {filtered.length > PAGE_SIZE && (
+      {filtered.length > pageSize && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1rem] border border-border bg-white px-4 py-3 shadow-card">
           <p className="text-sm text-muted">
-            Showing {(currentPage - 1) * PAGE_SIZE + 1}-
-            {Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} filtered listings
+            Showing {(currentPage - 1) * pageSize + 1}-
+            {Math.min(currentPage * pageSize, filtered.length)} of {filtered.length} filtered listings
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <label
+              htmlFor="inventory-page-size"
+              className="text-xs font-semibold uppercase tracking-[0.16em] text-muted"
+            >
+              Items per page
+            </label>
+            <select
+              id="inventory-page-size"
+              className="input min-w-[92px] px-3 py-2 text-sm"
+              value={pageSize}
+              onChange={(event) =>
+                setPageSize(Number(event.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])
+              }
+            >
+              {PAGE_SIZE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
               className="btn-secondary text-sm"
@@ -436,7 +470,8 @@ export function AdminInventoryTable({ items }: Props) {
               Select / deselect all
             </label>
             <span className="text-xs uppercase tracking-[0.16em] text-muted">
-              {selectedIds.length} selected
+              {selectedUnits} items selected / {selectedIds.length} listing
+              {selectedIds.length === 1 ? "" : "s"}
             </span>
           </div>
 

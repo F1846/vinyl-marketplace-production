@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { MediaCondition, ProductFormat, ProductStatus } from "@/types/product";
 
@@ -20,6 +20,13 @@ export type ProductIdentityInput = {
 
 function visibleProductWhere(id: string) {
   return and(eq(schema.products.id, id), isNull(schema.products.deletedAt));
+}
+
+function visibleMatchingProductWhere(input: ProductIdentityInput, status?: ProductStatus) {
+  return and(
+    buildProductIdentityWhere(input),
+    status ? eq(schema.products.status, status) : undefined
+  );
 }
 
 export function buildProductIdentityWhere(input: ProductIdentityInput) {
@@ -148,10 +155,67 @@ async function ensureProductImages(product: ProductRecord): Promise<void> {
   }
 }
 
-export async function archiveProductRecord(id: string): Promise<boolean> {
-  const product = await getVisibleProductById(id);
-  if (!product) {
-    return false;
+async function copyProductImages(sourceProductId: string, targetProductId: string): Promise<void> {
+  const images = await db()
+    .select({
+      url: schema.productImages.url,
+      sortOrder: schema.productImages.sortOrder,
+    })
+    .from(schema.productImages)
+    .where(eq(schema.productImages.productId, sourceProductId));
+
+  if (images.length === 0) {
+    return;
+  }
+
+  await db().insert(schema.productImages).values(
+    images.map((image) => ({
+      id: crypto.randomUUID(),
+      productId: targetProductId,
+      url: image.url,
+      sortOrder: image.sortOrder,
+    }))
+  );
+}
+
+async function softDeleteMergedProduct(product: ProductRecord) {
+  await db()
+    .update(schema.products)
+    .set({
+      deletedAt: new Date(),
+      status: "archived",
+      stockQuantity: 0,
+      discogsListingId: null,
+      updatedAt: new Date(),
+      version: product.version + 1,
+    })
+    .where(visibleProductWhere(product.id));
+}
+
+async function moveBackToArchivedInventory(product: ProductRecord): Promise<boolean> {
+  const mergeQuantity =
+    product.status === "sold_out" ? Math.max(product.stockQuantity, 0) : Math.max(product.stockQuantity, 1);
+
+  const existingArchived = await db().query.products.findFirst({
+    where: and(
+      visibleMatchingProductWhere(product, "archived"),
+      ne(schema.products.id, product.id)
+    ),
+  });
+
+  if (existingArchived) {
+    await db()
+      .update(schema.products)
+      .set({
+        priceCents: product.priceCents > 0 ? product.priceCents : existingArchived.priceCents,
+        stockQuantity: existingArchived.stockQuantity + mergeQuantity,
+        updatedAt: new Date(),
+        version: existingArchived.version + 1,
+      })
+      .where(visibleProductWhere(existingArchived.id));
+
+    await softDeleteMergedProduct(product);
+    return true;
   }
 
   await db()
@@ -161,7 +225,22 @@ export async function archiveProductRecord(id: string): Promise<boolean> {
       updatedAt: new Date(),
       version: product.version + 1,
     })
-    .where(visibleProductWhere(id));
+    .where(visibleProductWhere(product.id));
+
+  return true;
+}
+
+export async function archiveProductRecord(id: string): Promise<boolean> {
+  const product = await getVisibleProductById(id);
+  if (!product) {
+    return false;
+  }
+
+  if (product.status === "archived") {
+    return true;
+  }
+
+  await moveBackToArchivedInventory(product);
 
   return true;
 }
@@ -196,22 +275,105 @@ export async function putProductOnSaleRecord(
     return false;
   }
 
-  // Don't put on sale if a different identical copy is already active
-  const otherActiveCopy = await db().query.products.findFirst({
-    where: and(
-      buildProductIdentityWhere(product),
-      eq(schema.products.status, "active")
-    ),
-  });
-
-  if (otherActiveCopy && otherActiveCopy.id !== id) {
-    return false;
-  }
-
   const nextPriceCents =
     typeof explicitPriceCents === "number" && Number.isFinite(explicitPriceCents)
       ? Math.max(0, Math.round(explicitPriceCents))
       : product.priceCents;
+
+  const existingLiveCopy = await db().query.products.findFirst({
+    where: and(
+      visibleMatchingProductWhere(product),
+      ne(schema.products.status, "archived"),
+      ne(schema.products.id, product.id)
+    ),
+    with: {
+      images: {
+        orderBy: [schema.productImages.sortOrder],
+      },
+    },
+  });
+
+  if (product.status === "archived") {
+    if (existingLiveCopy) {
+      const nextLiveStock =
+        existingLiveCopy.status === "active" && existingLiveCopy.stockQuantity > 0
+          ? existingLiveCopy.stockQuantity
+          : 1;
+
+      await db()
+        .update(schema.products)
+        .set({
+          priceCents: nextPriceCents,
+          stockQuantity: nextLiveStock,
+          status: "active",
+          updatedAt: new Date(),
+          version: existingLiveCopy.version + 1,
+        })
+        .where(visibleProductWhere(existingLiveCopy.id));
+
+      if (!(existingLiveCopy.status === "active" && existingLiveCopy.stockQuantity > 0)) {
+        const nextArchivedQuantity = Math.max(product.stockQuantity - 1, 0);
+        if (nextArchivedQuantity === 0) {
+          await softDeleteMergedProduct(product);
+        } else {
+          await db()
+            .update(schema.products)
+            .set({
+              stockQuantity: nextArchivedQuantity,
+              status: "archived",
+              updatedAt: new Date(),
+              version: product.version + 1,
+            })
+            .where(visibleProductWhere(product.id));
+        }
+      }
+
+      return true;
+    }
+
+    if (product.stockQuantity > 1) {
+      const nextArchivedQuantity = product.stockQuantity - 1;
+      const nextProductId = crypto.randomUUID();
+
+      await db()
+        .update(schema.products)
+        .set({
+          stockQuantity: nextArchivedQuantity,
+          status: "archived",
+          updatedAt: new Date(),
+          version: product.version + 1,
+        })
+        .where(visibleProductWhere(product.id));
+
+      await db().insert(schema.products).values({
+        id: nextProductId,
+        artist: product.artist,
+        title: product.title,
+        format: product.format,
+        genre: product.genre,
+        priceCents: nextPriceCents,
+        stockQuantity: 1,
+        conditionMedia: product.conditionMedia,
+        conditionSleeve: product.conditionSleeve,
+        pressingLabel: product.pressingLabel,
+        pressingYear: product.pressingYear,
+        pressingCatalogNumber: product.pressingCatalogNumber,
+        discogsListingId: null,
+        discogsReleaseId: product.discogsReleaseId,
+        description: product.description,
+        status: "active",
+        version: 1,
+      });
+
+      await copyProductImages(product.id, nextProductId);
+      const insertedProduct = await getVisibleProductById(nextProductId);
+      if (insertedProduct) {
+        await ensureProductImages(insertedProduct);
+      }
+
+      return true;
+    }
+  }
 
   await ensureProductImages(product);
 
