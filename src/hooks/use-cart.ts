@@ -13,8 +13,8 @@ export interface CartItemType {
 }
 
 const CART_KEY = "federico_shop_cart";
-const CART_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
-const CART_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const CART_COOKIE_MAX_AGE_SECONDS = 60 * 10; 
+const CART_TTL_MS = 10 * 60 * 1000;
 
 type StoredCartPayload = {
   items: CartItemType[];
