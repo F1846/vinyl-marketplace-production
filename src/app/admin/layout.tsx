@@ -23,9 +23,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <div>
       <AdminSessionTimeout timeoutMs={ADMIN_SESSION_TTL_SECONDS * 1000} />
-      <div className="flex flex-col md:flex-row md:gap-4">
-        <AdminNav logoutAction={adminLogoutAction} />
-        <div className="min-w-0 flex-1">{children}</div>
+      <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+        <div className="flex flex-col md:flex-row">
+          <AdminNav logoutAction={adminLogoutAction} />
+          <div className="min-w-0 flex-1 px-4 sm:px-5 lg:px-6">{children}</div>
+        </div>
       </div>
     </div>
   );
