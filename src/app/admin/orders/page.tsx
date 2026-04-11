@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { desc } from "drizzle-orm";
+import { count, desc } from "drizzle-orm";
 import { schema } from "@/db";
 import Link from "next/link";
 import { requireAuthenticatedAdmin } from "@/lib/auth";
@@ -7,12 +7,27 @@ import { formatEuroFromCents } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminOrdersPage() {
+const PAGE_SIZE = 100;
+
+export default async function AdminOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   await requireAuthenticatedAdmin();
 
+  const params = await searchParams;
+  const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+
   const d = db();
+  const [{ total }] = await d.select({ total: count() }).from(schema.orders);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
   const orders = await d.query.orders.findMany({
     orderBy: [desc(schema.orders.createdAt)],
+    limit: PAGE_SIZE,
+    offset: (currentPage - 1) * PAGE_SIZE,
   });
 
   const statusColors: Record<string, string> = {
@@ -25,7 +40,7 @@ export default async function AdminOrdersPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-foreground">Orders ({orders.length})</h1>
+      <h1 className="text-xl font-bold text-foreground">Orders ({total})</h1>
 
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
@@ -61,6 +76,29 @@ export default async function AdminOrdersPage() {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1rem] border border-border bg-white px-4 py-3">
+          <p className="text-sm text-muted">
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, total)} of {total} orders
+          </p>
+          <div className="flex items-center gap-2">
+            {currentPage > 1 ? (
+              <Link href={`/admin/orders?page=${currentPage - 1}`} className="btn-secondary text-sm">Previous</Link>
+            ) : (
+              <button type="button" className="btn-secondary text-sm" disabled>Previous</button>
+            )}
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+              Page {currentPage} / {totalPages}
+            </span>
+            {currentPage < totalPages ? (
+              <Link href={`/admin/orders?page=${currentPage + 1}`} className="btn-secondary text-sm">Next</Link>
+            ) : (
+              <button type="button" className="btn-secondary text-sm" disabled>Next</button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

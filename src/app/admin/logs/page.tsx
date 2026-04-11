@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { requireAuthenticatedAdmin } from "@/lib/auth";
 import { db, schema } from "@/../db";
-import { desc } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import { Download, ShieldAlert, ShieldCheck, ShieldX, Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Login Logs — Admin" };
+
+const PAGE_SIZE = 100;
 
 const RESULT_META: Record<string, { label: string; className: string; Icon: typeof ShieldCheck }> = {
   success: { label: "Success", className: "badge bg-emerald-100 text-emerald-800", Icon: ShieldCheck },
@@ -15,25 +17,42 @@ const RESULT_META: Record<string, { label: string; className: string; Icon: type
   missing_password: { label: "Missing password", className: "badge bg-zinc-100 text-zinc-600", Icon: Clock },
 };
 
-export default async function AdminLogsPage() {
+export default async function AdminLogsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   await requireAuthenticatedAdmin();
 
-  const logs = await db()
+  const params = await searchParams;
+  const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+
+  const d = db();
+
+  const [[{ total }], [{ successCount }], [{ failCount }], [{ rateLimitedCount }]] =
+    await Promise.all([
+      d.select({ total: count() }).from(schema.adminLoginLogs),
+      d.select({ successCount: count() }).from(schema.adminLoginLogs).where(eq(schema.adminLoginLogs.result, "success")),
+      d.select({ failCount: count() }).from(schema.adminLoginLogs).where(eq(schema.adminLoginLogs.result, "invalid_password")),
+      d.select({ rateLimitedCount: count() }).from(schema.adminLoginLogs).where(eq(schema.adminLoginLogs.result, "rate_limited")),
+    ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const logs = await d
     .select()
     .from(schema.adminLoginLogs)
     .orderBy(desc(schema.adminLoginLogs.createdAt))
-    .limit(200);
-
-  const successCount = logs.filter((l) => l.result === "success").length;
-  const failCount = logs.filter((l) => l.result === "invalid_password").length;
-  const rateLimitedCount = logs.filter((l) => l.result === "rate_limited").length;
+    .limit(PAGE_SIZE)
+    .offset((currentPage - 1) * PAGE_SIZE);
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Login Logs</h1>
-          <p className="mt-1 text-sm text-muted">Last 200 login attempts</p>
+          <p className="mt-1 text-sm text-muted">{total} login attempts total</p>
         </div>
         <Link
           href="/api/admin/logs"
@@ -110,6 +129,29 @@ export default async function AdminLogsPage() {
           </div>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1rem] border border-border bg-white px-4 py-3">
+          <p className="text-sm text-muted">
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, total)} of {total} entries
+          </p>
+          <div className="flex items-center gap-2">
+            {currentPage > 1 ? (
+              <Link href={`/admin/logs?page=${currentPage - 1}`} className="btn-secondary text-sm">Previous</Link>
+            ) : (
+              <button type="button" className="btn-secondary text-sm" disabled>Previous</button>
+            )}
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+              Page {currentPage} / {totalPages}
+            </span>
+            {currentPage < totalPages ? (
+              <Link href={`/admin/logs?page=${currentPage + 1}`} className="btn-secondary text-sm">Next</Link>
+            ) : (
+              <button type="button" className="btn-secondary text-sm" disabled>Next</button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -89,7 +89,8 @@ export function AdminProductsTable({
     return products.filter(
       (p) =>
         p.artist.toLowerCase().includes(q) ||
-        p.title.toLowerCase().includes(q)
+        p.title.toLowerCase().includes(q) ||
+        (p.pressingLabel?.toLowerCase().includes(q) ?? false)
     );
   }, [products, query]);
 
@@ -216,7 +217,7 @@ export function AdminProductsTable({
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted pointer-events-none" />
         <input
           type="search"
-          placeholder="Search by artist or title…"
+          placeholder="Search by artist, title or label…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="input pl-10"
