@@ -32,6 +32,6 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-HEALTHCHECK CMD curl -f http://localhost:3000/health || exit 1
+HEALTHCHECK CMD ["node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
 
 CMD ["node", "server.js"]

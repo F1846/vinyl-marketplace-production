@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   check:
-    name: Lint, Typecheck, Build
+    name: Lint, Typecheck, Tests, Build
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -36,6 +36,9 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Focused route tests
+        run: node --import tsx --test src/app/api/health/route.test.ts
 
       - name: Build
         run: npm run build
