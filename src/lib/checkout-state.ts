@@ -47,7 +47,7 @@ function getCheckoutStateSecret(): string {
 
   if (!secret) {
     throw new Error(
-      "Checkout state signing secret is not configured. Set CHECKOUT_STATE_SECRET before enabling PayPal checkout."
+      "CHECKOUT_STATE_SECRET is not configured. Set it in your environment variables."
     );
   }
 

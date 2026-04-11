@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
-import { db, schema } from "@/db";
 import { getRequestIp, rateLimit } from "@/lib/rate-limit";
+import { db, schema } from "@/db";
 
 const refreshCartSchema = z.object({
   productIds: z.array(z.string().uuid()).min(1).max(100),
@@ -11,7 +11,7 @@ const refreshCartSchema = z.object({
 export async function POST(req: NextRequest) {
   const cartRateLimit = await rateLimit(
     `cart-refresh:${getRequestIp(req)}`,
-    60,
+    30,
     60 * 1000
   );
 

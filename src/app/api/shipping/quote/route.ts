@@ -8,7 +8,7 @@ import { shippingQuoteSchema } from "@/validations/checkout";
 export async function POST(req: NextRequest) {
   const quoteRateLimit = await rateLimit(
     `shipping-quote:${getRequestIp(req)}`,
-    30,
+    20,
     60 * 1000
   );
 
