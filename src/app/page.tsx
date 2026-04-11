@@ -174,90 +174,94 @@ export default async function HomePage() {
       <JsonLd data={newArrivalsStructuredData} />
 
       <section className="grid gap-4 overflow-hidden rounded-[1.35rem] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(243,242,238,0.95))] px-4 py-6 shadow-card sm:px-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.82fr)] lg:px-6 lg:py-7">
-        <div className="space-y-5">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">
-            <RecordIcon className="h-3.5 w-3.5 text-foreground" />
-            {dictionary.home.independentRecordStore}
-          </div>
-          <div className="space-y-3">
-            <h1 className="max-w-[11.25ch] text-balance font-sans text-[clamp(3.15rem,7vw,5.25rem)] font-bold leading-[1.04] tracking-[-0.042em] text-foreground">
-              {dictionary.home.worthHaving}
-            </h1>
-            <p className="max-w-xl text-[15px] leading-7 text-muted">
-              {dictionary.home.worthHavingBody}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/catalog" className="btn-primary">
-              {dictionary.home.browseCatalog} <ArrowRight className="h-5 w-5" />
-            </Link>
-            <Link href="/shipping" className="btn-secondary">
-              {dictionary.home.shippingAndPickup}
-            </Link>
-          </div>
-          <div className="grid gap-2.5 sm:grid-cols-3">
-            <Link
-              href={featuredHeroProduct ? `/products/${featuredHeroProduct.id}` : "/catalog"}
-              className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
-            >
-              <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.availableNow}</p>
-              <p className="mt-1.5 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
-                {count ?? 0}
-              </p>
-              <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
-                {featuredHeroProduct
-                  ? `${featuredHeroProduct.artist} - ${featuredHeroProduct.title}`
-                  : dictionary.home.currentFallback}
-              </p>
-            </Link>
-            <Link
-              href={cheapestProduct ? `/products/${cheapestProduct.id}` : "/catalog?sort=price-asc"}
-              className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
-            >
-              <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.from}</p>
-              <p className="mt-1.5 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
-                {minPrice === null ? "0 EUR" : formatEuroFromCents(minPrice)}
-              </p>
-              <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
-                {cheapestProduct
-                  ? formatMessage(dictionary.home.startWith, {
-                      product: `${cheapestProduct.artist} - ${cheapestProduct.title}`,
-                    })
-                  : dictionary.home.currentFallback}
-              </p>
-            </Link>
-            <Link
-              href={
-                formatSpotlight
-                  ? `/catalog?format=${encodeURIComponent(formatSpotlight.format)}`
-                  : "/catalog"
-              }
-              className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
-            >
-              <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.formatMix}</p>
-              <p className="mt-1.5 min-h-[3.3rem] overflow-visible pl-0.5 pt-[1px] pb-[4px] font-sans text-[1.04rem] font-bold capitalize leading-[1.2] text-foreground sm:text-[1.1rem]">
-                <span className="inline-flex flex-wrap items-baseline gap-y-1">
-                  {renderFormatMixValue(dictionary.home.formatMixValue)}
-                </span>
-              </p>
-              <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
-                {formatSpotlight
-                  ? `${formatSpotlight.artist} - ${formatSpotlight.title}`
-                  : dictionary.home.formatFallback}
-              </p>
-            </Link>
-          </div>
-      {featureStripProducts.length > 0 && (
-            <div className="grid gap-2.5 sm:grid-cols-3">
-              {featureStripProducts.map((product) => (
-                <ProductCard key={product.id} product={product} size="compact" />
-              ))}
+        <div className="flex flex-col gap-5">
+          <div className="space-y-5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">
+              <RecordIcon className="h-3.5 w-3.5 text-foreground" />
+              {dictionary.home.independentRecordStore}
             </div>
-          )}
+            <div className="space-y-3">
+              <h1 className="max-w-[11.25ch] text-balance font-sans text-[clamp(3.15rem,7vw,5.25rem)] font-bold leading-[1.04] tracking-[-0.042em] text-foreground">
+                {dictionary.home.worthHaving}
+              </h1>
+              <p className="max-w-xl text-[15px] leading-7 text-muted">
+                {dictionary.home.worthHavingBody}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/catalog" className="btn-primary">
+                {dictionary.home.browseCatalog} <ArrowRight className="h-5 w-5" />
+              </Link>
+              <Link href="/shipping" className="btn-secondary">
+                {dictionary.home.shippingAndPickup}
+              </Link>
+            </div>
+          </div>
+          <div className="mt-auto space-y-2.5">
+            <div className="grid gap-2.5 sm:grid-cols-3">
+              <Link
+                href={featuredHeroProduct ? `/products/${featuredHeroProduct.id}` : "/catalog"}
+                className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
+              >
+                <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.availableNow}</p>
+                <p className="mt-1.5 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
+                  {count ?? 0}
+                </p>
+                <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
+                  {featuredHeroProduct
+                    ? `${featuredHeroProduct.artist} - ${featuredHeroProduct.title}`
+                    : dictionary.home.currentFallback}
+                </p>
+              </Link>
+              <Link
+                href={cheapestProduct ? `/products/${cheapestProduct.id}` : "/catalog?sort=price-asc"}
+                className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
+              >
+                <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.from}</p>
+                <p className="mt-1.5 font-sans text-[1.55rem] font-bold leading-none tracking-[-0.04em] text-foreground">
+                  {minPrice === null ? "0 EUR" : formatEuroFromCents(minPrice)}
+                </p>
+                <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
+                  {cheapestProduct
+                    ? formatMessage(dictionary.home.startWith, {
+                        product: `${cheapestProduct.artist} - ${cheapestProduct.title}`,
+                      })
+                    : dictionary.home.currentFallback}
+                </p>
+              </Link>
+              <Link
+                href={
+                  formatSpotlight
+                    ? `/catalog?format=${encodeURIComponent(formatSpotlight.format)}`
+                    : "/catalog"
+                }
+                className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
+              >
+                <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.formatMix}</p>
+                <p className="mt-1.5 min-h-[3.3rem] overflow-visible pl-0.5 pt-[1px] pb-[4px] font-sans text-[1.04rem] font-bold capitalize leading-[1.2] text-foreground sm:text-[1.1rem]">
+                  <span className="inline-flex flex-wrap items-baseline gap-y-1">
+                    {renderFormatMixValue(dictionary.home.formatMixValue)}
+                  </span>
+                </p>
+                <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
+                  {formatSpotlight
+                    ? `${formatSpotlight.artist} - ${formatSpotlight.title}`
+                    : dictionary.home.formatFallback}
+                </p>
+              </Link>
+            </div>
+            {featureStripProducts.length > 0 && (
+              <div className="grid gap-2.5 sm:grid-cols-3">
+                {featureStripProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} size="compact" />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid auto-rows-fr gap-2.5 sm:grid-cols-2">
           {heroPreviewProducts.map((product) => (
-            <ProductCard key={product.id} product={product} size="mini" />
+            <ProductCard key={product.id} product={product} size="compact" />
           ))}
         </div>
       </section>
