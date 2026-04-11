@@ -423,9 +423,6 @@ export default async function AdminOrderDetailPage({
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs leading-6 text-muted">
-              Review the message here and send it directly from the admin order page.
-            </p>
             <button type="submit" className="btn-primary">
               Send email
             </button>

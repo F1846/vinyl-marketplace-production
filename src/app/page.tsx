@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Fragment } from "react";
 import {
   ArrowRight,
   Check,
@@ -23,17 +24,19 @@ import {
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Federico Shop | Berlin Vinyl, Techno, EBM, Darkwave & Post-Punk Records",
+  title: "Federico Shop | Berlin-Based Online Record Shop for Vinyl, Tapes & CDs",
   description:
-    "Federico Shop is a Berlin-based online record shop for graded vinyl, cassette, and CD: techno, EBM, darkwave, post-punk, and collector-focused used records.",
+    "Federico Shop is a Berlin-based online record shop from Neukolln for graded vinyl, cassette, and CD. Shop techno, EBM, darkwave, electro, ambient, and post-punk records online.",
   keywords: [
     "Federico Shop",
     "Federico",
     "Federico Shop vinyl",
     "Berlin online record shop",
+    "Berlin Neukolln online record shop",
     "Berlin vinyl shop",
     "techno vinyl Berlin",
     "EBM records",
+    "electro records Berlin",
     "darkwave vinyl",
     "post-punk records",
     "used vinyl Berlin",
@@ -51,6 +54,21 @@ function shuffleProducts<T>(items: T[]): T[] {
     [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
   }
   return next;
+}
+
+function renderFormatMixValue(value: string) {
+  const segments = value.split(" / ").filter(Boolean);
+
+  if (segments.length <= 1) {
+    return value;
+  }
+
+  return segments.map((segment, index) => (
+    <Fragment key={`${segment}-${index}`}>
+      {index > 0 ? <span className="px-1 text-muted/70">/</span> : null}
+      <span className="whitespace-nowrap">{segment}</span>
+    </Fragment>
+  ));
 }
 
 export default async function HomePage() {
@@ -162,7 +180,7 @@ export default async function HomePage() {
             {dictionary.home.independentRecordStore}
           </div>
           <div className="space-y-3">
-            <h1 className="max-w-[10.5ch] text-balance font-sans text-[clamp(3.15rem,7vw,5.25rem)] font-bold leading-[0.91] tracking-[-0.05em] text-foreground">
+            <h1 className="max-w-[11ch] text-balance font-sans text-[clamp(3.15rem,7vw,5.25rem)] font-bold leading-[0.98] tracking-[-0.045em] text-foreground">
               {dictionary.home.worthHaving}
             </h1>
             <p className="max-w-xl text-[15px] leading-7 text-muted">
@@ -217,8 +235,8 @@ export default async function HomePage() {
               className="group rounded-[0.95rem] border border-border bg-white p-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-foreground/15"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{dictionary.home.formatMix}</p>
-              <p className="mt-1.5 font-sans text-[1.22rem] font-bold capitalize tracking-[-0.04em] text-foreground">
-                {dictionary.home.formatMixValue}
+              <p className="mt-1.5 flex min-h-[3rem] flex-wrap items-start gap-y-1 pl-0.5 font-sans text-[1.04rem] font-bold capitalize leading-[1.08] text-foreground sm:text-[1.1rem]">
+                {renderFormatMixValue(dictionary.home.formatMixValue)}
               </p>
               <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-muted">
                 {formatSpotlight

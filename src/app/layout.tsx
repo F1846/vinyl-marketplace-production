@@ -36,17 +36,18 @@ const googleTagId = "AW-18075366550";
 
 export const metadata: Metadata = {
   title: {
-    default: "Federico Shop | Berlin Electronic Music Vinyl, Cassettes & CDs",
+    default: "Federico Shop | Berlin-Based Online Record Shop for Vinyl, Tapes & CDs",
     template: "%s | Federico Shop",
   },
   metadataBase: new URL(siteConfig.baseUrl),
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
-      { url: siteConfig.faviconPath, type: "image/svg+xml", sizes: "any" },
+      { url: siteConfig.faviconPath, type: "image/png", sizes: "512x512" },
+      { url: siteConfig.faviconSvgPath, type: "image/svg+xml", sizes: "any" },
       { url: "/icon", type: "image/png", sizes: "512x512" },
     ],
-    shortcut: [{ url: siteConfig.faviconPath, type: "image/svg+xml" }],
+    shortcut: [{ url: siteConfig.faviconPath, type: "image/png", sizes: "512x512" }],
     apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
   },
   description: siteConfig.description,

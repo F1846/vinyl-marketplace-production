@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowDown,
@@ -49,6 +49,8 @@ const STATUS_ORDER: Record<ProductStatus, number> = {
   sold_out: 1,
   archived: 2,
 };
+
+const PAGE_SIZE = 100;
 
 function StatusBadge({ status, id }: { status: ProductStatus; id: string }) {
   if (status === "active") {
@@ -123,13 +125,15 @@ export function AdminInventoryTable({ items }: Props) {
   const [formatFilter, setFormatFilter] = useState<"all" | ProductFormat>("all");
   const [sortKey, setSortKey] = useState<InventorySortKey>("stock");
   const [sortDir, setSortDir] = useState<InventorySortDirection>("desc");
+  const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingStock, setPendingStock] = useState<Record<string, string>>({});
   const [savingStock, setSavingStock] = useState(false);
   const lastSelectedIndexRef = useRef<number | null>(null);
   const checkboxRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const deferredQuery = useDeferredValue(query);
   const filtered = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
 
     return [...items]
       .filter((item) => {
@@ -177,32 +181,50 @@ export function AdminInventoryTable({ items }: Props) {
         );
         return sortDir === "asc" ? delta : -delta;
       });
-  }, [formatFilter, items, query, sortDir, sortKey, statusFilter]);
+  }, [deferredQuery, formatFilter, items, sortDir, sortKey, statusFilter]);
 
-  const sum = (arr: InventoryRow[]) =>
-    arr.reduce((acc, item) => acc + item.stockQuantity, 0);
+  useEffect(() => {
+    setPage(1);
+    lastSelectedIndexRef.current = null;
+  }, [deferredQuery, formatFilter, sortDir, sortKey, statusFilter]);
+
+  useEffect(() => {
+    lastSelectedIndexRef.current = null;
+  }, [page]);
+
+  const totalUnits = useMemo(
+    () => items.reduce((acc, item) => acc + item.stockQuantity, 0),
+    [items]
+  );
 
   const statusCounts = useMemo(
     () => ({
-      all: sum(items),
-      active: sum(items.filter((item) => item.status === "active")),
-      sold_out: sum(items.filter((item) => item.status === "sold_out")),
-      archived: sum(items.filter((item) => item.status === "archived")),
+      all: items.length,
+      active: items.filter((item) => item.status === "active").length,
+      sold_out: items.filter((item) => item.status === "sold_out").length,
+      archived: items.filter((item) => item.status === "archived").length,
     }),
     [items]
   );
 
   const formatCounts = useMemo(
     () => ({
-      all: sum(items),
-      vinyl: sum(items.filter((item) => item.format === "vinyl")),
-      cassette: sum(items.filter((item) => item.format === "cassette")),
-      cd: sum(items.filter((item) => item.format === "cd")),
+      all: items.length,
+      vinyl: items.filter((item) => item.format === "vinyl").length,
+      cassette: items.filter((item) => item.format === "cassette").length,
+      cd: items.filter((item) => item.format === "cd").length,
     }),
     [items]
   );
 
-  const visibleIds = useMemo(() => filtered.map((item) => item.id), [filtered]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedFiltered = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [currentPage, filtered]);
+
+  const visibleIds = useMemo(() => paginatedFiltered.map((item) => item.id), [paginatedFiltered]);
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const allVisibleSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIdSet.has(id));
@@ -226,7 +248,7 @@ export function AdminInventoryTable({ items }: Props) {
       if (withRange && lastSelectedIndexRef.current !== null) {
         const start = Math.min(lastSelectedIndexRef.current, index);
         const end = Math.max(lastSelectedIndexRef.current, index);
-        const rangeIds = filtered.slice(start, end + 1).map((item) => item.id);
+        const rangeIds = paginatedFiltered.slice(start, end + 1).map((item) => item.id);
 
         for (const id of rangeIds) {
           if (checked) {
@@ -253,11 +275,11 @@ export function AdminInventoryTable({ items }: Props) {
   };
 
   const selectByStatus = (nextStatus: ProductStatus) => {
-    const nextIds = filtered
+    const nextIds = paginatedFiltered
       .filter((item) => item.status === nextStatus)
       .map((item) => item.id);
     setSelectedIds(nextIds);
-    lastSelectedIndexRef.current = nextIds.length > 0 ? filtered.length - 1 : null;
+    lastSelectedIndexRef.current = nextIds.length > 0 ? paginatedFiltered.length - 1 : null;
   };
 
   const toggleSort = (nextSortKey: InventorySortKey) => {
@@ -290,7 +312,9 @@ export function AdminInventoryTable({ items }: Props) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Inventory ({sum(items)} units)</h1>
+          <h1 className="text-xl font-bold text-foreground">
+            Inventory ({totalUnits} units / {items.length} listings)
+          </h1>
         </div>
         <Link href="/admin/import" className="btn-secondary flex items-center gap-2 text-sm">
           <Upload className="h-4 w-4" />
@@ -366,6 +390,36 @@ export function AdminInventoryTable({ items }: Props) {
         <p className="text-sm text-muted">
           {filtered.length} result{filtered.length === 1 ? "" : "s"} for &ldquo;{query}&rdquo;
         </p>
+      )}
+
+      {filtered.length > PAGE_SIZE && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1rem] border border-border bg-white px-4 py-3 shadow-card">
+          <p className="text-sm text-muted">
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}-
+            {Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} filtered listings
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="btn-secondary text-sm"
+              disabled={currentPage === 1}
+              onClick={() => setPage((value) => Math.max(1, value - 1))}
+            >
+              Previous
+            </button>
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+              Page {currentPage} / {totalPages}
+            </span>
+            <button
+              type="button"
+              className="btn-secondary text-sm"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+            >
+              Next
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="space-y-3 rounded-[1.5rem] border border-border bg-white p-4 shadow-card">
@@ -528,7 +582,7 @@ export function AdminInventoryTable({ items }: Props) {
                 </td>
               </tr>
             ) : (
-              filtered.map((item, index) => (
+              paginatedFiltered.map((item, index) => (
                 <tr
                   key={item.id}
                   className="border-b border-border last:border-0 hover:bg-surface-hover"
@@ -559,7 +613,7 @@ export function AdminInventoryTable({ items }: Props) {
                             toggleItem(item.id, index, true, false);
                           }
                           const nextIndex = index + 1;
-                          toggleItem(filtered[nextIndex].id, nextIndex, true, false);
+                          toggleItem(paginatedFiltered[nextIndex].id, nextIndex, true, false);
                           checkboxRefs.current[nextIndex]?.focus();
                         }
 
