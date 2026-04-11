@@ -78,17 +78,14 @@ function ItemThumbnail({
     );
   }
   return (
-    <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded border border-border bg-white">
-      <Image
-        src={imageUrl}
-        alt={`${artist} - ${title}`}
-        fill
-        sizes="48px"
-        className="object-contain"
-        style={{ padding: "5%" }}
-        unoptimized
-      />
-    </div>
+    <Image
+      src={imageUrl}
+      alt={`${artist} - ${title}`}
+      width={48}
+      height={48}
+      className="h-12 w-12 flex-shrink-0 rounded border border-border object-cover"
+      unoptimized
+    />
   );
 }
 

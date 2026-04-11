@@ -95,8 +95,9 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
             src={imageUrl}
             alt={`${product.artist} - ${product.title}`}
             fill
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className="object-contain transition-transform duration-500 group-hover:scale-[1.01]"
             sizes={imageSizes}
+            style={{ padding: "5%" }}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-muted">
