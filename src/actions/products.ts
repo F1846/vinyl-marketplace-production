@@ -151,6 +151,7 @@ export async function addProductFormAction(
       error: "Failed to create product. Please try again.",
       success: false,
     };
+  }
 }
 
 export async function updateProduct(id: string, formData: FormData): Promise<void> {
