@@ -4,12 +4,12 @@ export const runtime = "edge";
 // image instead of following a redirect chain.
 export async function GET(request: Request) {
   const iconUrl = new URL("/icon", request.url).toString();
-  const upstream = await fetch(iconUrl);
+  const upstream = await fetch(iconUrl, { cache: "force-cache" });
   const body = await upstream.arrayBuffer();
   return new Response(body, {
     headers: {
       "Content-Type": "image/png",
-      "Cache-Control": "public, max-age=86400",
+      "Cache-Control": "public, max-age=31536000, immutable",
     },
   });
 }

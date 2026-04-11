@@ -43,9 +43,9 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
+      { url: "/icon", type: "image/png", sizes: "512x512" },
       { url: siteConfig.faviconPath, type: "image/png", sizes: "512x512" },
       { url: siteConfig.faviconSvgPath, type: "image/svg+xml", sizes: "any" },
-      { url: "/icon", type: "image/png", sizes: "512x512" },
     ],
     shortcut: [{ url: siteConfig.faviconPath, type: "image/png", sizes: "512x512" }],
     apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
@@ -104,9 +104,11 @@ const websiteStructuredData = [
     "@type": "WebSite",
     "@id": `${siteConfig.baseUrl}#website`,
     name: siteConfig.name,
+    alternateName: siteConfig.brandAliases,
     url: siteConfig.baseUrl,
     description: siteConfig.description,
     inLanguage: ["en", "de", "it"],
+    keywords: siteConfig.seoKeywordText,
     publisher: {
       "@id": `${siteConfig.baseUrl}#organization`,
     },
@@ -133,7 +135,17 @@ const websiteStructuredData = [
       caption: siteConfig.name,
     },
     email: siteConfig.supportEmail,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: [siteConfig.legal.street, siteConfig.legal.street2]
+        .filter(Boolean)
+        .join(", "),
+      addressLocality: siteConfig.legal.city,
+      postalCode: siteConfig.legal.postalCode,
+      addressCountry: siteConfig.legal.country,
+    },
     sameAs: [siteConfig.discogsUrl],
+    keywords: siteConfig.seoKeywordText,
     knowsAbout: siteConfig.seoKeywords,
     contactPoint: [
       {
@@ -171,10 +183,12 @@ const websiteStructuredData = [
     description: siteConfig.description,
     email: siteConfig.supportEmail,
     telephone: siteConfig.legal.phone ?? undefined,
+    currenciesAccepted: "EUR",
     paymentAccepted: ["PayPal", "Credit Card", "Local Pickup"],
     priceRange: "EUR",
     areaServed: ["Germany", "Europe"],
     sameAs: [siteConfig.discogsUrl],
+    keywords: siteConfig.seoKeywordText,
     knowsAbout: siteConfig.seoKeywords,
     hasOfferCatalog: {
       "@type": "OfferCatalog",

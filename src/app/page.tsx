@@ -28,19 +28,19 @@ export const metadata: Metadata = {
   description:
     "Federico Shop is a Berlin-based online record shop from Neukolln for graded vinyl, cassette, and CD. Shop techno, EBM, darkwave, electro, ambient, and post-punk records online.",
   keywords: [
-    "Federico Shop",
-    "Federico",
-    "Federico Shop vinyl",
     "Berlin online record shop",
     "Berlin Neukolln online record shop",
+    "Berlin electronic music record shop",
     "Berlin vinyl shop",
     "techno vinyl Berlin",
+    "techno vinyl online",
     "EBM records",
     "electro records Berlin",
     "darkwave vinyl",
     "post-punk records",
     "used vinyl Berlin",
     "vinyl cassette CD shop",
+    ...siteConfig.seoKeywords.slice(0, 10),
   ],
   alternates: {
     canonical: siteConfig.baseUrl,
@@ -135,12 +135,14 @@ export default async function HomePage() {
     url: siteConfig.baseUrl,
     description: siteConfig.description,
     areaServed: "Europe",
+    keywords: siteConfig.seoKeywordText,
     paymentAccepted: ["PayPal", "Credit Card", "Local Pickup"],
   };
   const newArrivalsStructuredData = {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: "New arrivals at Federico Shop",
+    description: "Fresh used vinyl, cassette, and CD arrivals from Federico Shop in Berlin.",
     itemListOrder: "https://schema.org/ItemListOrderDescending",
     numberOfItems: newArrivalProducts.length,
     itemListElement: newArrivalProducts.map((product, index) => ({
