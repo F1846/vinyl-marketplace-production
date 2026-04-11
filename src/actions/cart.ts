@@ -36,7 +36,6 @@ export async function addToCart(productId: string) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
     maxAge: CART_COOKIE_MAX_AGE_SECONDS,
     path: "/",
   });
@@ -51,7 +50,6 @@ export async function removeFromCart(productId: string) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
     maxAge: CART_COOKIE_MAX_AGE_SECONDS,
     path: "/",
   });
@@ -72,7 +70,6 @@ export async function updateCartQuantity(productId: string, quantity: number) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
     maxAge: CART_COOKIE_MAX_AGE_SECONDS,
     path: "/",
   });
