@@ -85,7 +85,7 @@ function ItemThumbnail({
         fill
         sizes="48px"
         className="object-contain"
-        style={{ padding: "2%" }}
+        style={{ padding: "5%" }}
         unoptimized
       />
     </div>
@@ -422,8 +422,8 @@ export function AdminInventoryTable({ items }: Props) {
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-surface-hover">
             <tr>
-              <th className="w-10 px-4 py-3 text-left font-medium text-foreground"><span className="sr-only">Select</span></th>
-              <th className="min-w-[320px] px-4 py-3 text-left font-medium text-foreground">Item</th>
+              <th className="w-6 pl-2 pr-1 py-3 text-left font-medium text-foreground"><span className="sr-only">Select</span></th>
+              <th className="min-w-[320px] pl-1 pr-4 py-3 text-left font-medium text-foreground">Item</th>
               <th className="hidden px-4 py-3 text-left font-medium text-foreground sm:table-cell">Format</th>
               <th className="hidden px-4 py-3 text-left font-medium text-foreground md:table-cell">{renderSortHeader("Price", "price")}</th>
               <th className="hidden px-4 py-3 text-left font-medium text-foreground md:table-cell">{renderSortHeader("Stock", "stock")}</th>
@@ -441,7 +441,7 @@ export function AdminInventoryTable({ items }: Props) {
             ) : (
               paginatedFiltered.map((item, index) => (
                 <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-hover">
-                  <td className="px-4 py-3">
+                  <td className="pl-2 pr-1 py-3">
                     <input
                       type="checkbox"
                       checked={selectedIdSet.has(item.id)}
@@ -465,11 +465,11 @@ export function AdminInventoryTable({ items }: Props) {
                       aria-label={`Select ${item.artist} - ${item.title}`}
                     />
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-start gap-3 rounded-[1.15rem] border border-border/90 bg-white px-3 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                  <td className="pl-1 pr-4 py-3">
+                    <div className="flex items-start gap-3">
                       <ItemThumbnail imageUrl={item.imageUrl} artist={item.artist} title={item.title} />
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium leading-snug text-foreground">
+                        <div className="font-medium text-foreground">
                           {item.discogsReleaseId ? (
                             <a
                               href={`https://www.discogs.com/release/${item.discogsReleaseId}`}
@@ -485,7 +485,7 @@ export function AdminInventoryTable({ items }: Props) {
                           )}
                         </div>
                         {(item.pressingLabel || item.pressingCatalogNumber || item.pressingYear) && (
-                          <div className="mt-1 text-xs leading-relaxed text-muted">
+                          <div className="mt-0.5 text-xs text-muted">
                             {[item.pressingLabel, item.pressingCatalogNumber, item.pressingYear].filter(Boolean).join(" \u00b7 ")}
                           </div>
                         )}
