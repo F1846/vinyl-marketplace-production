@@ -300,9 +300,6 @@ export async function bulkUpdateStock(
   "use server";
   await requireAuthenticatedAdmin();
 
-  if (entries.length > 500) {
-    throw new Error("Bulk update limit exceeded (max 500 items).");
-  }
 
   for (const { id, stockQuantity } of entries) {
     if (!id || !Number.isFinite(stockQuantity) || stockQuantity < 0) continue;
