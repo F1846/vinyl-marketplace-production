@@ -70,16 +70,24 @@ export async function addProductFormAction(
   }
 
   const productId = crypto.randomUUID();
-  const artist = String(formData.get("artist"));
-  const title = String(formData.get("title"));
+  const artist = String(formData.get("artist")).trim().slice(0, 255);
+  const title = String(formData.get("title")).trim().slice(0, 255);
   const format = formData.get("format") as "vinyl" | "cassette" | "cd";
-  const genre = String(formData.get("genre"));
+  const genre = String(formData.get("genre")).trim().slice(0, 100);
   const conditionMedia = parseMediaCondition(formData.get("conditionMedia"));
   const conditionSleeve =
     format === "vinyl" ? parseMediaCondition(formData.get("conditionSleeve")) : null;
-  const pressingLabel = (formData.get("pressingLabel") as string) || null;
-  const pressingCatalogNumber = (formData.get("pressingCatalogNumber") as string) || null;
-  const description = String(formData.get("description"));
+  const pressingLabel = ((formData.get("pressingLabel") as string) || null)?.slice(0, 255) ?? null;
+  const pressingCatalogNumber = ((formData.get("pressingCatalogNumber") as string) || null)?.slice(0, 100) ?? null;
+  const description = String(formData.get("description")).trim();
+
+  if (!artist) return { error: "Artist is required", success: false };
+  if (!title) return { error: "Title is required", success: false };
+  if (!genre) return { error: "Genre is required", success: false };
+  if (!description) return { error: "Description is required", success: false };
+  if (!["vinyl", "cassette", "cd"].includes(format)) {
+    return { error: "Invalid format", success: false };
+  }
 
   try {
     const existingProduct = await d.query.products.findFirst({
@@ -190,18 +198,18 @@ export async function updateProduct(id: string, formData: FormData): Promise<voi
   await d
     .update(schema.products)
     .set({
-      artist: String(formData.get("artist")),
-      title: String(formData.get("title")),
+      artist: String(formData.get("artist")).trim().slice(0, 255),
+      title: String(formData.get("title")).trim().slice(0, 255),
       format: updateFormat,
-      genre: String(formData.get("genre")),
+      genre: String(formData.get("genre")).trim().slice(0, 100),
       priceCents,
       stockQuantity,
       conditionMedia: parseMediaCondition(formData.get("conditionMedia")),
       conditionSleeve: updateConditionSleeve,
-      pressingLabel: (formData.get("pressingLabel") as string) || null,
+      pressingLabel: ((formData.get("pressingLabel") as string) || null)?.slice(0, 255) ?? null,
       pressingYear,
-      pressingCatalogNumber: (formData.get("pressingCatalogNumber") as string) || null,
-      description: String(formData.get("description")),
+      pressingCatalogNumber: ((formData.get("pressingCatalogNumber") as string) || null)?.slice(0, 100) ?? null,
+      description: String(formData.get("description")).trim(),
       status: nextStatus,
       updatedAt: new Date(),
       version: product.version + 1,
