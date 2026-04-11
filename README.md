@@ -1,37 +1,74 @@
-# Federico Shop
+# Vinyl Marketplace
 
-Production codebase for Federico Shop, an editorial storefront for electronic music records, tapes, and CDs with admin tools for catalog, shipping, checkout, invoices, and order tracking.
+Reusable Next.js storefront and admin system for a record shop selling vinyl, tapes, and CDs.
 
-## Live Site
+This repository is documented as a generic template so it can be reused for other shops. Brand-specific text, SEO keywords, store contact data, pickup details, and translated storefront copy should be customized before launch.
 
-- Storefront: [https://www.federicoshop.de](https://www.federicoshop.de)
-- Catalog: [https://www.federicoshop.de/catalog](https://www.federicoshop.de/catalog)
-- Order tracking: [https://www.federicoshop.de/track-order](https://www.federicoshop.de/track-order)
-- Admin login: [https://www.federicoshop.de/admin](https://www.federicoshop.de/admin)
+## Current Status
 
-## What Is Included
-
-- Editorial storefront with responsive catalog, product pages, and homepage shelves
+- Responsive storefront with homepage shelves, catalog filters, product pages, cart, checkout, order confirmation, and order tracking
 - Auto-detected storefront language with manual language switcher
-- Stripe Checkout, PayPal checkout, and Berlin local pickup
-- Mandatory checkout address step before payment
-- Country and quantity based shipping rules managed in admin
-- PDF invoice downloads for customers and admins
-- Transactional order emails via Mailgun
-- Live tracking support with Ship24, plus 17TRACK or AfterShip fallback
-- Admin order tools for status updates, tracking numbers, VAT, invoice download, and pickup handling
-- Admin product tools for edit, hide, soft-delete removal, archive, and sold-out relist
-- Inventory / Collection page (admin-only) with search, status filter, price editor, and per-item put-on-sale
-- Bulk CSV import supporting both Discogs **inventory** CSV (active listings) and **collection** CSV (full collection as archived inventory)
-- Inline "Put on Sale" flow: set price → status becomes active → Discogs images fetched automatically
-- Mobile-responsive admin with horizontal scrollable tab nav (Dashboard, Products, Inventory, Import, Orders, Shipping, Logs)
-- Admin Login Logs page with IP, User-Agent, timestamp and result for every login attempt
-- Black favicon and Apple touch icon generated via Next.js ImageResponse
-- Discogs CSV import workflow with Discogs image lookup
-- SEO support with sitemap, robots, structured data, and Google verification tag support
-- GitHub Actions CI and Vercel production deploy
-- Daily free security audit (GitHub Models, no API key) + daily Claude Code audit (ANTHROPIC_API_KEY) with auto-PR on findings
-- Admin login logs stored in DB (table `admin_login_logs`)
+- Card checkout, PayPal checkout, and local pickup support
+- Mandatory address step before payment
+- Database-driven shipping rules
+- PDF invoices for customers and admins
+- Transactional customer emails via Mailgun
+- Tracking support with Ship24, plus 17TRACK or AfterShip fallback
+- Admin tools for products, inventory, import jobs, orders, shipping rules, and login logs
+- CSV import flow for both active catalog listings and full collection inventory
+- CI, preview deploy workflow, manual production deploy workflow, and daily security audit automation
+
+## What You Should Customize First
+
+Before using this repo for a real shop, update these branding and content surfaces:
+
+- `src/lib/site.ts`
+  - store name
+  - description
+  - SEO keywords
+  - order/support emails
+  - legal address
+  - pickup defaults
+- `src/lib/i18n/dictionaries.ts`
+  - storefront copy in every supported language
+- `public/logo-mark.svg`
+  - logo mark shown in header, favicon-derived assets, and metadata
+- `.env.local` / Vercel environment variables
+  - domain
+  - email sender
+  - legal/store contact details
+  - payment and tracking provider credentials
+
+The codebase still ships with example defaults in some source files so the app runs out of the box. Treat those values as placeholders, not production-ready branding.
+
+## Feature Summary
+
+- Storefront
+  - homepage with featured shelves and random product previews
+  - catalog with search, sort, multi-genre filtering, and progressive loading
+  - product pages with image gallery, release notes, grading, stock, and add-to-cart
+  - cart and checkout with address validation before payment
+  - order confirmation and track-order lookup
+- Payments and fulfillment
+  - Stripe checkout
+  - PayPal checkout
+  - local pickup flow
+  - database-driven shipping rates by destination and cart composition
+  - PDF invoice generation
+  - customer emails for confirmation, shipment, status updates, and admin-sent manual messages
+- Admin
+  - dashboard
+  - product CRUD and status management
+  - inventory / collection view
+  - CSV import jobs with destination selection
+  - order detail tools for status, tracking, VAT, invoice download, and customer email
+  - shipping rule management
+  - login logs page
+- Operations
+  - PostgreSQL via Drizzle ORM
+  - optional Vercel Blob media helpers
+  - security audit automation
+  - GitHub Actions CI and deploy workflows
 
 ## Tech Stack
 
@@ -41,7 +78,7 @@ Production codebase for Federico Shop, an editorial storefront for electronic mu
 - Styling: Tailwind CSS
 - Payments: Stripe Checkout and PayPal
 - Email: Mailgun
-- Storage: Vercel Blob
+- File/media storage: Vercel Blob helpers
 - Tracking: Ship24, 17TRACK, or AfterShip
 - Deployment: Vercel
 - CI/CD: GitHub Actions
@@ -55,7 +92,7 @@ Production codebase for Federico Shop, an editorial storefront for electronic mu
 - Stripe account
 - Mailgun account
 - Optional: PayPal account
-- Optional: Discogs user token
+- Optional: Discogs token for CSV enrichment and image lookup
 
 ### Setup
 
@@ -66,7 +103,7 @@ npm install
 cp .env.example .env.local
 ```
 
-Fill in `.env.local`, then run:
+Then fill in `.env.local` with your own values and run:
 
 ```bash
 npm run db:push
@@ -76,31 +113,34 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Key Environment Variables
+## Environment Variables
 
-See [.env.example](./.env.example) for the complete list.
+See [.env.example](./.env.example) for the full template.
 
 ### Core
 
 - `DATABASE_URL`
 - `NEXT_PUBLIC_SITE_URL`
 - `GOOGLE_SITE_VERIFICATION`
+- `TRUST_PROXY_HEADERS`
 
-### Admin
+### Admin and secrets
 
 - `ADMIN_PASSWORD`
 - `ADMIN_PASSWORD_HASH`
 - `ADMIN_SESSION_SECRET`
+- `CHECKOUT_STATE_SECRET`
+- `INVOICE_DOWNLOAD_SECRET`
+- `CRON_SECRET`
 
-### Checkout
+### Payments
 
-- `STRIPE_MODE`
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
 - `PAYPAL_ENVIRONMENT`
 - `PAYPAL_CLIENT_ID`
 - `PAYPAL_CLIENT_SECRET`
-- `CHECKOUT_STATE_SECRET`
+- `NEXT_PUBLIC_PAYPAL_ENABLED`
 
 ### Email
 
@@ -117,13 +157,39 @@ See [.env.example](./.env.example) for the complete list.
 - `SHIP24_API_KEY`
 - `SEVENTEENTRACK_API_KEY`
 - `AFTERSHIP_API_KEY`
-- `CRON_SECRET`
 
-### Catalog and Media
+### Store profile
 
-- `BLOB_READ_WRITE_TOKEN`
+- `STORE_OWNER`
+- `STORE_ORDER_EMAIL`
+- `STORE_SUPPORT_EMAIL`
+- `STORE_CONTACT_EMAIL`
+- `STORE_SUPPORT_CONTACT_EMAIL`
+- `STORE_ADDRESS_LINE1`
+- `STORE_ADDRESS_LINE2`
+- `STORE_POSTAL_CODE`
+- `STORE_CITY`
+- `STORE_COUNTRY`
+- `STORE_PHONE`
+- `STORE_VAT_ID`
+
+### Pickup profile
+
+- `STORE_PICKUP_LABEL`
+- `STORE_PICKUP_NOTE`
+- `STORE_PICKUP_CONTACT_NAME`
+- `STORE_PICKUP_ADDRESS_LINE1`
+- `STORE_PICKUP_POSTAL_CODE`
+- `STORE_PICKUP_CITY`
+- `STORE_PICKUP_COUNTRY`
+- `STORE_PICKUP_PHONE`
+- `STORE_PICKUP_PHONE_LABEL`
+
+### Catalog and media helpers
+
 - `DISCOGS_USER_TOKEN`
 - `DISCOGS_USER_AGENT`
+- `BLOB_READ_WRITE_TOKEN`
 
 ## Common Scripts
 
@@ -139,14 +205,19 @@ See [.env.example](./.env.example) for the complete list.
 | `npm run db:seed` | Seed starter data |
 | `npm run db:studio` | Open Drizzle Studio |
 | `npm run admin:hash-password -- "your-password"` | Generate an admin password hash |
-| `npm run catalog:import-discogs -- "path-to-csv"` | Import catalog rows from a Discogs style inventory CSV |
+| `npm run catalog:import-discogs -- "path-to-csv"` | Import a Discogs-style inventory CSV |
 | `npm run shipping:apply` | Apply shipping rate seed rules |
-| `npm run email:test -- you@example.com` | Send a transactional email test |
-| `npm run email:test-order-flow -- you@example.com` | Send order flow email tests |
+| `npm run email:test -- you@example.com` | Send a live transactional email test |
+| `npm run email:test-order-flow -- you@example.com` | Send order-flow email samples |
 
-### MongoDB Backup Snapshot
+## Backup and Data Notes
 
-Use the Python backup script to copy the current PostgreSQL shop data into a MongoDB Atlas backup database:
+- Runtime uses one primary PostgreSQL `DATABASE_URL`
+- MongoDB is supported only as an offline backup target through `scripts/backup_postgres_to_mongo.py`
+- Dual-write between PostgreSQL and MongoDB is not enabled by default
+- If you need a backup database, clone PostgreSQL or run the backup script rather than changing the app to write to two databases
+
+Example:
 
 ```bash
 python scripts/backup_postgres_to_mongo.py "mongodb+srv://..."
@@ -155,141 +226,55 @@ python scripts/backup_postgres_to_mongo.py "mongodb+srv://..."
 Optional second argument:
 
 ```bash
-python scripts/backup_postgres_to_mongo.py "mongodb+srv://..." "federico_shop_backup"
+python scripts/backup_postgres_to_mongo.py "mongodb+srv://..." "shop_backup"
 ```
 
-This is backup-only and does not change the live app runtime, which still uses a single PostgreSQL `DATABASE_URL`.
+## Admin Overview
 
-## Admin Features
-
-The admin area is designed for a single-shop workflow. The UI is fully mobile-responsive with a collapsible navigation drawer on small screens.
-
-- Dashboard with product and order totals
-- Product list with sort controls for price, stock, and status; client-side search by artist/title
-- **Inventory / Collection page** (`/admin/inventory`): view your full collection with On Sale / Not for Sale / Sold Out labels, per-item sale toggle, search bar, and inline bulk CSV import. Invisible to customers.
-- Product actions for edit, hide, relist, and soft-delete removal from admin/storefront
-- Shipping rules editor
+- Dashboard with stock and order totals
+- Product management with edit, hide, relist, archive, and removal actions
+- Inventory / collection view for not-for-sale stock
+- Bulk CSV import with destination selection
 - Order detail page with:
-  - status updates
-  - tracking number and carrier or tracking URL
+  - status changes
+  - tracking updates
   - VAT override
-  - PDF invoice download
-  - manual customer email send from `support@federicoshop.de` or `orders@federicoshop.de`
-  - pickup details
-- Absolute session expiry after login for admin security
+  - invoice download
+  - manual customer email composer
+- Shipping rules editor
+- Login logs page
+- Absolute session expiry and inactivity refresh logic for admin auth
 
-## Orders and Customer Flow
+## Order and Customer Flow
 
 - Cart and checkout collect full customer details before payment
-- Card payments create orders through Stripe webhooks
-- PayPal orders use a signed return flow
-- Local pickup orders show fixed pickup details
-- Pickup emails include the Berlin pickup address plus WhatsApp/message contact details
+- Stripe orders are finalized after webhook confirmation
+- PayPal orders use a signed return/capture flow
+- Pickup orders use a separate no-shipping checkout path
+- Order confirmation emails include item summaries and product thumbnails
+- Shipping and status emails reuse the same branded shell
+- Customers can download invoice PDFs from email links and order lookup
 - Customers can track orders at `/track-order`
-- Customers can download invoice PDFs from order emails and order lookup
-- Order emails share a consistent Federico Shop layout and subject style
 
-## Shipping Model
+## Deployment Model
 
-Shipping is database-driven and can be updated in admin. Current rules are based on destination country, total item count, and whether the cart contains vinyl.
+- `CI` runs on pushes and pull requests targeting `main`
+- `Deploy Preview to Vercel` runs on push to `main` and on manual dispatch
+- `Deploy Production to Vercel` is manual-only
+- `vercel.json` disables direct Git-based deployments so deploys are controlled through GitHub Actions
 
-Examples:
+## Security and Ops Status
 
-- Germany vinyl carts: `6 EUR` up to 5 items, then `10 EUR`
-- Europe vinyl carts: `14 EUR` up to 3 items, then `+2 EUR` per additional item
-- UK and Switzerland vinyl carts: `21 EUR` up to 2 items, then `+2 EUR` per additional item
-- Germany cassette or CD only carts: `4 EUR`
-- Europe cassette or CD only carts: `10 EUR`
-- UK and temporary rest-of-world cassette or CD only carts: `14 EUR`
-- Palestine: `30 EUR` fixed up to 10 items
-
-Mixed-format carts are calculated once per whole cart, not added separately by medium.
-
-## Email and Tracking Notes
-
-### Mailgun
-
-- Use a verified Mailgun domain for production sending
-- Set `EMAIL_FROM` to a verified sender such as `Federico Shop DE <orders@federicoshop.de>`
-- Incoming support and order mailbox forwarding can be handled separately at the DNS or provider level
-- Admin order detail includes a manual customer-message composer that reuses the same house email design
-
-### Tracking
-
-- `ship24` is the preferred live tracking provider
-- `17track` is supported as a free alternative
-- `aftership` remains available if needed
-- Admins can also store a direct tracking URL template
-
-## Deployment
-
-### Vercel
-
-1. Push to GitHub
-2. Connect the repository to Vercel
-3. Add production environment variables
-4. Redeploy production
-
-### Database
-
-- The app uses a single PostgreSQL `DATABASE_URL` at runtime
-- Neon is supported directly through Drizzle + Neon HTTP
-- You can clone the live shop database into another Neon or PostgreSQL database for backup
-- You can also snapshot the PostgreSQL shop data into MongoDB backup collections with `scripts/backup_postgres_to_mongo.py`
-- If you switch databases, update `DATABASE_URL` locally and in Vercel, then redeploy
-- Dual-writing to two databases is not enabled by default; use one primary database and clone backups instead
-
-### Stripe Webhook
-
-Use:
-
-```text
-https://www.federicoshop.de/api/webhooks/stripe
-```
-
-### Scheduled Tracking Sync
-
-Set a cron job to call:
-
-```text
-/api/tracking/sync
-```
-
-with the `CRON_SECRET` header or query value expected by the route.
-
-## Project Structure
-
-- `src/app/` - App Router pages, route handlers, admin pages, checkout, tracking
-- `src/components/` - storefront, admin, and shared React components
-- `src/actions/` - server actions for products, orders, shipping, and admin updates
-- `src/lib/` - database, auth, checkout, email, invoices, SEO, tracking, site config
-- `src/hooks/` - client hooks such as cart state
-- `src/types/` - shared TypeScript types
-- `src/validations/` - Zod schemas
-- `db/` - schema, migrations, and seed data
-- `scripts/` - one-off maintenance, email, shipping, and import scripts
-- `.github/workflows/` - CI, deploy, and CodeQL workflows
-
-## Continuous Repo Check (CI Automation)
-
-The workflow `.github/workflows/continuous-repo-check.yml` runs hourly using the Claude Code CLI (`claude-sonnet-4-6`). It audits the repo for security, privacy, and code-quality issues, applies a single safe fix if found, and opens a pull request for review.
-
-**Required GitHub secret:**
-
-- `ANTHROPIC_API_KEY` — your Anthropic API key. Add it at `Settings → Secrets and variables → Actions`.
-
-The workflow replaces the previous OpenAI Codex automation.
-
-## Security and Ops
-
-- Admin routes are intentionally `noindex`
-- Cart, checkout, order confirmation, and API routes are intentionally `noindex`
+- Admin and sensitive workflow pages are intentionally `noindex`
 - Public storefront pages are indexable
+- DB-backed rate limiting is in place for key abuse surfaces
+- Admin sessions use a dedicated secret when configured
+- GitHub CodeQL and audit workflows are present
 - Repo security policy lives in [.github/SECURITY.md](./.github/SECURITY.md)
-- Code scanning is configured with GitHub CodeQL
 
 ## Related Docs
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
 - [DEPLOY.md](./DEPLOY.md)
 - [SEO-STRATEGY.md](./SEO-STRATEGY.md)
+- [docs/PRD.md](./docs/PRD.md)

@@ -2,55 +2,58 @@
 
 ## Supported Versions
 
-The production deployment is based on the `main` branch.
+The maintained production line is based on the `main` branch.
 
 | Version | Supported |
 | --- | --- |
 | `main` | Yes |
-| older branches / old deployments | No |
+| older branches / historic deployments | No |
 
 ## Reporting a Vulnerability
 
-If you find a security issue, please do **not** open a public GitHub issue.
+Do **not** open a public issue for a security problem.
 
-Report it privately by email to:
+Before using this repository in production, replace the placeholder contact below with your real security or support mailbox.
 
-- `support@federicoshop.de`
+Recommended contact format:
 
-Use a subject like:
+- `security@your-domain.example`
+- or `support@your-domain.example`
 
-- `[SECURITY] Federico Shop vulnerability report`
+Recommended subject:
+
+- `[SECURITY] vulnerability report`
 
 Please include:
 
 - a short description of the issue
-- the affected URL, page, API route, or feature
-- clear reproduction steps
-- any proof of concept or screenshots that help reproduce it
-- the potential impact if you know it
+- affected page, route, or feature
+- reproduction steps
+- screenshots or proof of concept if helpful
+- expected impact if known
 
-## What to Expect
+## Response Expectations
 
-- Initial acknowledgement target: within 3 business days
-- Status update target: within 7 business days
-- Fix timing depends on severity and deployment risk
+- acknowledgement target: within 3 business days
+- status update target: within 7 business days
+- fix timing depends on severity and deployment risk
 
-When possible, please give us reasonable time to investigate and patch the issue before public disclosure.
+Please allow reasonable time for investigation and remediation before public disclosure.
 
 ## Scope
 
-This policy covers:
+This policy is intended to cover:
 
-- the live store at `https://www.federicoshop.de`
+- the deployed storefront using this repository
+- checkout, admin, order, tracking, invoice, and email flows
 - the production application code in this repository
-- checkout, admin, order, tracking, and email-related flows
 
-This policy does not cover:
+Out of scope:
 
-- third-party platform outages outside this repository
-- issues that require physical access to user devices
-- spam, SEO, or abuse reports that are not security vulnerabilities
+- third-party outages outside this repository
+- physical device access issues
+- non-security spam or SEO complaints
 
 ## Sensitive Data
 
-Please avoid sending real customer payment data or unnecessary personal data in your report.
+Do not send real payment details or unnecessary personal data in your report.

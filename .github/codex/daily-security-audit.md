@@ -1,4 +1,4 @@
-You are running the daily automated security and quality audit for F1846/vinyl-marketplace-production.
+You are running the daily automated security and quality audit for this repository.
 
 Your goal is to find and fix the single highest-value, lowest-risk issue in the codebase today. You have full read/write access to the working tree.
 
@@ -27,7 +27,7 @@ Go deep. Inspect every layer:
 
 ### Infrastructure
 - CI/CD workflows: pinned action versions, least-privilege permissions, secret usage
-- Environment variables: missing from .env.example, undocumented variables
+- Environment variables: missing from `.env.example`, undocumented variables
 - Database migrations: schema/migration divergence, missing constraints
 
 ## Rules
@@ -47,14 +47,14 @@ Go deep. Inspect every layer:
 Return JSON matching the provided schema exactly.
 
 - `result`: one of `fix_applied`, `report_only`, `no_action`
-- `branch_topic`: stable kebab-case slug, e.g. `admin-cookie-path` or `checkout-rate-limit`. Reuse the same slug if the same issue recurs.
+- `branch_topic`: stable kebab-case slug, e.g. `admin-cookie-path` or `checkout-rate-limit`
 - `commit_message`: imperative, terse, no prefix
 - `pr_title`: must start with `[claude]`
 - `pr_body`: full GitHub PR description including:
-  - What changed (or why no change was made)
+  - What changed, or why no change was made
   - The top 5 findings ranked by severity, with: severity level, affected file(s), why it matters, recommended fix
   - Validation performed
-  - Explicit review note for Federico (F1846)
+  - Explicit review note for the repository maintainer
 - `findings_summary`: 3-8 bullet points of today's most important findings
 - `validation_summary`: what was run to validate the fix
 - `review_status`: reviewer status string

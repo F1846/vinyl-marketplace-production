@@ -12,7 +12,7 @@ Add `OPENAI_API_KEY` in the repository settings before relying on the workflow s
 - Installs dependencies before invoking Codex so local validation can run without extra network access.
 - Lets Codex inspect the repository and apply at most one safe, targeted fix per run.
 - Pushes any resulting change set to `codex/security-audit-<topic>` and creates or updates a PR with `codex` and `codex-automation` labels.
-- Requests review from `F1846` when GitHub allows it and records the result in the workflow summary.
+- Requests review from the configured repository maintainer when GitHub allows it and records the result in the workflow summary.
 
 ## Guardrails
 

@@ -1,4 +1,4 @@
-You are running the scheduled "Continuous Repo Check" audit for F1846/vinyl-marketplace-production.
+You are running the scheduled "Continuous Repo Check" audit for this repository.
 
 Audit the current checkout for supported security, privacy, broken-logic, and high-value code-quality risks. Inspect auth, admin actions, API routes, checkout/order/payment flows, DB and ORM usage, input validation, uploads, secrets, logging, email flows, integrations, headers, dependency risk, and build/deploy config.
 
@@ -24,4 +24,4 @@ Return JSON that matches the provided schema exactly.
   - what changed, or why no code change was made
   - ranked findings with severity, confidence, affected files, why they matter, and recommended fixes
   - validation performed, or why validation was limited
-  - explicit review status for Federico (`F1846`)
+  - explicit review status for the repository maintainer

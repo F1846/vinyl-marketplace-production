@@ -1,228 +1,276 @@
-# Vinyl Marketplace — Architecture
+# Vinyl Marketplace Architecture
 
-## Project Structure
+## Overview
 
-```
-vinyl-marketplace/
-├── .env.example                  # Environment variable template
-├── .gitignore
-├── next.config.ts                # Next.js configuration (Image domains, redirects)
-├── tsconfig.json                 # TypeScript configuration
-├── tailwind.config.ts            # Tailwind CSS configuration
-├── postcss.config.mjs            # PostCSS configuration
-├── components.json               # shadcn/ui configuration (if used)
-├── package.json                  # Project dependencies + scripts
-├── drizzle.config.ts             # Drizzle ORM configuration
-│
-├── docs/
-│   └── PRD.md                    # Product requirements document
-│
-├── ARCHITECTURE.md               # This file
-│
+This application is a full-stack record-shop platform built with Next.js App Router. It combines a public storefront, a protected admin area, transactional email, payment integrations, shipping logic, order tracking, and database-backed inventory management.
+
+The project is reusable, but it currently ships with example branding defaults. Store-specific branding should be replaced in `src/lib/site.ts`, `src/lib/i18n/dictionaries.ts`, and the environment configuration before launch.
+
+## High-Level System
+
+- Frontend
+  - public storefront pages under `src/app/`
+  - admin UI under `src/app/admin/`
+  - reusable components under `src/components/`
+- Backend
+  - route handlers under `src/app/api/`
+  - server actions under `src/actions/`
+  - domain services under `src/lib/`
+- Persistence
+  - PostgreSQL via Drizzle ORM
+  - schema and migrations under `db/`
+- Integrations
+  - Stripe
+  - PayPal
+  - Mailgun
+  - Ship24 / 17TRACK / AfterShip
+  - optional Vercel Blob helpers
+- Operations
+  - GitHub Actions CI
+  - preview deploy workflow
+  - manual production deploy workflow
+  - daily security audit workflows
+
+## Repository Layout
+
+```text
+.
+├── .github/
+│   ├── SECURITY.md
+│   ├── codex/
+│   └── workflows/
 ├── db/
-│   ├── schema.ts                 # Drizzle ORM table definitions, enums, relations
-│   ├── index.ts                  # Shared database client export
+│   ├── index.ts
+│   ├── schema.ts
 │   └── migrations/
-│       └── 001_initial.sql       # Initial migration (enums, tables, indexes, triggers)
-│
-├── public/                       # Static assets (favicon, og images, etc.)
-│
-└── src/
-    ├── app/                      # Next.js App Router
-    │   ├── layout.tsx            # Root layout (fonts, metadata, providers)
-    │   ├── page.tsx              # Home page (featured / new arrivals)
-    │   ├── not-found.tsx         # Global 404 page
-    │   │
-    │   ├── catalog/
-    │   │   ├── page.tsx          # Catalog listing with filters (Server Component)
-    │   │   └── loading.tsx       # Skeleton loader
-    │   │
-    │   ├── products/
-    │   │   └── [id]/
-    │   │       ├── page.tsx      # Product detail page (Server Component)
-    │   │       └── not-found.tsx # 404 for deleted / missing products
-    │   │
-    │   ├── cart/
-    │   │   └── page.tsx          # Shopping cart page (Client Component)
-    │   │
-    │   ├── checkout/
-    │   │   └── route.ts          # POST — creates Stripe Checkout session
-    │   │
-    │   ├── order-confirmation/
-    │   │   └── page.tsx          # Post-payment confirmation page
-    │   │
-    │   ├── track-order/
-    │   │   └── page.tsx          # Order lookup form + status display
-    │   │
-    │   ├── api/
-    │   │   ├── webhooks/
-    │   │   │   └── stripe/
-    │   │   │       └── route.ts  # Stripe webhook handler (POST)
-    │   │   └── orders/
-    │   │       └── lookup/
-    │   │           └── route.ts  # Public order lookup API (POST)
-    │   │
-    │   └── admin/
-    │       ├── layout.tsx        # Admin layout (auth gate, mobile tab nav + desktop sidebar)
-    │       ├── page.tsx          # Admin dashboard overview
-    │       ├── login/
-    │       │   └── page.tsx      # Admin login page
-    │       ├── logs/
-    │       │   └── page.tsx      # Login logs — IP, UA, result, timestamp (last 200)
-    │       ├── inventory/
-    │       │   └── page.tsx      # Full collection view: search, filter, put-on-sale, price editor
-    │       ├── import/
-    │       │   └── page.tsx      # Discogs CSV import (inventory CSV or collection CSV)
-    │       ├── products/
-    │       │   ├── page.tsx      # Product list with search + status filter
-    │       │   ├── new/
-    │       │   │   └── page.tsx  # Create product form
-    │       │   └── [id]/
-    │       │       └── edit/
-    │       │           └── page.tsx  # Edit product form
-    │       ├── shipping/
-    │       │   └── page.tsx      # Shipping rates admin
-    │       └── orders/
-    │           ├── page.tsx      # Order list with status filter
-    │           └── [id]/
-    │               └── page.tsx  # Order detail + status update + tracking
-    │
-    ├── components/
-    │   ├── ui/                   # Reusable presentational components (Button, Card, etc.)
-    │   ├── layout/               # Header, Footer, Navigation, AdminSidebar
-    │   ├── catalog/              # ProductCard, ProductGrid, FilterBar, SearchBox
-    │   ├── product/              # ImageGallery, ConditionBadge, StockStatus
-    │   ├── cart/                 # CartItemRow, CartSummary, UnavailableItemsSection
-    │   ├── checkout/             # OrderSummary, CheckoutButton
-    │   ├── order/                # OrderTimeline, TrackingInfo
-    │   ├── admin/                # ProductForm, OrderStatusUpdate, ImageUpload
-    │   └── feedback/             # Toast, LoadingSpinner, EmptyState, ErrorBanner
-    │
-    ├── lib/
-    │   ├── db.ts                 # Database client singleton
-    │   ├── stripe.ts             # Stripe client singleton
-    │   ├── email.ts              # Email sending (Resend / SendGrid)
-    │   ├── image-upload.ts       # Vercel Blob / Cloudinary upload helper
-    │   ├── order-number.ts       # Human-readable order number generator
-    │   ├── cart-utils.ts         # Cart parsing, validation, merging
-    │   ├── product-utils.ts      # Stock checks, condition display names
-    │   └── auth.ts               # Admin authentication utilities
-    │
-    ├── types/
-    │   ├── product.ts            # Product-related TypeScript types
-    │   ├── order.ts              # Order-related TypeScript types
-    │   └── cart.ts               # Cart item and session types
-    │
-    ├── actions/
-    │   ├── products.ts           # Server Actions: create, update, archive, relist, putItemOnSale
-    │   ├── import.ts             # Server Action: CSV import (auto-detects inventory vs collection)
-    │   ├── orders.ts             # Server Actions: update order status, add tracking
-    │   ├── auth.ts               # Server Actions: admin login, logout
-    │   └── cart.ts               # Server Actions: cart mutations
-    │
-    ├── validations/
-    │   ├── product.ts            # Zod schemas for product form input
-    │   ├── order.ts              # Zod schemas for order status updates
-    │   └── checkout.ts           # Zod schemas for checkout session creation
-    │
-    ├── styles/
-    │   └── globals.css           # Tailwind imports + custom CSS variables
-    │
-    ├── hooks/                    # Custom React hooks
-    │   ├── use-cart.ts           # Shopping cart state management (localStorage + sync)
-    │   ├── use-stock-check.ts    # Real-time stock validation for cart items
-    │   └── use-order-tracking.ts # Poll-based or SSE-based order status updates
-    │
-    └── emails/
-        ├── templates/
-        │   ├── order-confirmation.tsx  # Confirmation email template
-        │   └── shipping-notification.tsx  # Shipping email template (post-MVP)
-        └── index.ts                    # Email dispatch function
+├── docs/
+│   └── PRD.md
+├── public/
+├── scripts/
+├── src/
+│   ├── actions/
+│   ├── app/
+│   ├── components/
+│   ├── hooks/
+│   ├── lib/
+│   ├── styles/
+│   ├── types/
+│   └── validations/
+├── ARCHITECTURE.md
+├── DEPLOY.md
+├── README.md
+└── SEO-STRATEGY.md
 ```
 
-## Directory Rationales
+## Main Application Areas
+
+### Public storefront
+
+Key routes:
+
+- `/`
+- `/catalog`
+- `/products/[id]`
+- `/cart`
+- `/checkout/paypal`
+- `/order-confirmation`
+- `/track-order`
+- `/about`
+- `/contact`
+- `/shipping`
+- `/refund`
+- `/privacy`
+- `/terms`
+- `/imprint`
+
+The storefront is mostly server-rendered, with focused client components for cart state, filters, checkout interactivity, and dynamic UI.
+
+### Admin area
+
+Key routes:
+
+- `/admin`
+- `/admin/login`
+- `/admin/products`
+- `/admin/inventory`
+- `/admin/import`
+- `/admin/orders`
+- `/admin/orders/[id]`
+- `/admin/shipping`
+- `/admin/logs`
+
+The admin area is protected by route-level auth checks and uses a mix of server components and server actions for mutations.
+
+### API routes
+
+Key route handlers:
+
+- `/api/admin/login`
+- `/api/admin/logout`
+- `/api/admin/session/refresh`
+- `/api/admin/import`
+- `/api/admin/import/[jobId]`
+- `/api/admin/orders/[id]/invoice`
+- `/api/cart/refresh`
+- `/api/catalog`
+- `/api/checkout/create`
+- `/api/checkout/paypal/create`
+- `/api/checkout/paypal/capture`
+- `/api/checkout/pickup`
+- `/api/orders/lookup`
+- `/api/orders/invoice`
+- `/api/tracking/sync`
+- `/api/webhooks/stripe`
+
+## Core Service Modules
 
 ### `db/`
-Database-first source of truth. `schema.ts` contains Drizzle ORM table definitions. The Drizzle client is exported from `db/index.ts` and imported wherever queries are needed.
 
-**Tables:** `products`, `product_images`, `orders`, `order_items`, `shipping_rates`, `rate_limits`, `admin_login_logs`
+- `db/schema.ts`
+  - Drizzle enums, tables, and relations
+- `db/index.ts`
+  - shared DB client
 
-**Migrations:**
-- `001_initial.sql` — products, orders, order_items, product_images
-- `002_discogs_catalog_sync.sql` — discogs sync columns
-- `003_shipping_rates.sql` — country+format shipping rates
-- `004_rate_limits.sql` — DB-backed rate limiting
-- `005_products_deleted_at.sql` — soft delete for products
-- `006_admin_login_logs.sql` — admin login attempt log (IP, UA, result)
+Current main tables:
 
-### `src/app/`
-Next.js App Router file-based routing. Server Components by default; Client Components marked with `"use client"` at the top. Each public route corresponds to a user story in the PRD. The `/api/` namespace holds webhook and lookup endpoints. The `/admin/` namespace is protected by route-level auth middleware.
-
-### `src/components/`
-Organized by feature domain. `ui/` holds low-level building blocks (buttons, inputs, cards). Feature directories (`catalog/`, `product/`, `cart/`) compose those primitives into domain-specific UI. Shared structural elements go in `layout/`. User feedback patterns go in `feedback/`.
+- `products`
+- `product_images`
+- `orders`
+- `order_items`
+- `shipping_rates`
+- `rate_limits`
+- `admin_login_logs`
+- `import_jobs`
 
 ### `src/lib/`
-Singleton configurations and utility functions. Each file wraps an external dependency (database, Stripe, email) with environment variable injection and provides typed helper functions. This layer isolates infrastructure from application logic.
 
-### `src/types/`
-TypeScript type definitions that mirror the database schema but are decoupled from Drizzle types. These are used across components, actions, and API routes. They represent the domain model, not the persistence layer.
+Important modules:
+
+- `auth.ts`
+  - admin session handling
+- `checkout.ts`
+  - checkout validation, shipping calculation, order finalization
+- `checkout-state.ts`
+  - signed PayPal return state
+- `email.ts`
+  - Mailgun integration and customer email templates
+- `invoice.ts`
+  - PDF invoice generation and download tokens
+- `order-notifications.ts`
+  - order email orchestration
+- `order-tracking.ts`
+  - tracking provider sync and normalization
+- `shipping.ts`
+  - shipping rate calculation logic
+- `site.ts`
+  - store profile, SEO defaults, links, pickup and legal data
+- `discogs-import.ts`
+  - CSV import parsing and enrichment helpers
 
 ### `src/actions/`
-Next.js Server Actions for form submissions and mutations. These handle server-side validation (via Zod), database operations, and error handling. Used by admin CRUD forms and any mutation that does not need a traditional API route.
+
+Server actions handle admin mutations such as:
+
+- product updates
+- inventory edits
+- order status changes
+- tracking updates
+- manual customer emails
+- import job triggers
 
 ### `src/validations/`
-Zod schemas for every form and API input boundary. These are the single source of truth for input validation and are shared between Server Actions, API routes, and client-side form validation.
 
-### `src/hooks/`
-Custom React hooks that encapsulate client-side state logic. The cart hook manages localStorage persistence and cart synchronization. The stock-check hook validates cart items against current inventory.
+Zod schemas define input boundaries for:
 
-### `src/emails/`
-Transactional email templates built with React (Resend / @react-email). Each template is a standalone component that receives order data and renders HTML. The index module provides a send function that handles delivery tracking and error logging.
+- checkout payloads
+- order actions
+- product forms
 
-## Data Flow
+## Main Data Flows
 
-### Add to Cart
-1. User clicks "Add to Cart" on a product detail page (Client Component).
-2. `useCart` hook writes the item to `localStorage` and updates the cart count header.
-3. When viewing the cart, each item is validated against the current stock level via a server query.
-4. If stock has changed, the UI clamps the quantity and shows an inline message.
+### Catalog and storefront browsing
 
-### Checkout
-1. User clicks "Proceed to Checkout."
-2. A `POST` request to `/checkout` validates cart inventory atomically.
-3. A Stripe Checkout session is created with line items, flat shipping, and totals.
-4. User is redirected to Stripe's hosted checkout page.
-5. On success, Stripe redirects to `/order-confirmation`.
-6. Stripe simultaneously sends `checkout.session.completed` to `/api/webhooks/stripe`.
+1. Public pages fetch products from PostgreSQL through Drizzle.
+2. Product images are joined or queried in sorted order.
+3. Metadata and JSON-LD are rendered server-side for SEO.
+4. Client-side enhancements handle cart state and catalog interactivity.
 
-### Webhook → Order Creation
-1. Stripe sends `checkout.session.completed` to `/api/webhooks/stripe`.
-2. The webhook handler verifies the signature and checks idempotency (existing order with same `stripe_session_id`).
-3. If new, it inserts the `orders` record and `order_items` records in a single transaction.
-4. It sends a confirmation email and logs the event.
-5. The handler returns 200 in all cases to acknowledge receipt.
+### Checkout and order creation
 
-### Admin Product CRUD
-1. Admin authenticates via `/admin/login` (password from `ADMIN_PASSWORD` env var).
-2. The "Add Product" form collects all fields + image uploads.
-3. Images are uploaded to Vercel Blob Storage before form submission returns URLs.
-4. The Server Action validates input with Zod, then inserts into `products` and `product_images`.
-5. The product appears in the public catalog on the next load (no caching delay).
-6. Updates increment the `version` column for optimistic concurrency control.
+1. Cart items are validated against current stock.
+2. Shipping is calculated from DB-managed rules.
+3. The payment flow branches to:
+   - Stripe checkout session
+   - PayPal create/capture
+   - pickup checkout
+4. On successful finalization:
+   - stock is reserved atomically
+   - order and order items are inserted
+   - confirmation email is sent
+   - invoice download becomes available
 
-## Order State Machine
+### Order email flow
 
-```
-pending → processing → shipped → delivered
-            |
-            └──→ cancelled
-```
+The email system supports:
 
-Valid transitions:
-- `pending` → `processing` (payment captured via webhook)
-- `pending` → `cancelled` (payment failed or refunded)
-- `processing` → `shipped` (admin marks as shipped with tracking)
-- `processing` → `cancelled` (order issue, refund issued)
-- `shipped` → `delivered` (admin confirms delivery)
+- order confirmation
+- shipped notification
+- status updates
+- manual admin-sent messages
 
-Invalid transitions (e.g., `pending` → `shipped`, `cancelled` → `processing`) are rejected with an error.
+Mail content is built centrally in `src/lib/email.ts` so the layout, subject style, and shared footer stay consistent.
+
+### Tracking flow
+
+1. Admin saves a tracking number or tracking URL/carrier.
+2. The app optionally syncs tracking data through the configured provider.
+3. Status can update manually in admin or automatically from tracking sync.
+4. Customers can also check live order progress via `/track-order`.
+
+### Inventory and import flow
+
+1. Admin uploads a CSV through `/admin/import`.
+2. An import job is created and tracked in the DB.
+3. Rows are parsed into products with destination-aware status:
+   - active catalog
+   - archived inventory / collection
+4. Matching logic and import helpers decide whether to create or update entries.
+
+## Branding and Localization Surfaces
+
+Brand-specific behavior is spread across a few deliberate locations:
+
+- `src/lib/site.ts`
+  - store name, legal contact, pickup defaults, SEO keywords, canonical base URL
+- `src/lib/i18n/dictionaries.ts`
+  - translated copy for storefront and informational pages
+- `public/`
+  - logo and static visual assets
+- environment variables
+  - sender domains, contact mailboxes, legal address, pickup info
+
+If you reuse this repository for another shop, these are the first files to update.
+
+## Security and Operational Guardrails
+
+- admin auth with signed sessions
+- DB-backed rate limiting
+- Stripe webhook signature verification
+- signed PayPal state handling
+- invoice download tokens
+- protected admin routes
+- public/private indexing boundaries
+- GitHub CodeQL and audit workflows
+
+## Current Workflow Model
+
+- `CI`
+  - lint, typecheck, focused tests, build
+- `Deploy Preview to Vercel`
+  - runs on push to `main`
+- `Deploy Production to Vercel`
+  - manual only
+- `Daily Security Audit`
+  - scheduled issue-based audit
+
+This means preview deployments are automatic, while production promotion stays explicit.
