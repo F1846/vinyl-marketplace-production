@@ -72,7 +72,7 @@ function ItemThumbnail({
 }) {
   if (!imageUrl) {
     return (
-      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded border border-border bg-surface text-xs text-muted">
+      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded border border-border bg-surface text-xs text-muted">
         —
       </div>
     );
@@ -81,9 +81,9 @@ function ItemThumbnail({
     <Image
       src={imageUrl}
       alt={`${artist} - ${title}`}
-      width={48}
-      height={48}
-      className="h-12 w-12 flex-shrink-0 rounded border border-border object-cover"
+      width={64}
+      height={64}
+      className="h-16 w-16 flex-shrink-0 rounded border border-border object-cover"
       unoptimized
     />
   );
@@ -365,7 +365,7 @@ export function AdminInventoryTable({ items }: Props) {
         </div>
       )}
 
-      <div className="space-y-3 rounded-[1.5rem] border border-border bg-white p-4 shadow-card">
+      <div className="space-y-3 rounded-[1.5rem] border border-border bg-white py-3 pl-3 pr-4 shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <input id="inventory-select-all" type="checkbox" checked={allVisibleSelected} onChange={toggleAll}
@@ -419,10 +419,10 @@ export function AdminInventoryTable({ items }: Props) {
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-surface-hover">
             <tr>
-              <th className="w-10 px-4 py-3 text-left font-medium text-foreground">
+              <th className="w-8 pl-3 pr-2 py-3 text-left font-medium text-foreground">
                 <span className="sr-only">Select</span>
               </th>
-              <th className="w-full px-4 py-3 text-left font-medium text-foreground">Item</th>
+              <th className="w-full pl-2 pr-4 py-3 text-left font-medium text-foreground">Item</th>
               <th className="hidden px-4 py-3 text-left font-medium text-foreground lg:table-cell">Format</th>
               <th className="hidden px-4 py-3 text-left font-medium text-foreground lg:table-cell">
                 {renderSortHeader("Price", "price")}
@@ -446,7 +446,7 @@ export function AdminInventoryTable({ items }: Props) {
             ) : (
               paginatedFiltered.map((item, index) => (
                 <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-hover">
-                  <td className="px-4 py-3">
+                  <td className="pl-3 pr-2 py-3">
                     <input
                       type="checkbox"
                       checked={selectedIdSet.has(item.id)}
@@ -470,7 +470,7 @@ export function AdminInventoryTable({ items }: Props) {
                       aria-label={`Select ${item.artist} - ${item.title}`}
                     />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="pl-2 pr-4 py-3">
                     <div className="flex items-start gap-3">
                       <ItemThumbnail imageUrl={item.imageUrl} artist={item.artist} title={item.title} />
                       <div className="min-w-0 flex-1">
