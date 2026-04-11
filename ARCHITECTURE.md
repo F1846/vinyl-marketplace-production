@@ -2,16 +2,16 @@
 
 ## Overview
 
-This application is a full-stack record-shop platform built with Next.js App Router. It combines a public storefront, a protected admin area, transactional email, payment integrations, shipping logic, order tracking, and database-backed inventory management.
+This application is a full-stack record-shop platform built with Next.js App Router. It combines a public storefront, a protected admin area, checkout and payment flows, transactional email, invoice generation, order tracking, shipping rules, and database-backed product and inventory management.
 
-The project is reusable, but it currently ships with example branding defaults. Store-specific branding should be replaced in `src/lib/site.ts`, `src/lib/i18n/dictionaries.ts`, and the environment configuration before launch.
+The repository is reusable, but it ships with example branding defaults. Replace store identity, translations, SEO profile, and legal/contact details before launch.
 
 ## High-Level System
 
 - Frontend
   - public storefront pages under `src/app/`
   - admin UI under `src/app/admin/`
-  - reusable components under `src/components/`
+  - reusable UI components under `src/components/`
 - Backend
   - route handlers under `src/app/api/`
   - server actions under `src/actions/`
@@ -35,34 +35,34 @@ The project is reusable, but it currently ships with example branding defaults. 
 
 ```text
 .
-├── .github/
-│   ├── SECURITY.md
-│   ├── codex/
-│   └── workflows/
-├── db/
-│   ├── index.ts
-│   ├── schema.ts
-│   └── migrations/
-├── docs/
-│   └── PRD.md
-├── public/
-├── scripts/
-├── src/
-│   ├── actions/
-│   ├── app/
-│   ├── components/
-│   ├── hooks/
-│   ├── lib/
-│   ├── styles/
-│   ├── types/
-│   └── validations/
-├── ARCHITECTURE.md
-├── DEPLOY.md
-├── README.md
-└── SEO-STRATEGY.md
+|-- .github/
+|   |-- SECURITY.md
+|   |-- codex/
+|   `-- workflows/
+|-- db/
+|   |-- index.ts
+|   |-- schema.ts
+|   `-- migrations/
+|-- docs/
+|   `-- PRD.md
+|-- public/
+|-- scripts/
+|-- src/
+|   |-- actions/
+|   |-- app/
+|   |-- components/
+|   |-- hooks/
+|   |-- lib/
+|   |-- styles/
+|   |-- types/
+|   `-- validations/
+|-- ARCHITECTURE.md
+|-- DEPLOY.md
+|-- README.md
+`-- SEO-STRATEGY.md
 ```
 
-## Main Application Areas
+## Main Application Surfaces
 
 ### Public storefront
 
@@ -82,8 +82,9 @@ Key routes:
 - `/privacy`
 - `/terms`
 - `/imprint`
+- `/[slug]`
 
-The storefront is mostly server-rendered, with focused client components for cart state, filters, checkout interactivity, and dynamic UI.
+The storefront is mostly server-rendered, with client components where session cart state, catalog interactivity, checkout return flows, and live customer interactions are needed.
 
 ### Admin area
 
@@ -99,9 +100,9 @@ Key routes:
 - `/admin/shipping`
 - `/admin/logs`
 
-The admin area is protected by route-level auth checks and uses a mix of server components and server actions for mutations.
+The admin UI uses a mix of server components, server actions, and route handlers. Authentication is enforced at the route level and session refresh keeps active admin sessions alive until expiry.
 
-### API routes
+### API surface
 
 Key route handlers:
 
@@ -110,6 +111,7 @@ Key route handlers:
 - `/api/admin/session/refresh`
 - `/api/admin/import`
 - `/api/admin/import/[jobId]`
+- `/api/admin/logs`
 - `/api/admin/orders/[id]/invoice`
 - `/api/cart/refresh`
 - `/api/catalog`
@@ -117,21 +119,19 @@ Key route handlers:
 - `/api/checkout/paypal/create`
 - `/api/checkout/paypal/capture`
 - `/api/checkout/pickup`
-- `/api/orders/lookup`
+- `/api/health`
 - `/api/orders/invoice`
+- `/api/orders/lookup`
+- `/api/shipping/countries`
+- `/api/shipping/quote`
 - `/api/tracking/sync`
 - `/api/webhooks/stripe`
 
-## Core Service Modules
+## Core Data Model
 
-### `db/`
+### Primary tables
 
-- `db/schema.ts`
-  - Drizzle enums, tables, and relations
-- `db/index.ts`
-  - shared DB client
-
-Current main tables:
+Current core tables include:
 
 - `products`
 - `product_images`
@@ -142,135 +142,186 @@ Current main tables:
 - `admin_login_logs`
 - `import_jobs`
 
+### Product and inventory model
+
+The app does not split catalog and inventory into separate applications or separate databases.
+
+- `products` stores both:
+  - active storefront listings
+  - not-for-sale inventory / collection stock
+- storefront visibility is derived from status, stock, and admin actions
+- admin import flows can route CSV rows directly into:
+  - on-sale catalog stock
+  - off-sale inventory stock
+- import helpers try to match existing items so repeated imports update the existing release instead of blindly multiplying rows
+
+### Order model
+
+Orders are normalized across:
+
+- `orders`
+  - customer identity
+  - address data
+  - totals
+  - payment method
+  - order status
+  - tracking state
+- `order_items`
+  - purchased product reference
+  - quantity
+  - price snapshot at purchase time
+
+## Core Service Modules
+
 ### `src/lib/`
 
 Important modules:
 
 - `auth.ts`
-  - admin session handling
+  - admin auth, session signing, expiry, and refresh behavior
+- `cart.ts`
+  - cart state helpers and refresh logic
+- `catalog.ts`
+  - storefront catalog querying and filtering
 - `checkout.ts`
   - checkout validation, shipping calculation, order finalization
 - `checkout-state.ts`
   - signed PayPal return state
 - `email.ts`
-  - Mailgun integration and customer email templates
+  - Mailgun integration and shared customer email shell
+- `image-upload.ts`
+  - product image helper logic
+- `import-jobs.ts`
+  - CSV import orchestration
 - `invoice.ts`
-  - PDF invoice generation and download tokens
+  - PDF invoice generation and signed download links
 - `order-notifications.ts`
   - order email orchestration
 - `order-tracking.ts`
   - tracking provider sync and normalization
+- `paypal.ts`
+  - PayPal configuration helpers
+- `product-admin.ts`
+  - admin product and inventory mutations
+- `rate-limit.ts`
+  - DB-backed rate limiting for public abuse-sensitive surfaces
 - `shipping.ts`
-  - shipping rate calculation logic
+  - shipping rule calculation logic
 - `site.ts`
   - store profile, SEO defaults, links, pickup and legal data
+- `seo-landing-pages.ts`
+  - landing page metadata source
 - `discogs-import.ts`
-  - CSV import parsing and enrichment helpers
+  - CSV parsing and Discogs enrichment helpers
 
 ### `src/actions/`
 
-Server actions handle admin mutations such as:
+Server actions handle admin-side mutations such as:
 
-- product updates
-- inventory edits
-- order status changes
-- tracking updates
+- auth actions
+- cart updates
+- import job creation
+- order status and tracking changes
 - manual customer emails
-- import job triggers
+- product and inventory edits
+- shipping rule edits
 
-### `src/validations/`
+## Main Flows
 
-Zod schemas define input boundaries for:
+### Catalog browsing
 
-- checkout payloads
-- order actions
-- product forms
-
-## Main Data Flows
-
-### Catalog and storefront browsing
-
-1. Public pages fetch products from PostgreSQL through Drizzle.
-2. Product images are joined or queried in sorted order.
-3. Metadata and JSON-LD are rendered server-side for SEO.
-4. Client-side enhancements handle cart state and catalog interactivity.
+1. Public routes query products from PostgreSQL through Drizzle.
+2. Product images are resolved and ordered for cards and product pages.
+3. Metadata and JSON-LD are rendered server-side.
+4. Client components handle filters, search, progressive loading, and cart interactions.
 
 ### Checkout and order creation
 
-1. Cart items are validated against current stock.
+1. Cart items are revalidated against current stock.
 2. Shipping is calculated from DB-managed rules.
 3. The payment flow branches to:
    - Stripe checkout session
    - PayPal create/capture
-   - pickup checkout
+   - local pickup checkout
 4. On successful finalization:
-   - stock is reserved atomically
+   - stock is decremented atomically
    - order and order items are inserted
    - confirmation email is sent
-   - invoice download becomes available
+   - invoice generation becomes available
 
-### Order email flow
+### Order communication
 
 The email system supports:
 
 - order confirmation
 - shipped notification
 - status updates
-- manual admin-sent messages
+- manual admin replies from the order detail page
 
-Mail content is built centrally in `src/lib/email.ts` so the layout, subject style, and shared footer stay consistent.
+Mail content is composed centrally so layout, subject style, and branding remain consistent across the whole order lifecycle.
 
 ### Tracking flow
 
-1. Admin saves a tracking number or tracking URL/carrier.
-2. The app optionally syncs tracking data through the configured provider.
-3. Status can update manually in admin or automatically from tracking sync.
-4. Customers can also check live order progress via `/track-order`.
+1. Admin saves a tracking number and optionally a carrier slug or URL template.
+2. The app syncs tracking data through the configured provider when available.
+3. Admin can still override status manually when needed.
+4. Customers can review the current status from `/track-order`.
 
-### Inventory and import flow
+### Inventory and CSV imports
 
 1. Admin uploads a CSV through `/admin/import`.
-2. An import job is created and tracked in the DB.
-3. Rows are parsed into products with destination-aware status:
-   - active catalog
-   - archived inventory / collection
-4. Matching logic and import helpers decide whether to create or update entries.
+2. The UI chooses a destination:
+   - catalog / on sale
+   - inventory / not for sale
+3. The app creates an import job in the database.
+4. Parsed rows are matched against existing records where possible.
+5. Matching rows update existing stock instead of forcing duplicate entries.
+
+### SEO surface
+
+SEO is handled as part of the app shell, not bolted on externally.
+
+- metadata is generated for home, catalog, product, landing, and legal pages
+- sitemap and robots are generated from app routes
+- JSON-LD is rendered server-side for public pages
+- icon routes, manifest, and social images are provided under `src/app/`
 
 ## Branding and Localization Surfaces
 
-Brand-specific behavior is spread across a few deliberate locations:
+Brand-specific behavior is intentionally concentrated in a few places:
 
 - `src/lib/site.ts`
-  - store name, legal contact, pickup defaults, SEO keywords, canonical base URL
+  - store name, legal contact, pickup defaults, SEO profile, canonical base URL
 - `src/lib/i18n/dictionaries.ts`
-  - translated copy for storefront and informational pages
+  - translated storefront and informational copy
 - `public/`
-  - logo and static visual assets
+  - logo and other static visual assets
 - environment variables
-  - sender domains, contact mailboxes, legal address, pickup info
+  - sender domains, support mailboxes, legal address, pickup data, payment keys, tracking keys
 
-If you reuse this repository for another shop, these are the first files to update.
+If you reuse this repository for another shop, update these first.
 
 ## Security and Operational Guardrails
 
 - admin auth with signed sessions
+- expiry plus refresh behavior for active admin sessions
 - DB-backed rate limiting
 - Stripe webhook signature verification
 - signed PayPal state handling
-- invoice download tokens
+- invoice download token protection
 - protected admin routes
 - public/private indexing boundaries
 - GitHub CodeQL and audit workflows
 
-## Current Workflow Model
+## Workflow Model
 
 - `CI`
-  - lint, typecheck, focused tests, build
+  - audit, lint, typecheck, focused tests, and build
 - `Deploy Preview to Vercel`
-  - runs on push to `main`
+  - runs for pull requests and push to `main`
 - `Deploy Production to Vercel`
   - manual only
 - `Daily Security Audit`
-  - scheduled issue-based audit
+  - scheduled audit workflow
 
-This means preview deployments are automatic, while production promotion stays explicit.
+Preview environments are automatic for review, while production promotion stays explicit.

@@ -1,7 +1,17 @@
 {
   "name": "vinyl-marketplace",
+  "description": "Reusable Next.js storefront and admin system for vinyl, cassette, and CD shops.",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
+  "keywords": [
+    "record-shop",
+    "ecommerce",
+    "nextjs",
+    "vinyl",
+    "catalog",
+    "inventory"
+  ],
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
