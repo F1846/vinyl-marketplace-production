@@ -56,15 +56,15 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
   const imageAspect = isMini ? "aspect-[0.82]" : isCompact ? "aspect-[0.85]" : "aspect-[0.88]";
   const paddingClass = isMini ? "p-2.5" : isCompact ? "p-3" : "p-[0.8125rem]";
   const artistClass = isMini
-    ? "min-h-[1.75rem] text-[0.88rem] font-semibold uppercase tracking-[0.08em] text-muted"
+    ? "h-[2.1rem] text-[0.88rem] font-semibold uppercase tracking-[0.08em] text-muted"
     : isCompact
-      ? "min-h-[1.95rem] text-[0.92rem] font-semibold uppercase tracking-[0.08em] text-muted"
-      : "min-h-[2.1rem] text-[0.96rem] font-semibold uppercase tracking-[0.08em] text-muted";
+      ? "h-[2.2rem] text-[0.92rem] font-semibold uppercase tracking-[0.08em] text-muted"
+      : "h-[2.35rem] text-[0.96rem] font-semibold uppercase tracking-[0.08em] text-muted";
   const titleClass = isMini
-    ? "min-h-[2rem] text-[0.88rem]"
+    ? "h-[2.3rem] text-[0.88rem]"
     : isCompact
-      ? "min-h-[2.15rem] text-[0.92rem]"
-      : "min-h-[2.35rem] text-[0.96rem]";
+      ? "h-[2.45rem] text-[0.92rem]"
+      : "h-[2.6rem] text-[0.96rem]";
   const priceClass = isMini
     ? "text-[0.88rem] font-semibold text-foreground"
     : isCompact
