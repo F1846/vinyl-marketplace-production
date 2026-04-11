@@ -146,11 +146,11 @@ export async function addProductFormAction(
     revalidateProductPaths(productId);
     return { error: null, success: true };
   } catch (err: unknown) {
+    console.error("addProductFormAction failed:", err);
     return {
-      error: err instanceof Error ? err.message : "Failed to create product",
+      error: "Failed to create product. Please try again.",
       success: false,
     };
-  }
 }
 
 export async function updateProduct(id: string, formData: FormData): Promise<void> {
@@ -290,6 +290,10 @@ export async function bulkUpdateStock(
 ) {
   "use server";
   await requireAuthenticatedAdmin();
+
+  if (entries.length > 500) {
+    throw new Error("Bulk update limit exceeded (max 500 items).");
+  }
 
   for (const { id, stockQuantity } of entries) {
     if (!id || !Number.isFinite(stockQuantity) || stockQuantity < 0) continue;

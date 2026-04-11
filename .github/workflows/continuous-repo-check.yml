@@ -68,7 +68,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0
 
@@ -79,7 +79,7 @@ jobs:
           test -n "$ANTHROPIC_API_KEY" || (echo "::error::Missing GitHub secret ANTHROPIC_API_KEY" && exit 1)
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caaf4b7be9abbc6a3e818e1e8f455 # v4
         with:
           node-version: 22
           cache: "npm"
@@ -213,7 +213,7 @@ jobs:
       - name: Create or update PR
         id: pr
         if: steps.detect_changes.outputs.has_changes == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
         env:
           BRANCH_NAME: ${{ steps.branch.outputs.branch }}
           PR_TITLE: ${{ steps.parse_codex.outputs.pr_title }}

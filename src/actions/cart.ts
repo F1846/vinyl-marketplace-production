@@ -9,7 +9,7 @@ const cartItemSchema = z.object({
 });
 
 const COOKIE_NAME = "federico_shop_cart";
-const CART_COOKIE_MAX_AGE_SECONDS = 60 * 10;
+const CART_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
 
 export async function getCart(): Promise<z.infer<typeof cartItemSchema>[]> {
   const cookieStore = await cookies();
@@ -35,6 +35,7 @@ export async function addToCart(productId: string) {
   cookieStore.set(COOKIE_NAME, JSON.stringify(current), {
     httpOnly: true,
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     maxAge: CART_COOKIE_MAX_AGE_SECONDS,
     path: "/",
   });
@@ -48,6 +49,7 @@ export async function removeFromCart(productId: string) {
   cookieStore.set(COOKIE_NAME, JSON.stringify(updated), {
     httpOnly: true,
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     maxAge: CART_COOKIE_MAX_AGE_SECONDS,
     path: "/",
   });
@@ -67,6 +69,7 @@ export async function updateCartQuantity(productId: string, quantity: number) {
   cookieStore.set(COOKIE_NAME, JSON.stringify(updated), {
     httpOnly: true,
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     maxAge: CART_COOKIE_MAX_AGE_SECONDS,
     path: "/",
   });
