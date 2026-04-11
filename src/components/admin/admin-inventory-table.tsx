@@ -78,14 +78,17 @@ function ItemThumbnail({
     );
   }
   return (
-    <Image
-      src={imageUrl}
-      alt={`${artist} - ${title}`}
-      width={48}
-      height={48}
-      className="h-12 w-12 flex-shrink-0 rounded border border-border object-cover"
-      unoptimized
-    />
+    <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded border border-border bg-white">
+      <Image
+        src={imageUrl}
+        alt={`${artist} - ${title}`}
+        fill
+        sizes="48px"
+        className="object-contain"
+        style={{ padding: "2%" }}
+        unoptimized
+      />
+    </div>
   );
 }
 
@@ -332,7 +335,7 @@ export function AdminInventoryTable({ items }: Props) {
       )}
 
       {filtered.length > pageSize && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1rem] border border-border bg-white px-4 py-3 shadow-card">
+        <div className="flex flex-wrap items-center justify-start gap-3 rounded-[1rem] border border-border bg-white px-4 py-3 shadow-card">
           <p className="text-sm text-muted">
             Showing {(currentPage - 1) * pageSize + 1}-
             {Math.min(currentPage * pageSize, filtered.length)} of {filtered.length} filtered listings
@@ -463,10 +466,10 @@ export function AdminInventoryTable({ items }: Props) {
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-3 rounded-[1.15rem] border border-border/90 bg-white px-3 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
                       <ItemThumbnail imageUrl={item.imageUrl} artist={item.artist} title={item.title} />
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-foreground">
+                        <div className="font-medium leading-snug text-foreground">
                           {item.discogsReleaseId ? (
                             <a
                               href={`https://www.discogs.com/release/${item.discogsReleaseId}`}
@@ -482,7 +485,7 @@ export function AdminInventoryTable({ items }: Props) {
                           )}
                         </div>
                         {(item.pressingLabel || item.pressingCatalogNumber || item.pressingYear) && (
-                          <div className="mt-0.5 text-xs text-muted">
+                          <div className="mt-1 text-xs leading-relaxed text-muted">
                             {[item.pressingLabel, item.pressingCatalogNumber, item.pressingYear].filter(Boolean).join(" \u00b7 ")}
                           </div>
                         )}
