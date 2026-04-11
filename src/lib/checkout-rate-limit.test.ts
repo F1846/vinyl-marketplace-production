@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test, { afterEach } from "node:test";
 import { NextRequest } from "next/server";
-import { enforceCheckoutRateLimit } from "./checkout-rate-limit";
+import {
+  enforceCheckoutCompletionRateLimit,
+  enforceCheckoutRateLimit,
+} from "./checkout-rate-limit";
 
 const ENV_KEYS = ["DATABASE_URL", "TRUST_PROXY_HEADERS", "VERCEL", "VERCEL_ENV"] as const;
 
@@ -58,4 +61,25 @@ test("enforceCheckoutRateLimit blocks repeated checkout attempts from the same I
   assert.equal(blocked.response?.headers.get("Retry-After"), blocked.headers["Retry-After"]);
   assert.equal(blocked.response?.headers.get("X-RateLimit-Limit"), "5");
   assert.equal(blocked.response?.headers.get("X-RateLimit-Remaining"), "0");
+});
+
+test("enforceCheckoutCompletionRateLimit uses a separate bucket from checkout creation", async () => {
+  delete process.env.DATABASE_URL;
+  delete process.env.TRUST_PROXY_HEADERS;
+  process.env.VERCEL = "1";
+
+  const requestIp = "203.0.113.11";
+
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    const createResult = await enforceCheckoutRateLimit(makeRequest(requestIp));
+    assert.equal(createResult.response, null);
+  }
+
+  const createBlocked = await enforceCheckoutRateLimit(makeRequest(requestIp));
+  assert.equal(createBlocked.response?.status, 429);
+
+  const completionResult = await enforceCheckoutCompletionRateLimit(makeRequest(requestIp));
+  assert.equal(completionResult.response, null);
+  assert.equal(completionResult.headers["X-RateLimit-Limit"], "5");
+  assert.equal(completionResult.headers["X-RateLimit-Remaining"], "4");
 });
