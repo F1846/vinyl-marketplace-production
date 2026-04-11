@@ -23,6 +23,13 @@ async function getActiveProducts() {
         id: true,
         updatedAt: true,
       },
+      with: {
+        images: {
+          columns: { url: true },
+          orderBy: [schema.productImages.sortOrder],
+          limit: 5,
+        },
+      },
     });
   } catch (error) {
     const reason =
@@ -90,6 +97,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: product.updatedAt,
       changeFrequency: "weekly" as const,
       priority: 0.8,
+      ...(product.images.length > 0 && {
+        images: product.images.map((img) => img.url),
+      }),
     })),
   ];
 }

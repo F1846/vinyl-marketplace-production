@@ -37,7 +37,7 @@ export function AdminNav({ logoutAction }: Props) {
   return (
     <>
       {/* ── Mobile: horizontal scrollable tab bar ── */}
-      <div className="md:hidden w-full">
+      <div className="md:hidden w-full px-4 sm:px-6">
         {/* Top utility row */}
         <div className="flex items-center justify-between border-b border-border pb-2 mb-2">
           <Link
@@ -59,7 +59,7 @@ export function AdminNav({ logoutAction }: Props) {
         {/* Scrollable tab row */}
         <nav
           aria-label="Admin navigation"
-          className="flex overflow-x-auto gap-1 pb-2 scrollbar-none border-b border-border mb-4 -mx-4 px-4"
+          className="flex overflow-x-auto gap-1 pb-2 scrollbar-none border-b border-border mb-4"
         >
           {navLinks.map((link) => {
             const active = isActive(link.href, link.exact);
@@ -83,7 +83,7 @@ export function AdminNav({ logoutAction }: Props) {
       </div>
 
       {/* ── Desktop: sidebar ── */}
-      <aside className="hidden w-56 flex-shrink-0 md:block" aria-label="Admin navigation">
+      <aside className="hidden w-56 flex-shrink-0 md:block md:pl-4 lg:pl-6" aria-label="Admin navigation">
         <div className="mb-4 flex items-center justify-between gap-3">
           <Link
             href="/"

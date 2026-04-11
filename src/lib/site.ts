@@ -6,13 +6,15 @@ function clean(value: string | undefined | null): string | null {
 }
 
 function normalizePickupLabel(value: string | null): string {
-  const fallback = "Berlin Neukolln : 12049";
+  const fallback = "Berlin Neukolln 12049";
 
   if (!value) {
     return fallback;
   }
 
-  return /studio/i.test(value) ? fallback : value;
+  const normalizedValue = value.replace(/Berlin Neukolln\s*:\s*12049/i, fallback);
+
+  return /studio/i.test(normalizedValue) ? fallback : normalizedValue;
 }
 
 function uniqueStrings(values: string[]): string[] {
