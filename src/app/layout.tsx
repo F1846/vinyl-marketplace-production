@@ -57,7 +57,7 @@ export const metadata: Metadata = {
   publisher: siteConfig.name,
   category: "music store",
   openGraph: {
-    title: "Federico Shop | Berlin Electronic Music Record Shop",
+    title: "Federico Shop | Berlin-Based Online Record Shop",
     description: siteConfig.description,
     type: "website",
     url: siteConfig.baseUrl,
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
         url: siteUrl("/opengraph-image"),
         width: 1200,
         height: 630,
-        alt: "Federico Shop - Berlin electronic music record shop",
+        alt: "Federico Shop - Berlin-based online record shop",
       },
     ],
   },
@@ -76,7 +76,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Federico Shop | Berlin Electronic Music Record Shop",
+    title: "Federico Shop | Berlin-Based Online Record Shop",
     description: siteConfig.description,
     images: [siteUrl("/twitter-image")],
   },

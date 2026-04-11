@@ -50,7 +50,7 @@ function getCatalogSeoMeta(query: {
     const primaryGenre = query.genre[0]!;
     return {
       title: `${primaryGenre} ${formatLabel} Catalog`,
-      description: `Browse graded ${primaryGenre.toLowerCase()} ${query.format} copies from Federico Shop, the Berlin electronic music record shop for collector vinyl, cassette, and CD finds.`,
+      description: `Browse graded ${primaryGenre.toLowerCase()} ${query.format} copies from Federico Shop, the Berlin-based online record shop for collector vinyl, cassette, and CD finds.`,
       keywords: [
         `${primaryGenre} ${query.format}`,
         `${primaryGenre} ${formatLabel.toLowerCase()}`,

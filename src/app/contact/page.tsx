@@ -6,13 +6,13 @@ import { legalAddressLines, siteConfig, siteUrl } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Contact Federico Shop",
   description:
-    "Contact Federico Shop in Berlin for orders, local pickup, shipping questions, and record requests.",
+    "Contact Federico Shop, the Berlin-based online record shop, for orders, local pickup, shipping questions, and record requests.",
   keywords: [
     "contact Federico Shop",
     "Federico Shop support",
     "orders federicoshop.de",
     "support federicoshop.de",
-    "Berlin record shop contact",
+    "Berlin online record shop contact",
   ],
   alternates: {
     canonical: siteUrl("/contact"),

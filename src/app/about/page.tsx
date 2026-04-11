@@ -6,12 +6,12 @@ import { siteConfig, siteUrl } from "@/lib/site";
 export const metadata: Metadata = {
   title: "About Federico Shop",
   description:
-    "Learn about Federico Shop, a Berlin-based electronic music record shop focused on graded vinyl, cassette, and CD finds.",
+    "Learn about Federico Shop, a Berlin-based online record shop focused on graded vinyl, cassette, and CD finds.",
   keywords: [
     "about Federico Shop",
     "Federico Shop Berlin",
-    "Berlin record shop",
-    "electronic music record shop",
+    "Berlin online record shop",
+    "electronic music online record shop",
   ],
   alternates: {
     canonical: siteUrl("/about"),

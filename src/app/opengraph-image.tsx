@@ -40,7 +40,7 @@ export default function OpenGraphImage() {
               color: "#5f5a52",
             }}
           >
-            Berlin Electronic Music Record Shop
+            Berlin-Based Online Record Shop
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             <div

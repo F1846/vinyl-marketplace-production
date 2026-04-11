@@ -25,12 +25,12 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Federico Shop | Berlin Vinyl, Techno, EBM, Darkwave & Post-Punk Records",
   description:
-    "Federico Shop is a Berlin electronic music record shop for graded vinyl, cassette, and CD: techno, EBM, darkwave, post-punk, and collector-focused used records.",
+    "Federico Shop is a Berlin-based online record shop for graded vinyl, cassette, and CD: techno, EBM, darkwave, post-punk, and collector-focused used records.",
   keywords: [
     "Federico Shop",
     "Federico",
     "Federico Shop vinyl",
-    "Berlin electronic music record shop",
+    "Berlin online record shop",
     "Berlin vinyl shop",
     "techno vinyl Berlin",
     "EBM records",

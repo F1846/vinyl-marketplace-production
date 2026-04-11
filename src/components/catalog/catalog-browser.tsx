@@ -230,9 +230,6 @@ export function CatalogBrowser({
             <h1 className="font-sans text-[2rem] font-bold leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[2.15rem]">
               {dictionary.catalog.shopArchive}
             </h1>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              {dictionary.catalog.browseWithoutReload}
-            </p>
           </div>
           <div className="rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
             {activeLabel}

@@ -54,7 +54,7 @@ export async function generateMetadata({
       `${product.pressingLabel ?? "electronic music"} record`,
       "used vinyl record",
       "Federico Shop Berlin",
-      "electronic music record shop",
+      "electronic music online record shop",
     ],
     alternates: {
       canonical: siteUrl(`/products/${product.id}`),

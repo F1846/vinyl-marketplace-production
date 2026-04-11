@@ -43,11 +43,11 @@ export const seoLandingPages: SeoLandingPage[] = [
     title: "Techno Vinyl | Federico Shop Berlin",
     heading: "Techno vinyl picked for collectors.",
     description:
-      "Shop techno vinyl from Federico Shop, the Berlin electronic music record shop for graded used records, fair euro pricing, and collector-minded shipping.",
+      "Shop techno vinyl from Federico Shop, the Berlin-based online record shop for graded used records, fair euro pricing, and collector-minded shipping.",
     intro:
       "This page focuses on techno vinyl from the Federico Shop racks, with graded condition notes and direct links into the live catalog.",
     body:
-      "If you are searching for techno vinyl online from a Berlin record shop, this is the cleanest starting point: current stock, clear grading, and checkout with card, PayPal, or local pickup.",
+      "If you are searching for techno vinyl online from a Berlin-based online record shop, this is the cleanest starting point: current stock, clear grading, and checkout with card, PayPal, or local pickup.",
     keywords: [
       "techno vinyl",
       "techno records berlin",
@@ -73,7 +73,7 @@ export const seoLandingPages: SeoLandingPage[] = [
     title: "Darkwave Records | Federico Shop Berlin",
     heading: "Darkwave records with clear grading and stock.",
     description:
-      "Explore darkwave records from Federico Shop, including graded vinyl, cassette, and CD listings from a Berlin electronic music record shop.",
+      "Explore darkwave records from Federico Shop, including graded vinyl, cassette, and CD listings from a Berlin-based online record shop.",
     intro:
       "This landing page gathers darkwave records from the live Federico Shop catalog so visitors and search engines can reach the section directly.",
     body:
@@ -133,7 +133,7 @@ export const seoLandingPages: SeoLandingPage[] = [
     title: "Electro Vinyl | Federico Shop Berlin",
     heading: "Electro vinyl ready to pull from the racks.",
     description:
-      "Find electro vinyl from Federico Shop, the Berlin electronic music record shop with graded used records, fair euro pricing, and responsive shipping.",
+      "Find electro vinyl from Federico Shop, the Berlin-based online record shop with graded used records, fair euro pricing, and responsive shipping.",
     intro:
       "This page is built as a direct search landing page for electro vinyl, with a tighter focus than the general catalog and quick links into nearby styles.",
     body:
@@ -163,7 +163,7 @@ export const seoLandingPages: SeoLandingPage[] = [
     title: "Ambient Records | Federico Shop Berlin",
     heading: "Ambient records with condition notes and real stock.",
     description:
-      "Browse ambient records from Federico Shop, including graded vinyl, cassette, and CD listings from a Berlin-based electronic music record shop.",
+      "Browse ambient records from Federico Shop, including graded vinyl, cassette, and CD listings from a Berlin-based online record shop.",
     intro:
       "Ambient searches deserve a calmer landing page too, with live product links and a clearer path than dropping into the full store with no context.",
     body:

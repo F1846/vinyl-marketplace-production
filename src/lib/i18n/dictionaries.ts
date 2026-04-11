@@ -10,7 +10,7 @@ const english = {
     viewAll: "View all",
   },
   header: {
-    archive: "Electronic music record shop",
+    archive: "Berlin-based online record shop",
     browseCatalog: "Catalog",
     recordsMedia: "Records, tapes, and CDs",
     privacy: "Privacy",
@@ -51,7 +51,7 @@ const english = {
     formatMixValue: "Vinyl / Tape / CD",
     freshIn: "Fresh in",
     from: "From",
-    independentRecordStore: "Independent record store",
+    independentRecordStore: "Berlin-based online record shop",
     moreFromTheRacks: "More from the racks",
     newArrivals: "New arrivals",
     popularGenres: "Popular genres",
@@ -61,7 +61,7 @@ const english = {
     startWith: "Start with {product}",
     worthHaving: "Explore my collection.",
     worthHavingBody:
-      "Federico Shop is an electronic music record shop with graded vinyl, cassette, and CD finds, fair pricing, and collector-friendly shipping.",
+      "Federico Shop is a Berlin-based online record shop with graded vinyl, cassette, and CD finds, fair pricing, and collector-friendly shipping.",
   },
   productCard: {
     inStock: "{count} in stock",
@@ -74,7 +74,7 @@ const english = {
     allLoaded: "All matching records are loaded.",
     artistTitleLabel: "Artist, title, label",
     autoLoadPaused: "Auto-loading pauses here so the footer stays reachable.",
-    browseWithoutReload: "Browse collector copies without leaving the page every time you filter.",
+    browseWithoutReload: "",
     catalog: "Catalog",
     filters: "Filters",
     format: "Format",
@@ -119,7 +119,7 @@ const english = {
   },
   about: {
     body:
-      "Federico Shop is a Berlin-based record shop shaped by a long personal connection to electronic music, careful grading, and a selective, collector-minded way of sharing records.",
+      "Federico Shop is a Berlin-based online record shop shaped by a long personal connection to electronic music, careful grading, and a selective, collector-minded way of sharing records.",
     discogsBody:
       "If you want to explore more of my taste, collection history, and activity, you can visit my Discogs profile.",
     discogsLink: "Visit F1846 on Discogs",
@@ -307,7 +307,7 @@ const german: typeof english = {
   },
   header: {
     ...english.header,
-    archive: "Shop fur elektronische Musik",
+    archive: "Berliner Online-Plattenladen",
     browseCatalog: "Katalog",
     privacy: "Datenschutz",
     recordsMedia: "Schallplatten, Tapes und CDs",
@@ -348,7 +348,7 @@ const german: typeof english = {
     formatMixValue: "Vinyl / Kassette / CD",
     freshIn: "Frisch rein",
     from: "Ab",
-    independentRecordStore: "Unabhangiger Plattenladen",
+    independentRecordStore: "Berliner Online-Plattenladen",
     moreFromTheRacks: "Mehr aus den Regalen",
     newArrivals: "Neu eingetroffen",
     popularGenres: "Beliebte Genres",
@@ -357,7 +357,7 @@ const german: typeof english = {
     startWith: "Starte mit {product}",
     worthHaving: "Entdecke meine Sammlung.",
     worthHavingBody:
-      "Federico Shop ist ein Laden fur elektronische Musik mit gegradeten Vinyl-, Kassetten- und CD-Funden, fairen Preisen und sammlerfreundlichem Versand.",
+      "Federico Shop ist ein Berliner Online-Plattenladen mit gegradeten Vinyl-, Kassetten- und CD-Funden, fairen Preisen und sammlerfreundlichem Versand.",
   },
   productCard: {
     ...english.productCard,
@@ -371,7 +371,7 @@ const german: typeof english = {
     activeResultsFor: 'Ergebnisse fur "{query}"',
     allLoaded: "Alle passenden Artikel sind geladen.",
     autoLoadPaused: "Das automatische Nachladen pausiert hier, damit der Footer erreichbar bleibt.",
-    browseWithoutReload: "Durchsuche Sammlerexemplare, ohne die Seite bei jedem Filter neu zu laden.",
+    browseWithoutReload: "",
     catalog: "Katalog",
     filters: "Filter",
     loadMore: "24 weitere Records laden",
@@ -414,7 +414,7 @@ const german: typeof english = {
   about: {
     ...english.about,
     body:
-      "Federico Shop ist ein Berliner Plattenladen, gepragt von einer langen personlichen Verbindung zur elektronischen Musik, sorgfaltigem Grading und einer selektiven, sammlerorientierten Auswahl.",
+      "Federico Shop ist ein Berliner Online-Plattenladen, gepragt von einer langen personlichen Verbindung zur elektronischen Musik, sorgfaltigem Grading und einer selektiven, sammlerorientierten Auswahl.",
     discogsBody:
       "Wenn du mehr von meinem Geschmack, meiner Sammlung und meiner Aktivitat sehen willst, schau auf mein Discogs Profil.",
     discogsLink: "F1846 auf Discogs ansehen",
@@ -542,7 +542,7 @@ const italian: typeof english = {
   },
   header: {
     ...english.header,
-    archive: "Negozio di dischi di musica elettronica",
+    archive: "Negozio di dischi online con base a Berlino",
     browseCatalog: "Catalogo",
     privacy: "Privacy",
     recordsMedia: "Vinili, cassette e CD",
@@ -582,7 +582,7 @@ const italian: typeof english = {
     formatMixValue: "Vinili / Cassette / CD",
     freshIn: "Appena arrivati",
     from: "Da",
-    independentRecordStore: "Negozio di dischi indipendente",
+    independentRecordStore: "Negozio di dischi online con base a Berlino",
     moreFromTheRacks: "Altro dagli scaffali",
     newArrivals: "Nuovi arrivi",
     popularGenres: "Generi popolari",
@@ -591,7 +591,7 @@ const italian: typeof english = {
     startWith: "Inizia con {product}",
     worthHaving: "Esplora la mia collezione.",
     worthHavingBody:
-      "Federico Shop e un negozio di musica elettronica con vinili, cassette e CD selezionati e gradati, prezzi equi e spedizioni pensate per i collezionisti.",
+      "Federico Shop e un negozio di dischi online con base a Berlino, con vinili, cassette e CD selezionati e gradati, prezzi equi e spedizioni pensate per i collezionisti.",
   },
   productCard: {
     ...english.productCard,
@@ -605,7 +605,7 @@ const italian: typeof english = {
     activeResultsFor: 'Risultati per "{query}"',
     allLoaded: "Tutti i record corrispondenti sono stati caricati.",
     autoLoadPaused: "Il caricamento automatico si ferma qui per lasciare visibile il footer.",
-    browseWithoutReload: "Sfoglia copie da collezione senza ricaricare la pagina a ogni filtro.",
+    browseWithoutReload: "",
     catalog: "Catalogo",
     filters: "Filtri",
     format: "Formato",
@@ -652,7 +652,7 @@ const italian: typeof english = {
   about: {
     ...english.about,
     body:
-      "Federico Shop e un negozio berlinese nato da un legame personale di lunga data con la musica elettronica, da un grading attento e da una selezione pensata per collezionisti.",
+      "Federico Shop e un negozio di dischi online con base a Berlino, nato da un legame personale di lunga data con la musica elettronica, da un grading attento e da una selezione pensata per collezionisti.",
     discogsBody:
       "Se vuoi vedere meglio il mio gusto, la mia collezione e la mia attivita, visita il mio profilo Discogs.",
     discogsLink: "Visita F1846 su Discogs",
