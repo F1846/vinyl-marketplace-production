@@ -15,6 +15,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: siteUrl("/track-order"),
   },
+  openGraph: {
+    title: "Track Your Order | Federico Shop",
+    description:
+      "Track your Federico Shop order status, shipment updates, and carrier scans using your order number and email.",
+    url: siteUrl("/track-order"),
+  },
   robots: {
     index: true,
     follow: true,

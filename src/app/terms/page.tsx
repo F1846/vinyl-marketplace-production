@@ -1,10 +1,21 @@
+import type { Metadata } from "next";
 import { formatMessage } from "@/lib/i18n/format";
 import { getRequestDictionary } from "@/lib/i18n/server";
-import { siteConfig } from "@/lib/site";
+import { siteConfig, siteUrl } from "@/lib/site";
 
-export const metadata = {
-  title: "Terms and Conditions",
+export const metadata: Metadata = {
+  title: "Terms and Conditions | Federico Shop",
+  description:
+    "Review Federico Shop terms and conditions for purchases, returns, and use of our online vinyl and record shop.",
+  alternates: {
+    canonical: siteUrl("/terms"),
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
+
 
 export default async function TermsPage() {
   const dictionary = await getRequestDictionary();
