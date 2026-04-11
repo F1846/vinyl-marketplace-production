@@ -167,7 +167,7 @@ export default async function CatalogPage({
   const seo = getCatalogSeoMeta({ q, genre, format });
 
   const [catalog, filters] = await Promise.all([
-    getCatalogPage({ q, format, genre, sort, limit: 24, offset: 0 }),
+    getCatalogPage({ q, format, genre, sort, limit: 50, offset: 0 }),
     getCatalogFilters(),
   ]);
 
