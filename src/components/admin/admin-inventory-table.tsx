@@ -415,25 +415,25 @@ export function AdminInventoryTable({ items }: Props) {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="min-w-[1220px] w-full text-sm">
+      <div className="overflow-hidden rounded-lg border border-border">
+        <table className="w-full text-sm">
           <thead className="border-b border-border bg-surface-hover">
             <tr>
-              <th className="w-[68px] px-4 py-3 text-left font-medium text-foreground">
+              <th className="w-10 px-4 py-3 text-left font-medium text-foreground">
                 <span className="sr-only">Select</span>
               </th>
-              <th className="min-w-[400px] px-4 py-3 text-left font-medium text-foreground">Item</th>
-              <th className="min-w-[120px] px-4 py-3 text-left font-medium text-foreground">Format</th>
-              <th className="min-w-[120px] px-4 py-3 text-left font-medium text-foreground">
+              <th className="w-full px-4 py-3 text-left font-medium text-foreground">Item</th>
+              <th className="hidden px-4 py-3 text-left font-medium text-foreground lg:table-cell">Format</th>
+              <th className="hidden px-4 py-3 text-left font-medium text-foreground lg:table-cell">
                 {renderSortHeader("Price", "price")}
               </th>
-              <th className="min-w-[120px] px-4 py-3 text-left font-medium text-foreground">
+              <th className="hidden px-4 py-3 text-left font-medium text-foreground lg:table-cell">
                 {renderSortHeader("Stock", "stock")}
               </th>
-              <th className="min-w-[140px] px-4 py-3 text-left font-medium text-foreground">
+              <th className="px-4 py-3 text-left font-medium text-foreground">
                 {renderSortHeader("Status", "status")}
               </th>
-              <th className="min-w-[300px] px-4 py-3 text-right font-medium text-foreground">Actions</th>
+              <th className="px-4 py-3 text-right font-medium text-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -482,7 +482,7 @@ export function AdminInventoryTable({ items }: Props) {
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 hover:text-accent hover:underline"
                             >
-                              {item.artist} \u2014 {item.title}
+                              {item.artist} — {item.title}
                               <ExternalLink className="h-3 w-3 flex-shrink-0 text-muted" />
                             </a>
                           ) : (
@@ -491,10 +491,10 @@ export function AdminInventoryTable({ items }: Props) {
                         </div>
                         {(item.pressingLabel || item.pressingCatalogNumber || item.pressingYear) && (
                           <div className="mt-0.5 text-xs text-muted">
-                            {[item.pressingLabel, item.pressingCatalogNumber, item.pressingYear].filter(Boolean).join(" \u00b7 ")}
+                            {[item.pressingLabel, item.pressingCatalogNumber, item.pressingYear].filter(Boolean).join(" · ")}
                           </div>
                         )}
-                        <div className="mt-1 flex flex-wrap items-center gap-2 lg:hidden">
+                        <div className="mt-1 flex flex-wrap items-center gap-2 lg:hidden" aria-hidden="true">
                           <span className={`badge badge-${item.format}`}>{item.format}</span>
                           <span className="text-xs text-muted">{formatEuroFromCents(item.priceCents)}</span>
                           <input type="number" min="0" step="1"
@@ -506,13 +506,13 @@ export function AdminInventoryTable({ items }: Props) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="hidden px-4 py-3 lg:table-cell">
                     <span className={`badge badge-${item.format}`}>{item.format}</span>
                   </td>
-                  <td className="px-4 py-3 text-foreground">
+                  <td className="hidden px-4 py-3 text-foreground lg:table-cell">
                     {formatEuroFromCents(item.priceCents)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="hidden px-4 py-3 lg:table-cell">
                     <input type="number" min="0" step="1"
                       value={pendingStock[item.id] ?? item.stockQuantity}
                       onChange={(e) => setPendingStock((prev) => ({ ...prev, [item.id]: e.target.value }))}
