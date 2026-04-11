@@ -332,7 +332,7 @@ export function AdminInventoryTable({ items }: Props) {
       )}
 
       {filtered.length > pageSize && (
-        <div className="flex flex-wrap items-center justify-start gap-3 rounded-[1rem] border border-border bg-white px-4 py-3 shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1rem] border border-border bg-white px-4 py-3 shadow-card">
           <p className="text-sm text-muted">
             Showing {(currentPage - 1) * pageSize + 1}-
             {Math.min(currentPage * pageSize, filtered.length)} of {filtered.length} filtered listings
@@ -416,16 +416,24 @@ export function AdminInventoryTable({ items }: Props) {
       )}
 
       <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
+        <table className="min-w-[1220px] w-full text-sm">
           <thead className="border-b border-border bg-surface-hover">
             <tr>
-              <th className="w-6 pl-2 pr-1 py-3 text-left font-medium text-foreground"><span className="sr-only">Select</span></th>
-              <th className="min-w-[320px] pl-1 pr-4 py-3 text-left font-medium text-foreground">Item</th>
-              <th className="hidden px-4 py-3 text-left font-medium text-foreground sm:table-cell">Format</th>
-              <th className="hidden px-4 py-3 text-left font-medium text-foreground md:table-cell">{renderSortHeader("Price", "price")}</th>
-              <th className="hidden px-4 py-3 text-left font-medium text-foreground md:table-cell">{renderSortHeader("Stock", "stock")}</th>
-              <th className="px-4 py-3 text-left font-medium text-foreground">{renderSortHeader("Status", "status")}</th>
-              <th className="px-4 py-3 text-right font-medium text-foreground">Actions</th>
+              <th className="w-[68px] px-4 py-3 text-left font-medium text-foreground">
+                <span className="sr-only">Select</span>
+              </th>
+              <th className="min-w-[400px] px-4 py-3 text-left font-medium text-foreground">Item</th>
+              <th className="min-w-[120px] px-4 py-3 text-left font-medium text-foreground">Format</th>
+              <th className="min-w-[120px] px-4 py-3 text-left font-medium text-foreground">
+                {renderSortHeader("Price", "price")}
+              </th>
+              <th className="min-w-[120px] px-4 py-3 text-left font-medium text-foreground">
+                {renderSortHeader("Stock", "stock")}
+              </th>
+              <th className="min-w-[140px] px-4 py-3 text-left font-medium text-foreground">
+                {renderSortHeader("Status", "status")}
+              </th>
+              <th className="min-w-[300px] px-4 py-3 text-right font-medium text-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -438,7 +446,7 @@ export function AdminInventoryTable({ items }: Props) {
             ) : (
               paginatedFiltered.map((item, index) => (
                 <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-hover">
-                  <td className="pl-2 pr-1 py-3">
+                  <td className="px-4 py-3">
                     <input
                       type="checkbox"
                       checked={selectedIdSet.has(item.id)}
@@ -462,7 +470,7 @@ export function AdminInventoryTable({ items }: Props) {
                       aria-label={`Select ${item.artist} - ${item.title}`}
                     />
                   </td>
-                  <td className="pl-1 pr-4 py-3">
+                  <td className="px-4 py-3">
                     <div className="flex items-start gap-3">
                       <ItemThumbnail imageUrl={item.imageUrl} artist={item.artist} title={item.title} />
                       <div className="min-w-0 flex-1">
@@ -486,7 +494,7 @@ export function AdminInventoryTable({ items }: Props) {
                             {[item.pressingLabel, item.pressingCatalogNumber, item.pressingYear].filter(Boolean).join(" \u00b7 ")}
                           </div>
                         )}
-                        <div className="mt-1 flex flex-wrap items-center gap-2 sm:hidden">
+                        <div className="mt-1 flex flex-wrap items-center gap-2 lg:hidden">
                           <span className={`badge badge-${item.format}`}>{item.format}</span>
                           <span className="text-xs text-muted">{formatEuroFromCents(item.priceCents)}</span>
                           <input type="number" min="0" step="1"
@@ -498,13 +506,13 @@ export function AdminInventoryTable({ items }: Props) {
                       </div>
                     </div>
                   </td>
-                  <td className="hidden px-4 py-3 sm:table-cell">
+                  <td className="px-4 py-3">
                     <span className={`badge badge-${item.format}`}>{item.format}</span>
                   </td>
-                  <td className="hidden px-4 py-3 text-foreground md:table-cell">
+                  <td className="px-4 py-3 text-foreground">
                     {formatEuroFromCents(item.priceCents)}
                   </td>
-                  <td className="hidden px-4 py-3 md:table-cell">
+                  <td className="px-4 py-3">
                     <input type="number" min="0" step="1"
                       value={pendingStock[item.id] ?? item.stockQuantity}
                       onChange={(e) => setPendingStock((prev) => ({ ...prev, [item.id]: e.target.value }))}
