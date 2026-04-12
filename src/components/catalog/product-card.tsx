@@ -96,7 +96,6 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
             alt={`${product.artist} - ${product.title}`}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
-            style={{ inset: "5%" }}
             sizes={imageSizes}
           />
         ) : (

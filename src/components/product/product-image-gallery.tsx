@@ -36,7 +36,6 @@ export function ProductImageGallery({
             alt={`${artist} - ${title}`}
             fill
             className="object-cover"
-            style={{ inset: "5%" }}
             sizes="(max-width: 1024px) 100vw, 42vw"
             priority
           />
