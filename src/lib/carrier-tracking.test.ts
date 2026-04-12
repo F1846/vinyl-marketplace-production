@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildTrackingUrl } from "./order-tracking";
+import { buildTrackingUrl } from "./carrier-tracking";
 
 test("buildTrackingUrl returns direct URLs for known carriers", () => {
   const url = buildTrackingUrl("dhl", "JD014600003828281788");

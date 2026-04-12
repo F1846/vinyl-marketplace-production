@@ -42,7 +42,7 @@ jobs:
         run: npm run typecheck
 
       - name: Focused tests
-        run: node --import tsx --test src/app/api/health/route.test.ts src/lib/order-tracking.test.ts
+        run: node --import tsx --test src/app/api/health/route.test.ts src/lib/carrier-tracking.test.ts
 
       - name: Build
         run: npm run build
