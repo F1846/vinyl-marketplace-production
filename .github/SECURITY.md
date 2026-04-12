@@ -13,12 +13,12 @@ The maintained production line is based on the `main` branch.
 
 Do **not** open a public issue for a security problem.
 
-Before using this repository in production, replace the placeholder contact below with your real security or support mailbox.
+Before using this repository in production, replace the sample contact below with your real security or support mailbox.
 
 Recommended contact format:
 
-- `orders@federicoshop.de`
-- or `support@federicoshop.de`
+- `security@your-domain.example`
+- or `support@your-domain.example`
 
 Recommended subject:
 

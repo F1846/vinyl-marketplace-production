@@ -43,11 +43,11 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
+      { url: siteConfig.faviconPath, type: "image/x-icon", sizes: "any" },
       { url: "/icon", type: "image/png", sizes: "512x512" },
-      { url: siteConfig.faviconPath, type: "image/png", sizes: "512x512" },
       { url: siteConfig.faviconSvgPath, type: "image/svg+xml", sizes: "any" },
     ],
-    shortcut: [{ url: siteConfig.faviconPath, type: "image/png", sizes: "512x512" }],
+    shortcut: [{ url: siteConfig.faviconPath, type: "image/x-icon", sizes: "any" }],
     apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
   },
   description: siteConfig.description,

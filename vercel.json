@@ -2,6 +2,7 @@
   "git": {
     "deploymentEnabled": false
   },
+  "buildCommand": "npm run db:migrate && next build",
   "crons": [
     {
       "path": "/api/tracking/sync",

@@ -1,74 +1,113 @@
 # Vinyl Marketplace
 
-Reusable Next.js storefront and admin system for a record shop selling vinyl, tapes, and CDs.
+Reusable Next.js storefront and admin platform for a single record shop selling vinyl, cassettes, and CDs.
 
-This repository is documented as a generic template so it can be reused for other shops. Brand-specific text, SEO keywords, store contact data, pickup details, and translated storefront copy should be customized before launch.
+This repository is intentionally documented as a generic template. Replace the shipped branding, store profile, SEO metadata, contact details, and translated copy before using it for a real shop.
 
-## Current Status
+## What Ships In This Repo
 
-- Responsive storefront with homepage shelves, catalog filters, product pages, cart, checkout, order confirmation, and order tracking
-- Auto-detected storefront language with manual language switcher
-- Card checkout, PayPal checkout, and local pickup support
-- Mandatory address step before payment
-- Database-driven shipping rules
-- PDF invoices for customers and admins
-- Transactional customer emails via Mailgun
-- Tracking support with Ship24, plus 17TRACK or AfterShip fallback
-- Admin tools for products, inventory, import jobs, orders, shipping rules, and login logs
-- CSV import flow for both active catalog listings and full collection inventory
-- CI, preview deploy workflow, manual production deploy workflow, and daily security audit automation
+- Public storefront with a homepage, catalog, product pages, cart, checkout, legal pages, and order tracking
+- Multilingual storefront with locale detection and manual language switching
+- Address-first checkout with Stripe, PayPal, and local pickup flows
+- PDF invoice generation for customers and admins
+- Transactional customer emails for confirmations, status updates, shipped orders, and manual admin replies
+- Live tracking support through Ship24, 17TRACK, or AfterShip
+- Admin tools for products, inventory, imports, orders, shipping rules, and login logs
+- CSV import flows that can send rows either straight to the catalog or into off-sale inventory
+- Technical SEO foundations including sitemap, robots, metadata, JSON-LD, Open Graph assets, and favicon routes
+- GitHub Actions for CI, preview deploys, production deploys, and security audit automation
 
-## What You Should Customize First
+## Current Feature Snapshot
 
-Before using this repo for a real shop, update these branding and content surfaces:
+### Storefront
+
+- Homepage shelves and random record highlights
+- Catalog with:
+  - search
+  - sort
+  - format filters
+  - multi-genre filtering
+  - progressive loading
+- Product pages with:
+  - image gallery
+  - label, cat number, and year
+  - grading details
+  - release notes
+  - stock state
+- Cart refresh against current stock before checkout
+- Order lookup and live tracking page for customers
+
+### Checkout and fulfillment
+
+- Required customer address step before payment
+- Stripe checkout flow
+- PayPal create/capture flow
+- Local pickup checkout path
+- Database-driven shipping rules by destination and cart composition
+- Confirmation, shipment, status, and manual admin email flows
+- PDF invoice download links for customer and admin use
+
+### Admin
+
+- Dashboard with stock and order totals
+- Product management with edit, hide, relist, archive, and removal actions
+- Inventory view for not-for-sale collection stock
+- Bulk selection and status actions in inventory and product lists
+- CSV import jobs with destination selection:
+  - catalog / on sale
+  - inventory / not for sale
+- Order detail tools for:
+  - status updates
+  - tracking updates
+  - VAT override
+  - invoice download
+  - customer email sending
+- Shipping rules editor
+- Admin login logs
+
+### Ops and SEO
+
+- Health route for uptime checks
+- Public indexable storefront pages
+- `noindex` handling for admin and other sensitive surfaces
+- Product, catalog, breadcrumb, website, and organization structured data
+- Search Console verification support
+- Preview deploy workflow for pull requests
+- Manual production deploy workflow
+- Daily security audit workflow
+
+## What To Customize First
+
+Before launch, replace the template defaults in these places first:
 
 - `src/lib/site.ts`
   - store name
   - description
-  - SEO keywords
-  - order/support emails
-  - legal address
-  - pickup defaults
+  - tagline
+  - legal and pickup details
+  - contact emails
+  - brand aliases and SEO keywords
 - `src/lib/i18n/dictionaries.ts`
-  - storefront copy in every supported language
+  - storefront copy in each supported language
 - `public/logo-mark.svg`
-  - logo mark shown in header, favicon-derived assets, and metadata
+  - logo mark used by the header, metadata, and generated icons
 - `.env.local` / Vercel environment variables
-  - domain
-  - email sender
-  - legal/store contact details
-  - payment and tracking provider credentials
+  - real domain
+  - sender addresses
+  - payment keys
+  - tracking keys
+  - store contact profile
 
-The codebase still ships with example defaults in some source files so the app runs out of the box. Treat those values as placeholders, not production-ready branding.
+The app is meant to run out of the box, so some example values still exist in source files. Treat them as placeholders, not production-ready store identity.
 
-## Feature Summary
+## Core Product Model
 
-- Storefront
-  - homepage with featured shelves and random product previews
-  - catalog with search, sort, multi-genre filtering, and progressive loading
-  - product pages with image gallery, release notes, grading, stock, and add-to-cart
-  - cart and checkout with address validation before payment
-  - order confirmation and track-order lookup
-- Payments and fulfillment
-  - Stripe checkout
-  - PayPal checkout
-  - local pickup flow
-  - database-driven shipping rates by destination and cart composition
-  - PDF invoice generation
-  - customer emails for confirmation, shipment, status updates, and admin-sent manual messages
-- Admin
-  - dashboard
-  - product CRUD and status management
-  - inventory / collection view
-  - CSV import jobs with destination selection
-  - order detail tools for status, tracking, VAT, invoice download, and customer email
-  - shipping rule management
-  - login logs page
-- Operations
-  - PostgreSQL via Drizzle ORM
-  - optional Vercel Blob media helpers
-  - security audit automation
-  - GitHub Actions CI and deploy workflows
+- PostgreSQL is the primary application database
+- The same product model powers both:
+  - live catalog listings
+  - off-sale inventory / collection stock
+- Product visibility is controlled through stock, status, and admin actions rather than separate storefront and inventory apps
+- MongoDB support in this repo is backup-only through `scripts/backup_postgres_to_mongo.py`; the runtime stays single-database by default
 
 ## Tech Stack
 
@@ -78,8 +117,8 @@ The codebase still ships with example defaults in some source files so the app r
 - Styling: Tailwind CSS
 - Payments: Stripe Checkout and PayPal
 - Email: Mailgun
-- File/media storage: Vercel Blob helpers
 - Tracking: Ship24, 17TRACK, or AfterShip
+- Storage helpers: Vercel Blob
 - Deployment: Vercel
 - CI/CD: GitHub Actions
 
@@ -92,7 +131,8 @@ The codebase still ships with example defaults in some source files so the app r
 - Stripe account
 - Mailgun account
 - Optional: PayPal account
-- Optional: Discogs token for CSV enrichment and image lookup
+- Optional: Ship24, 17TRACK, or AfterShip account
+- Optional: Discogs token for CSV enrichment and image lookup helpers
 
 ### Setup
 
@@ -103,11 +143,12 @@ npm install
 cp .env.example .env.local
 ```
 
-Then fill in `.env.local` with your own values and run:
+Fill in `.env.local`, then run:
 
 ```bash
 npm run db:push
 npm run db:seed
+npm run shipping:apply
 npm run dev
 ```
 
@@ -115,7 +156,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Environment Variables
 
-See [.env.example](./.env.example) for the full template.
+Use [.env.example](./.env.example) as the source of truth.
 
 ### Core
 
@@ -185,7 +226,7 @@ See [.env.example](./.env.example) for the full template.
 - `STORE_PICKUP_PHONE`
 - `STORE_PICKUP_PHONE_LABEL`
 
-### Catalog and media helpers
+### Catalog import and media helpers
 
 - `DISCOGS_USER_TOKEN`
 - `DISCOGS_USER_AGENT`
@@ -205,72 +246,41 @@ See [.env.example](./.env.example) for the full template.
 | `npm run db:seed` | Seed starter data |
 | `npm run db:studio` | Open Drizzle Studio |
 | `npm run admin:hash-password -- "your-password"` | Generate an admin password hash |
-| `npm run catalog:import-discogs -- "path-to-csv"` | Import a Discogs-style inventory CSV |
-| `npm run shipping:apply` | Apply shipping rate seed rules |
-| `npm run email:test -- you@example.com` | Send a live transactional email test |
-| `npm run email:test-order-flow -- you@example.com` | Send order-flow email samples |
+| `npm run catalog:import-discogs -- "path-to-csv"` | Import a Discogs-style CSV into the product model |
+| `npm run shipping:apply` | Seed or refresh shipping rules |
+| `npm run email:test -- you@example.com` | Send a transactional email test |
+| `npm run email:test-order-flow -- you@example.com` | Send example order-flow emails |
 
-## Backup and Data Notes
+## CI and Deployment Model
+
+- `CI`
+  - runs on push to `main`
+  - runs on pull requests targeting `main`
+  - includes audit, lint, typecheck, focused tests, and build
+- `Deploy Preview to Vercel`
+  - runs for pull requests
+  - also runs on push to `main`
+  - can run manually
+- `Deploy Production to Vercel`
+  - manual only
+- `vercel.json`
+  - disables direct Git-based Vercel deployments so GitHub Actions remains the control point
+
+## Backup Notes
 
 - Runtime uses one primary PostgreSQL `DATABASE_URL`
-- MongoDB is supported only as an offline backup target through `scripts/backup_postgres_to_mongo.py`
+- MongoDB in this repository is for backup/export workflows only
 - Dual-write between PostgreSQL and MongoDB is not enabled by default
-- If you need a backup database, clone PostgreSQL or run the backup script rather than changing the app to write to two databases
 
-Example:
+Examples:
 
 ```bash
 python scripts/backup_postgres_to_mongo.py "mongodb+srv://..."
 ```
 
-Optional second argument:
-
 ```bash
 python scripts/backup_postgres_to_mongo.py "mongodb+srv://..." "shop_backup"
 ```
-
-## Admin Overview
-
-- Dashboard with stock and order totals
-- Product management with edit, hide, relist, archive, and removal actions
-- Inventory / collection view for not-for-sale stock
-- Bulk CSV import with destination selection
-- Order detail page with:
-  - status changes
-  - tracking updates
-  - VAT override
-  - invoice download
-  - manual customer email composer
-- Shipping rules editor
-- Login logs page
-- Absolute session expiry and inactivity refresh logic for admin auth
-
-## Order and Customer Flow
-
-- Cart and checkout collect full customer details before payment
-- Stripe orders are finalized after webhook confirmation
-- PayPal orders use a signed return/capture flow
-- Pickup orders use a separate no-shipping checkout path
-- Order confirmation emails include item summaries and product thumbnails
-- Shipping and status emails reuse the same branded shell
-- Customers can download invoice PDFs from email links and order lookup
-- Customers can track orders at `/track-order`
-
-## Deployment Model
-
-- `CI` runs on pushes and pull requests targeting `main`
-- `Deploy Preview to Vercel` runs on push to `main` and on manual dispatch
-- `Deploy Production to Vercel` is manual-only
-- `vercel.json` disables direct Git-based deployments so deploys are controlled through GitHub Actions
-
-## Security and Ops Status
-
-- Admin and sensitive workflow pages are intentionally `noindex`
-- Public storefront pages are indexable
-- DB-backed rate limiting is in place for key abuse surfaces
-- Admin sessions use a dedicated secret when configured
-- GitHub CodeQL and audit workflows are present
-- Repo security policy lives in [.github/SECURITY.md](./.github/SECURITY.md)
 
 ## Related Docs
 
@@ -278,3 +288,4 @@ python scripts/backup_postgres_to_mongo.py "mongodb+srv://..." "shop_backup"
 - [DEPLOY.md](./DEPLOY.md)
 - [SEO-STRATEGY.md](./SEO-STRATEGY.md)
 - [docs/PRD.md](./docs/PRD.md)
+- [.github/SECURITY.md](./.github/SECURITY.md)

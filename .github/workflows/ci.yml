@@ -41,8 +41,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Focused route tests
-        run: node --import tsx --test src/app/api/health/route.test.ts
+      - name: Focused tests
+        run: node --import tsx --test src/app/api/health/route.test.ts src/lib/carrier-tracking.test.ts
 
       - name: Build
         run: npm run build

@@ -8,26 +8,13 @@ import {
   type TrackingCheckpoint,
   type TrackingSummary,
 } from "@/types/order";
+import { normalizeCarrierSlug, buildTrackingUrl } from "./carrier-tracking";
+
+export { buildTrackingUrl };
 
 const AFTERSHIP_BASE_URL = "https://api.aftership.com/tracking/2025-07";
 const SEVENTEENTRACK_BASE_URL = "https://api.17track.net/track/v2";
 const SHIP24_BASE_URL = "https://api.ship24.com/public/v1";
-
-const CARRIER_TRACKING_URLS: Record<string, string> = {
-  dhl: "https://www.dhl.com/global-en/home/tracking/tracking-express.html?submit=1&tracking-id={trackingNumber}",
-  "deutsche-post": "https://www.deutschepost.de/sendung/simpleQuery.html?locale=en_GB&shipmentId={trackingNumber}",
-  dpd: "https://tracking.dpd.de/status/en_US/parcel/{trackingNumber}",
-  gls: "https://gls-group.com/DE/en/parcel-tracking?match={trackingNumber}",
-  ups: "https://www.ups.com/track?tracknum={trackingNumber}",
-  fedex: "https://www.fedex.com/fedextrack/?trknbr={trackingNumber}",
-  usps: "https://tools.usps.com/go/TrackConfirmAction?tLabels={trackingNumber}",
-  hermes: "https://www.myhermes.de/empfangen/sendungsverfolgung/sendungsinformation/?trackingnumber={trackingNumber}",
-  "royal-mail": "https://www.royalmail.com/track-your-item#/tracking-results/{trackingNumber}",
-  posteitaliane:
-    "https://www.poste.it/cerca/index.html#/risultati-spedizioni/{trackingNumber}",
-  colissimo: "https://www.laposte.fr/outils/suivre-vos-envois?code={trackingNumber}",
-  bpost: "https://track.bpost.cloud/track/items?itemIdentifier={trackingNumber}",
-};
 
 const TRACKING_STATUS_LABELS: Record<string, string> = {
   pending: "Label created",
@@ -248,22 +235,6 @@ function getTrackingProvider(): TrackingProviderId | null {
   return null;
 }
 
-function normalizeCarrierSlug(value: string | null | undefined): string | null {
-  const normalized = value?.trim().toLowerCase();
-  if (!normalized) {
-    return null;
-  }
-
-  if (/^https?:\/\//.test(normalized)) {
-    return normalized;
-  }
-
-  return normalized
-    .replace(/\s+/g, "-")
-    .replace(/_/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
-}
-
 function humanizeCarrier(value: string | null | undefined): string | null {
   const normalized = normalizeCarrierSlug(value);
   if (!normalized) {
@@ -290,41 +261,6 @@ function get17TrackCarrierCode(value: string | null | undefined): number | null 
   return Number(normalized);
 }
 
-export function buildTrackingUrl(
-  carrierInput: string | null | undefined,
-  trackingNumber: string | null | undefined
-): string | null {
-  const normalizedTrackingNumber = trackingNumber?.trim();
-  if (!normalizedTrackingNumber) {
-    return null;
-  }
-
-  const normalizedCarrier = normalizeCarrierSlug(carrierInput);
-  if (normalizedCarrier && /^https?:\/\//.test(normalizedCarrier)) {
-    if (normalizedCarrier.includes("{trackingNumber}")) {
-      return normalizedCarrier.replaceAll(
-        "{trackingNumber}",
-        encodeURIComponent(normalizedTrackingNumber)
-      );
-    }
-
-    return normalizedCarrier;
-  }
-
-  if (normalizedCarrier && CARRIER_TRACKING_URLS[normalizedCarrier]) {
-    return CARRIER_TRACKING_URLS[normalizedCarrier].replace(
-      "{trackingNumber}",
-      encodeURIComponent(normalizedTrackingNumber)
-    );
-  }
-
-  const searchTerms = [normalizedCarrier, normalizedTrackingNumber]
-    .filter(Boolean)
-    .join(" tracking ");
-
-  return `https://www.google.com/search?q=${encodeURIComponent(searchTerms || normalizedTrackingNumber)}`;
-}
-
 function buildDirectTrackingSummary(order: OrderRecord): TrackingSummary | null {
   if (!order.trackingNumber) {
     return null;
@@ -332,6 +268,7 @@ function buildDirectTrackingSummary(order: OrderRecord): TrackingSummary | null 
 
   const carrierSlug = normalizeCarrierSlug(order.trackingCarrier);
   const carrierName = humanizeCarrier(order.trackingCarrier);
+  const trackingUrl = buildTrackingUrl(order.trackingCarrier, order.trackingNumber);
 
   return {
     provider: "carrier",
@@ -340,10 +277,10 @@ function buildDirectTrackingSummary(order: OrderRecord): TrackingSummary | null 
     carrierName,
     carrierStatus: null,
     carrierStatusLabel: "Tracking link ready",
-    message: carrierSlug
+    message: trackingUrl
       ? `Open the carrier page to check the latest shipment scan for ${order.orderNumber}.`
       : `Use the tracking number to check the latest shipment scan for ${order.orderNumber}.`,
-    trackingUrl: buildTrackingUrl(order.trackingCarrier, order.trackingNumber),
+    trackingUrl,
     lastUpdatedAt: null,
     checkpoints: [],
   };
@@ -1011,3 +948,4 @@ export async function syncShippedOrders(limit = 25) {
 
   return results;
 }
+
