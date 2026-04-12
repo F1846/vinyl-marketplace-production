@@ -134,8 +134,19 @@ async function run() {
 
     // Execute each statement individually — Neon HTTP rejects multi-command
     // prepared statements, so we must send them one at a time.
+    // "already exists" errors are treated as no-ops: the object was created
+    // by a previous manual migration run before this runner was introduced.
     for (const stmt of statements) {
-      await exec(stmt);
+      try {
+        await exec(stmt);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("already exists")) {
+          console.log(`    skipped (already exists): ${stmt.slice(0, 60).replace(/\s+/g, " ")}…`);
+        } else {
+          throw err;
+        }
+      }
     }
 
     await sql`INSERT INTO _migrations (name) VALUES (${file})`;
