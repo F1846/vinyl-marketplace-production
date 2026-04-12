@@ -39,6 +39,10 @@ Before using this repo for a real shop, update these branding and content surfac
   - legal/store contact details
   - payment and tracking provider credentials
 
+**Important:** For the Federico Shop deployment, the following email addresses must be forwarded to `sandrodoglio40@gmail.com`:
+- `orders@federicoshop.de` (used for order notifications)
+- `support@federicoshop.de` (used for customer support)
+
 The codebase still ships with example defaults in some source files so the app runs out of the box. Treat those values as placeholders, not production-ready branding.
 
 ## Feature Summary

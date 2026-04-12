@@ -165,6 +165,11 @@ Recommended:
 - `STORE_ORDER_EMAIL=orders@your-domain.example`
 - `STORE_SUPPORT_EMAIL=support@your-domain.example`
 
+**Important:** For the Federico Shop deployment, the following email addresses must be forwarded to `sandrodoglio40@gmail.com`:
+
+- `orders@federicoshop.de` (used for order notifications)
+- `support@federicoshop.de` (used for customer support)
+
 Test with:
 
 ```bash
