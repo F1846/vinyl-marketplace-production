@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { OrderConfirmationClient } from "./order-confirmation-client";
 import { db, schema } from "@/db";
@@ -6,6 +7,12 @@ import { eq } from "drizzle-orm";
 import { createInvoiceToken } from "@/lib/invoice";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function OrderConfirmationPage({
   searchParams,
@@ -14,7 +21,7 @@ export default async function OrderConfirmationPage({
 }) {
   const params = await searchParams;
 
-  // Guard: no identifiers means the user landed here directly — send them to the catalog
+  // Guard: no identifiers means the user landed here directly â€” send them to the catalog
   if (!params.session_id && !params.order_number) {
     redirect("/catalog");
   }
