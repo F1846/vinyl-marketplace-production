@@ -301,9 +301,9 @@ export function buildTrackingUrl(
 
   const normalizedCarrier = normalizeCarrierSlug(carrierInput);
   if (normalizedCarrier && /^https?:\/\//.test(normalizedCarrier)) {
-    if (normalizedCarrier.includes("{trackingNumber}")) {
-      return normalizedCarrier.replaceAll(
-        "{trackingNumber}",
+    if (/\{trackingnumber\}/i.test(normalizedCarrier)) {
+      return normalizedCarrier.replace(
+        /\{trackingnumber\}/gi,
         encodeURIComponent(normalizedTrackingNumber)
       );
     }
