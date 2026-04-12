@@ -3,6 +3,7 @@ import {
   uuid,
   varchar,
   integer,
+  real,
   text,
   pgEnum,
   jsonb,
@@ -84,6 +85,7 @@ export const productImages = pgTable("product_images", {
     .references(() => products.id, { onDelete: "cascade" }),
   url: varchar("url", { length: 2048 }).notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
+  displayZoom: real("display_zoom").notNull().default(1.0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

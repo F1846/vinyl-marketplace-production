@@ -23,6 +23,7 @@ type ProductCardProduct = {
     id: string;
     url: string;
     sortOrder: number;
+    displayZoom: number;
   }>;
 };
 
@@ -43,7 +44,11 @@ interface ProductCardProps {
 export function ProductCard({ product, size = "default" }: ProductCardProps) {
   const dictionary = useDictionary();
   const { items } = useCart();
-  const imageUrl = product.images[0]?.url ?? null;
+  const firstImage = product.images[0] ?? null;
+  const imageUrl = firstImage?.url ?? null;
+  const imageInset = firstImage && firstImage.displayZoom < 1
+    ? `${((1 - firstImage.displayZoom) / 2) * 100}%`
+    : undefined;
   const reservedQuantity = getReservedQuantity(items, product.id);
   const availableStock = Math.max(product.stockQuantity - reservedQuantity, 0);
   const isMini = size === "mini";
@@ -97,6 +102,7 @@ export function ProductCard({ product, size = "default" }: ProductCardProps) {
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             sizes={imageSizes}
+            style={imageInset ? { inset: imageInset } : undefined}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-muted">

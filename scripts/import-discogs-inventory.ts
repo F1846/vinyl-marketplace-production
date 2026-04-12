@@ -486,6 +486,7 @@ async function main() {
           productId: product.id,
           url,
           sortOrder,
+          displayZoom: 0.96,
         }))
       );
     }

@@ -27,6 +27,7 @@ export type CatalogProduct = {
     id: string;
     url: string;
     sortOrder: number;
+    displayZoom: number;
   }>;
 };
 

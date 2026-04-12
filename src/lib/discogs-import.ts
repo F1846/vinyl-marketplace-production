@@ -644,6 +644,7 @@ export async function importDiscogsInventoryCsv(
           productId,
           url,
           sortOrder,
+          displayZoom: 0.96,
         }))
       );
       rowsWithImages += 1;
@@ -873,6 +874,7 @@ export async function importDiscogsCollectionCsv(
               productId: product.id,
               url,
               sortOrder,
+              displayZoom: 0.96,
             }))
           );
           rowsWithImages += 1;

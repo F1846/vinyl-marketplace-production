@@ -7,6 +7,7 @@ type GalleryImage = {
   id: string;
   url: string;
   sortOrder: number;
+  displayZoom: number;
 };
 
 type ProductImageGalleryProps = {
@@ -14,6 +15,12 @@ type ProductImageGalleryProps = {
   artist: string;
   title: string;
 };
+
+function zoomInset(displayZoom: number): string | undefined {
+  if (displayZoom >= 1) return undefined;
+  const pct = ((1 - displayZoom) / 2) * 100;
+  return `${pct}%`;
+}
 
 export function ProductImageGallery({
   images,
@@ -38,6 +45,7 @@ export function ProductImageGallery({
             className="object-cover"
             sizes="(max-width: 1024px) 100vw, 42vw"
             priority
+            style={zoomInset(selectedImage.displayZoom) ? { inset: zoomInset(selectedImage.displayZoom) } : undefined}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-base text-muted">
@@ -69,6 +77,7 @@ export function ProductImageGallery({
                   fill
                   className="object-cover"
                   sizes="6rem"
+                  style={zoomInset(image.displayZoom) ? { inset: zoomInset(image.displayZoom) } : undefined}
                 />
               </button>
             );
