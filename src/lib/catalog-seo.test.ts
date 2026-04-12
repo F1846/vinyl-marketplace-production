@@ -10,7 +10,7 @@ test("catalog search URLs are noindex and canonicalize to the filtered catalog",
     sort: "newest",
   });
 
-  assert.equal(metadata.robots?.index, false);
+  assert.equal((metadata.robots as { index?: boolean } | undefined)?.index, false);
   assert.equal(metadata.alternates?.canonical, "https://www.federicoshop.de/catalog?format=vinyl");
 });
 
@@ -22,7 +22,7 @@ test("custom sort URLs are noindex and canonicalize to the base collection", () 
     sort: "price-desc",
   });
 
-  assert.equal(metadata.robots?.index, false);
+  assert.equal((metadata.robots as { index?: boolean } | undefined)?.index, false);
   assert.equal(
     metadata.alternates?.canonical,
     "https://www.federicoshop.de/catalog?format=vinyl&genre=Techno",
