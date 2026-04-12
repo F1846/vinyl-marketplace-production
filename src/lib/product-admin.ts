@@ -148,7 +148,6 @@ async function ensureProductImages(product: ProductRecord): Promise<void> {
         productId: product.id,
         url,
         sortOrder,
-        displayZoom: 0.96,
       }))
     );
   } catch {
@@ -161,7 +160,6 @@ async function copyProductImages(sourceProductId: string, targetProductId: strin
     .select({
       url: schema.productImages.url,
       sortOrder: schema.productImages.sortOrder,
-      displayZoom: schema.productImages.displayZoom,
     })
     .from(schema.productImages)
     .where(eq(schema.productImages.productId, sourceProductId));
@@ -176,7 +174,6 @@ async function copyProductImages(sourceProductId: string, targetProductId: strin
       productId: targetProductId,
       url: image.url,
       sortOrder: image.sortOrder,
-      displayZoom: image.displayZoom,
     }))
   );
 }
